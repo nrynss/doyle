@@ -27,8 +27,8 @@ Doyle holds its own state (the citation index). Memory systems plug in through a
 
 | Adapter | Why |
 |---|---|
-| **Lambo**, the deep one | Citations are explicit (`depends_on`), contradictions are first-class (`against`), and with lambo#207 the warning shows on recall itself; lambo#208 returns the stale set |
-| **Muse Code memory**, the Meta-native one | Markdown under `<repo>/.agents/memory/` (a `MEMORY.md` index, one file per topic) plus personal scopes. Muse Code's `/migrate` imports Claude Code and Codex memory into the same format |
+| **Muse Code memory**, the lead | Meta-native and entirely new code. Markdown under `<repo>/.agents/memory/` (a `MEMORY.md` index, one file per topic) plus personal scopes. Muse Code's `/migrate` imports Claude Code and Codex memory into the same format |
+| **Lambo**, the second | An existing open-source dependency, reached as a client. Citations are explicit (`depends_on`), contradictions are first-class (`against`). The demo does not showcase Lambo's own features |
 
 Where a memory system cannot annotate, the agent learns of staleness through Doyle's own tool or the Muse Code hook.
 
@@ -47,6 +47,13 @@ One Rust binary, `doyle`, two modes: `check` (CLI and CI step) and `serve` (revi
 ## For judges (to build)
 
 A live page with a "For judges: start here" table: the recorded runs with and without Doyle, the measured numbers (memories flagged, wrong actions prevented, false alarms), the Muse Code session logs, and the review page itself.
+
+## Hackathon rules that shape the build
+
+- **New work only.** Everything presented must be built during the event (27 Oct – 4 Nov). The demo and README must make clear what is new (Doyle) and what is an existing dependency (Vimanam, Lambo). Never vendor or copy code from earlier projects.
+- **The repository must be public** by submission, on 4 Nov at 21:00 ET.
+- **A three-minute demo video** of what was built during the hackathon.
+- **Bonus fit:** Best Build on Meta Open Weight Models (the curator on Muse Spark Open via Baseten, doing real work) and Best Agentic Use-Case.
 
 ## Not this
 

@@ -16,6 +16,10 @@ Rules for any agent working in this repository. The product is in [`product.md`]
 
 - One task, one branch, one worktree. Two agents never edit one checkout.
 
+## New work only
+
+- This is a hackathon entry under a new-work-only rule. Write Doyle's code here, during the event. Never copy code from Lambo, Vimanam, Ribhu or any earlier project; depend on published crates or talk to a running server instead.
+
 ## Secrets
 
 - Keys come from the environment or the system keyring, never from a committed file. `.env` and `doyle.toml` are gitignored.
