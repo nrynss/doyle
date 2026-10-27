@@ -62,5 +62,5 @@ A live page with a "For judges: start here" table: the recorded runs with and wi
 ## Open questions
 
 - The second real upgrade for the evaluation, ideally with visible stakes (payments, auth, personal data).
-- Official Rules and problem statements on the event details page.
+- The problem statements, on the event details page (sign-in only). The Official Rules are read: original work, no new-code rule, open source allowed if licences are followed, no licence requirement.
 - The review page's stack.
