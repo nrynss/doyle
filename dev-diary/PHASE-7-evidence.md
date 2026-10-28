@@ -1,0 +1,87 @@
+# P7: Evidence
+
+The demo, run for real and recorded, and the numbers that say whether Doyle works. The judges' page shows them.
+
+Read first: [`../product.md`](../product.md) (The moment the demo is built around, For judges), [`README.md`](README.md) (Critical Path).
+
+---
+
+### T7.1: Demo workspace ★
+```yaml
+requires:   [T0.3]
+fixture-ok: yes
+size:       M · mid
+owns:       demo/
+status:     not-started
+```
+What Muse Wonder works in during the demo:
+- a small records service that serves the v1 or v2 behaviour of `testdata/contracts/` on a local port, with a fixed set of records, so a lost record is countable;
+- a client repository with a task prompt ("write a backup of every record"), its own `.agents/` and Muse Code configuration, and a script that resets it to the starting state;
+- a check that counts the records a backup holds against the service's.
+
+**Done when:** `demo/README.md` says how to start the service in either version, reset the workspace and count a backup; a v1 backup holds every record and a naive v2 backup provably doesn't.
+
+---
+
+### T7.2: Run without Doyle ★
+```yaml
+requires:   [T7.1]
+fixture-ok: no
+size:       S · user
+owns:       evidence/without-doyle/
+status:     not-started
+```
+Seed Wonder's memory in the demo workspace with the v1 belief (in its own session, so it writes the memory itself), switch the service to v2, and give a fresh session the backup task. Record the session (transcript, `muse export`, and a screen recording for the video), and the record count.
+
+**Done when:** the recorded session shows the backup returning success with records missing, and the count is in the handoff text.
+
+---
+
+### T7.3: Run with Doyle ★
+```yaml
+requires:   [T7.2, T5.1, T5.2, T5.3, T6.1, T6.2]
+fixture-ok: no
+size:       S · user
+owns:       evidence/with-doyle/
+status:     not-started
+```
+The same start, with Doyle: curate, check v1 → v2, the guard registered. Wonder is stopped, the correction is approved on the review page, it lands in Muse Code memory and Lambo, and Wonder writes a backup that holds every record. Record it all as in T7.2.
+
+**Done when:** the recorded session shows the denial with its reason, the approval, the corrected memory in both systems, and a backup with every record.
+
+---
+
+### T7.4: Measures
+```yaml
+requires:   [T7.3]
+fixture-ok: no
+size:       M · frontier
+owns:       evidence/measures.md, evidence/measures/
+status:     not-started
+```
+The numbers the judges' page states: memories flagged, wrong actions prevented, false alarms, citations the curator got right, proposals accepted unedited. Measured on the demo and on the second upgrade if T0.7 chose one, each with how it was counted.
+
+**Done when:** `evidence/measures.md` states each number with its method and the files behind it.
+
+---
+
+### T7.5: Judges' page
+```yaml
+requires:   [T6.2, T7.4]
+fixture-ok: yes
+size:       S · mid
+owns:       src/serve/judges.rs
+status:     not-started
+```
+Under `doyle serve`, "For judges: start here": a table linking the recorded runs with and without Doyle, the measures, the Muse Code session logs, and the review page itself (product.md, For judges). It says plainly what is new (Doyle) and what is an existing dependency (Vimanam, Lambo).
+
+**Done when:** the page serves from a fresh clone with the evidence committed, and every link resolves.
+
+---
+
+## Exit Criteria
+
+- [ ] The demo workspace resets and counts records (T7.1).
+- [ ] Both runs are recorded, and they differ the way product.md says (T7.2, T7.3).
+- [ ] The measures are stated with their method (T7.4).
+- [ ] The judges' page links all of it (T7.5).

@@ -6,7 +6,7 @@ Entry for the Meta Global AI Developer Hackathon (Cerebral Valley), Indie track,
 
 ## The product
 
-Coding agents remember what they learn about the code and the APIs they work with. Those memories rest on things that change. When an API contract changes, every memory about the old behaviour is now wrong, and nothing tells the agent. Muse Wonder's Active Memory remembers; it cannot know when what it remembers stops being true.
+Coding agents remember what they learn about the code and the APIs they work with. Those memories rest on things that change. When an API contract changes, every memory about the old behaviour is now wrong, and nothing tells the agent. An agent's built-in memory records what it learned but not why it holds, so it cannot know when what it remembers stops being true. Neither can an external memory such as Lambo.
 
 Doyle can. It:
 
@@ -17,20 +17,24 @@ Doyle can. It:
 5. **Gets a person's sign-off.** `doyle serve` is the review page: what changed, what went stale, which agents relied on it, the proposal, and approve / retire / keep.
 6. **Guards the agent.** A Muse Code `PreToolUse` hook asks Doyle whether an action rests on a stale memory and blocks it with the reason.
 
-**The moment the demo is built around:** an agent confidently ships a backup that returns 200 and silently loses records, because its memory says the endpoint returns everything. With Doyle, the same agent is stopped, the memory is corrected, and the backup is right.
+**The moment the demo is built around:** an agent confidently ships a backup that returns 200 and silently loses records, because its memory says the endpoint returns everything. With Doyle, the same agent is stopped, the memory is corrected in both the agent's built-in memory and Lambo, and the backup is right.
 
 ## Memory systems are clients
 
-Doyle holds its own state (the citation index). Memory systems plug in through adapters.
+Doyle holds its own state (the citation index). Memory systems plug in through adapters, and Doyle corrects every one that holds the stale memory.
+
+**Pluggable by design.** Doyle's core (citations, the diff, flagging, proposals, sign-off) knows only the adapter contract, never a particular memory system. Lambo is the adapter we know best, not a special case. Adding a memory system means writing one adapter, with no change to the core. The two adapters below are the ones built for the event. Claude Code and Codex memory, and hosted memories such as mem0, Letta or Zep, are the next candidates.
 
 **Adapter contract.** Required: list or read memories (id, text, last updated) and write one. Optional: annotate in place, so the warning shows on recall; mark superseded; notify on new memories.
 
 | Adapter | Why |
 |---|---|
-| **Muse Code memory**, the lead | Meta-native and entirely new code. Markdown under `<repo>/.agents/memory/` (a `MEMORY.md` index, one file per topic) plus personal scopes. Muse Code's `/migrate` imports Claude Code and Codex memory into the same format |
-| **Lambo**, the second | An existing open-source dependency, reached as a client. Citations are explicit (`depends_on`), contradictions are first-class (`against`). The demo does not showcase Lambo's own features |
+| **Muse Code built-in memory**, the lead | The memory Muse Wonder writes and recalls in Muse Code; Meta-native and entirely new code. Markdown with a `MEMORY.md` index (short notes inline, or one file per topic), each note with `type` and `description` frontmatter. The default scope is per project and private, at `~/.local/share/muse/memory/projects/<path-slug>-<hash>/`; the shared scope is `<repo>/.agents/memory/`. Doyle annotates the stale note in place. Muse Code's `/migrate` imports Claude Code and Codex memory into the same format |
+| **Lambo**, the second | An existing open-source dependency, reached as a client. Doyle corrects it too: it records the correction `against` the stale memory, so Lambo's recall warns. Citations are explicit (`depends_on`), contradictions are first-class (`against`). The demo shows the correction landing, not Lambo's other features |
 
 Where a memory system cannot annotate, the agent learns of staleness through Doyle's own tool or the Muse Code hook.
+
+**Verified on Muse Code 1.4.14 with Muse Wonder (`muse-wonder-1.0`), 28 Oct.** Wonder recalls a fact in a new session only once it has written it to its memory file: a fact it did not write came back unknown, in the same project and in another. Once written, the note recorded the fact and nothing about where it came from. After Doyle-style annotation of that note (`[STALE … now X]`), a fresh session answered with the corrected value.
 
 ## Meta models, one job each
 
@@ -57,7 +61,7 @@ A live page with a "For judges: start here" table: the recorded runs with and wi
 
 ## Not this
 
-- Not a memory store. Lambo and Muse Code memory are the memory.
+- Not a memory store. The agent's built-in memory and Lambo are the memory.
 - Not a coding agent. Muse Wonder is the agent.
 - Not a dashboard for its own sake. The page exists to settle corrections and show the evidence.
 
