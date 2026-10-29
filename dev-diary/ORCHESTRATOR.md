@@ -34,22 +34,7 @@ A task is **ready** when its status is `not-started`, every task in `requires` i
 
 - `main` is clean, and `./tools/check.sh` passes in the main checkout.
 - Set the task to `status: claimed:<agent>` on `main` and commit. That claim is how a later session sees the task is taken.
-- Choose the model from the task's class, unless the user says otherwise:
-
-| Class | Implementation |
-|---|---|
-| light | Haiku |
-| mid | Sonnet, or Haiku when the user asks |
-| frontier | Opus |
-| user | none; the orchestrator prepares, the user acts |
-
-**Muse Code as the implementer (user decision).** From P1 on, implementation goes to Muse Code sessions the user runs, on Meta's models: `muse-wonder-1.0` for frontier and mid tasks, `muse-spark-1.3` for light ones (Wonder Full needs a subscription this account doesn't have). The orchestrator still prepares, validates, lands and closes. For a Muse Code task:
-1. Claim the task on `main` and commit.
-2. Cut the worktree by hand from local `main`: `git worktree add ~/work/doyle-worktrees/<id> -b task-<id> main`. It lives outside the repository so Muse Code's memory for it is its own (Muse keys memory on the directory it starts in).
-3. Write the brief (the template below) to a file outside the repository and give the user the command to start Muse Code in the worktree with it.
-4. When the user says the session is done, validate exactly as for any implementer (step 4), then land (step 5) and close (step 6).
-
-Muse Code reads `AGENTS.md` once the workspace is trusted, so the rules there reach it. It must commit on its branch, never push or merge.
+- The user assigns the agent and the model for each task. The task's class (README, Task Pattern) says what kind of work it is; it does not pick the model.
 
 ### 3. Dispatch
 
