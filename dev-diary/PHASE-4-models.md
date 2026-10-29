@@ -57,7 +57,7 @@ requires:   [T4.1, T2.1, T0.3]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/prompts/mod.rs, src/prompts/curator.rs, testdata/replies/curator/
-status:     not-started
+status:     claimed:muse-spark-t4.3
 ```
 Given one memory's text and the contract index (operations, types and fields with their native names and `ElementId`s), return the elements the memory rests on, the claim in one line, and a confidence; or "rests on nothing in this contract". The model chooses only from IDs it was given; any other ID is dropped in code, never trusted.
 
@@ -73,7 +73,7 @@ requires:   [T4.1, T2.2]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/prompts/recheck.rs, testdata/replies/recheck/
-status:     not-started
+status:     claimed:muse-spark-t4.4
 ```
 Given a flagged memory, its citation, the changes behind the flag, and the old and new versions of each cited element, propose: **correct** (with replacement text that is true of the new contract, short and plain), **retire** (the memory no longer applies), or **keep** (the change doesn't touch what the memory claims), with a one-line rationale. Replacement text quotes nothing from the contract that could read as an instruction (README, guideline 7).
 
