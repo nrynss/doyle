@@ -4,6 +4,8 @@ The types and the two traits every other task codes against, the state store, an
 
 P1 runs in order, one task at a time. It is the serial bottleneck: keep it small and exact.
 
+**Module declarations before T1.5 (orchestrator decision):** until T1.5 makes the crate a library, a P1 task may add the one declaration line its own module needs (`mod core;` in `src/main.rs`, `mod store;` in `src/core/mod.rs`, `mod adapters;` or `mod models;` in `src/main.rs`), with a scoped `#[allow(dead_code)]` if the gate needs it. T1.5 moves every such line into `src/lib.rs` and drops the allows.
+
 Read first: [`../docs/architecture.md`](../docs/architecture.md) (The core model, The plug-in seams, Commands), [`PHASE-0-ground.md`](PHASE-0-ground.md) and what P0 recorded in `testdata/` and `docs/`.
 
 ---
@@ -14,13 +16,13 @@ requires:   [T0.3, T0.6]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/core/mod.rs, src/core/model.rs, Cargo.toml, Cargo.lock
-status:     in-review
+status:     done
 ```
 The types in architecture.md's core model table: `ElementId`, `MemoryRef`, `Memory`, `Citation`, `Flag`, `Proposal`, `Decision`, with serde round-trips. `ElementId` and the change IDs wrap Vimanam's strings without re-deriving them. `MemoryRef` names its adapter by a string the adapter declares, never an enum of known systems, so a new adapter needs no change here.
 
 Adds `serde` and `serde_json`; the commit message says why.
 
-**Done when:** every type round-trips through JSON in a test; the demo's three memories and their expected citations from `testdata/README.md` can be written as values of these types in a test; nothing in `src/core/` names Muse Code or Lambo.
+**Done when:** every type round-trips through JSON in a test; the demo's four memories and their expected citations from `testdata/README.md` can be written as values of these types in a test; nothing in `src/core/` names Muse Code or Lambo.
 
 **Notes (T1.1)**
 - Built: `src/core/model.rs` with the seven contract types plus `ChangeId` (the task's "the change IDs wrap Vimanam's strings" needs a home). `ElementId`/`ChangeId` are transparent `String` wrappers holding `ve2_`/`vc2_` IDs verbatim. `MemoryRef { adapter, id }` keeps the adapter as a plain string. `Memory { reference, text, updated_at: Option<String>, scope }`. `Citation { memory, elements, claim, recorded_by, confidence: f32 }`. `Severity { Breaking, Review }`: non-breaking is unrepresentable, so additive changes cannot flag. `Flag { id, memory, changes, severity, old_version, new_version, evidence }`. `Proposal { id, flag_id, action, rationale, proposed_by }` with `ProposalAction { Correct { new_text }, Retire, Keep }`. `Decision { id, proposal_id, verdict, decided_by, decided_at }` with `DecisionVerdict { Approve, Retire, Keep, EditThenApprove { new_text } }`. `src/core/mod.rs` re-exports them. 12 unit tests: a JSON round-trip per type, exact-shape checks, the severity vocabulary (including that `"non_breaking"` is rejected), and the demo's four memories with their expected citations built from the real `ve2_` IDs, closing the loop with M1's flag (3 changes), proposal and decision.
@@ -96,7 +98,7 @@ After this task no one edits `src/main.rs`, `src/cli.rs` or a `mod.rs` declarati
 
 ## Exit Criteria
 
-- [ ] The core types round-trip, and the demo's memories and citations are expressible in them (T1.1).
+- [x] The core types round-trip, and the demo's memories and citations are expressible in them (T1.1).
 - [ ] The store reloads, answers its queries, and survives a truncated line (T1.2).
 - [ ] The adapter trait has a conformance test that the fake passes (T1.3).
 - [ ] The model client replays and records (T1.4).
