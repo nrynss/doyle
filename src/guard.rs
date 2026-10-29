@@ -8,12 +8,13 @@
 //!
 //! Deterministic and model-free: the guard loads Doyle's store, takes the
 //! open flags, resolves each flagged memory's cited elements to native
-//! locations (method and path, operation ID, type name) through the contract
-//! named by that flag's `new_version`, and matches the tool input against
-//! them. A broken guard never blocks the agent's work: an unreadable store
-//! or contract allows the action with one warning on stderr. Unparsable
-//! hook input is the one fail-closed case (exit 2): the hook setup itself
-//! is broken and needs attention, and there is no event to route.
+//! locations (method and path, operation ID, type name) through the
+//! contracts named by that flag's old and new versions, and matches the
+//! tool input against them. A broken guard never blocks the agent's work:
+//! an unreadable store or contract allows the action with one warning on
+//! stderr. Unparsable hook input is the one fail-closed case (exit 2):
+//! the hook setup itself is broken and needs attention, and there is no
+//! event to route.
 
 use std::io::Read;
 use std::path::Path;
@@ -313,8 +314,15 @@ fn resolve_against_cwd(raw: &str, cwd: Option<&str>) -> String {
 }
 
 /// Every matchable native location of every open flag: the method and path,
-/// operation ID and type name of each cited element, through the contract
-/// that flag's `new_version` names.
+/// operation ID and type name of each cited element, resolved through BOTH
+/// contracts the flag names. The new version is what made the memory stale;
+/// the old version is what the memory was written against. A rename resolves
+/// through both (the old native location through the old contract, the new
+/// one through the new contract); a removed element resolves only through
+/// the old contract. Each side loads against the agent's cwd exactly as a
+/// single contract did before, and a side that fails to load is skipped:
+/// when no side yields a location the action is allowed with the existing
+/// warning, never fail-closed.
 struct Native {
     method: Option<String>,
     path: Option<String>,
@@ -333,36 +341,51 @@ fn build_match_index(store: &Store, open: &[crate::core::Flag], cwd: Option<&str
     let mut failures: Vec<String> = Vec::new();
     let mut loaded: Vec<(String, Option<ContractIndex>)> = Vec::new();
     for (position, flag) in open.iter().enumerate() {
-        let slot = match loaded.iter().position(|(key, _)| key == &flag.new_version) {
-            Some(slot) => slot,
-            None => {
-                let path = resolve_against_cwd(&flag.new_version, cwd);
-                let index = match ContractIndex::load(&path) {
-                    Ok(index) => Some(index),
-                    Err(_) => {
-                        failures.push(flag.new_version.clone());
-                        None
-                    }
-                };
-                loaded.push((flag.new_version.clone(), index));
-                loaded.len() - 1
+        for version in [&flag.old_version, &flag.new_version] {
+            if loaded.iter().any(|(key, _)| key == version) {
+                continue;
             }
-        };
-        let Some(index) = loaded[slot].1.as_ref() else {
-            continue;
-        };
+            let path = resolve_against_cwd(version, cwd);
+            let index = match ContractIndex::load(&path) {
+                Ok(index) => Some(index),
+                Err(_) => {
+                    failures.push(version.clone());
+                    None
+                }
+            };
+            loaded.push((version.clone(), index));
+        }
         for citation in store.citations_for_memory(&flag.memory) {
             for element in &citation.elements {
-                let Some(location) = index.native_location(element) else {
-                    continue;
-                };
-                natives.push(Native {
-                    method: location.method,
-                    path: location.path,
-                    operation_id: location.operation_id,
-                    type_name: location.type_name,
-                    flag: position,
-                });
+                for version in [&flag.old_version, &flag.new_version] {
+                    let slot = loaded
+                        .iter()
+                        .position(|(key, _)| key == version)
+                        .expect("both flag versions are loaded above");
+                    let Some(index) = loaded[slot].1.as_ref() else {
+                        continue;
+                    };
+                    let Some(location) = index.native_location(element) else {
+                        continue;
+                    };
+                    let native = Native {
+                        method: location.method,
+                        path: location.path,
+                        operation_id: location.operation_id,
+                        type_name: location.type_name,
+                        flag: position,
+                    };
+                    let duplicate = natives.iter().any(|known: &Native| {
+                        known.flag == native.flag
+                            && known.method == native.method
+                            && known.path == native.path
+                            && known.operation_id == native.operation_id
+                            && known.type_name == native.type_name
+                    });
+                    if !duplicate {
+                        natives.push(native);
+                    }
+                }
             }
         }
     }
@@ -384,83 +407,110 @@ struct Candidate {
 fn extract_candidates(strings: &[String]) -> Vec<Candidate> {
     let mut out = Vec::new();
     for text in strings {
-        let methods = methods_for(text);
-        for url in find_urls(text) {
-            if let Some(path) = path_of_url(&url) {
-                for method in &methods {
-                    out.push(Candidate {
-                        method: method.clone(),
-                        path: path.clone(),
-                    });
-                }
-            }
-        }
-        for path in find_bare_paths(text) {
-            for method in &methods {
-                out.push(Candidate {
-                    method: method.clone(),
-                    path: path.clone(),
-                });
-            }
+        for fragment in split_fragments(text) {
+            extract_fragment_candidates(fragment, &mut out);
         }
     }
     out
 }
 
-/// The methods a shell fragment means: every explicit `-X`/`--request`
-/// when any is present, else POST when data flags are present, else GET.
-fn methods_for(text: &str) -> Vec<String> {
-    let mut explicit = Vec::new();
-    let tokens: Vec<&str> = text.split_whitespace().collect();
-    let mut index = 0;
-    while index < tokens.len() {
-        let token = tokens[index];
-        if token == "-X" || token == "--request" {
-            if let Some(next) = tokens.get(index + 1)
-                && next.chars().all(|c| c.is_ascii_alphabetic())
-                && !next.is_empty()
-            {
-                let method = next.to_ascii_uppercase();
-                if !explicit.contains(&method) {
-                    explicit.push(method);
-                }
-            }
-            index += 1;
-        } else if let Some(rest) = token.strip_prefix("-X")
-            && !rest.is_empty()
-            && rest.chars().all(|c| c.is_ascii_alphabetic())
-        {
-            let method = rest.to_ascii_uppercase();
-            if !explicit.contains(&method) {
-                explicit.push(method);
-            }
-        } else if let Some(rest) = token.strip_prefix("--request=")
-            && !rest.is_empty()
-            && rest.chars().all(|c| c.is_ascii_alphabetic())
-        {
-            let method = rest.to_ascii_uppercase();
-            if !explicit.contains(&method) {
-                explicit.push(method);
+/// Every action in one shell fragment: each URL and each bare path takes
+/// the method of the nearest `-X`/`--request` flag before it in that
+/// fragment (see [`method_for_token`]).
+fn extract_fragment_candidates(fragment: &str, out: &mut Vec<Candidate>) {
+    let tokens: Vec<&str> = fragment.split_whitespace().collect();
+    for (index, token) in tokens.iter().enumerate() {
+        let method = method_for_token(&tokens, index);
+        for url in find_urls(token) {
+            if let Some(path) = path_of_url(&url) {
+                out.push(Candidate {
+                    method: method.clone(),
+                    path,
+                });
             }
         }
-        index += 1;
+        for path in bare_paths_in_token(token) {
+            out.push(Candidate {
+                method: method.clone(),
+                path,
+            });
+        }
     }
-    if !explicit.is_empty() {
-        return explicit;
+}
+
+/// Command boundaries: a fragment ends at `;`, `&&`, `||` or a newline.
+/// A lone `&` (background) or `|` (pipe) is not a boundary: the right-hand
+/// side still runs under the same command.
+fn split_fragments(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut indices = text.char_indices().peekable();
+    while let Some((index, c)) = indices.next() {
+        if c == ';' || c == '\n' || c == '\r' {
+            out.push(&text[start..index]);
+            start = index + c.len_utf8();
+        } else if (c == '&' || c == '|') && indices.peek().is_some_and(|(_, next)| *next == c) {
+            out.push(&text[start..index]);
+            indices.next();
+            start = index + 2 * c.len_utf8();
+        }
     }
-    let data = tokens.iter().any(|t| {
-        *t == "-d"
-            || *t == "-F"
-            || *t == "--form"
-            || *t == "--data"
-            || t.starts_with("--data-")
-            || t.starts_with("--form-")
-    });
-    if data {
-        vec![String::from("POST")]
+    out.push(&text[start..]);
+    out
+}
+
+/// The method for the URL or bare path in `tokens[index]`: the method named
+/// by the nearest `-X`/`--request` flag before it in the same fragment;
+/// when no method flag precedes it, POST when the fragment carries data
+/// flags, else GET.
+fn method_for_token(tokens: &[&str], index: usize) -> String {
+    let mut before = index;
+    while before > 0 {
+        before -= 1;
+        if let Some(method) = method_flag_at(tokens, before) {
+            return method;
+        }
+    }
+    if tokens.iter().any(is_data_flag) {
+        String::from("POST")
     } else {
-        vec![String::from("GET")]
+        String::from("GET")
     }
+}
+
+/// The method a `-X`/`--request` flag at `tokens[index]` names, if any:
+/// `-X POST`, `--request POST`, `-XPOST` and `--request=POST`. A bare `-X`
+/// with no usable next token names nothing.
+fn method_flag_at(tokens: &[&str], index: usize) -> Option<String> {
+    let token = tokens[index];
+    if token == "-X" || token == "--request" {
+        return tokens
+            .get(index + 1)
+            .filter(|next| !next.is_empty() && next.chars().all(|c| c.is_ascii_alphabetic()))
+            .map(|next| next.to_ascii_uppercase());
+    }
+    if let Some(rest) = token.strip_prefix("-X")
+        && !rest.is_empty()
+        && rest.chars().all(|c| c.is_ascii_alphabetic())
+    {
+        return Some(rest.to_ascii_uppercase());
+    }
+    if let Some(rest) = token.strip_prefix("--request=")
+        && !rest.is_empty()
+        && rest.chars().all(|c| c.is_ascii_alphabetic())
+    {
+        return Some(rest.to_ascii_uppercase());
+    }
+    None
+}
+
+fn is_data_flag(token: &&str) -> bool {
+    *token == "-d"
+        || *token == "-F"
+        || *token == "--form"
+        || *token == "--data"
+        || token.starts_with("--data-")
+        || token.starts_with("--form-")
 }
 
 /// Every `http(s)` URL in the text, cut at whitespace, quotes, angle
@@ -486,33 +536,50 @@ fn find_urls(text: &str) -> Vec<String> {
 }
 
 /// The path component of a URL: from the first `/` after the host, without
-/// query or fragment.
+/// query or fragment, trailing slashes or trailing dots.
 fn path_of_url(url: &str) -> Option<String> {
     let after_scheme = url.split("://").nth(1)?;
     let path = match after_scheme.find('/') {
         Some(index) => &after_scheme[index..],
         None => return Some(String::from("/")),
     };
-    let end = path.find(['?', '#']).unwrap_or(path.len());
-    Some(path[..end].to_string())
+    Some(normalize_path(path))
 }
 
-/// Bare path tokens (`/patients`, not inside a URL) in a shell fragment,
-/// without query or fragment.
-fn find_bare_paths(text: &str) -> Vec<String> {
+/// The matchable form of a candidate path: without query or fragment, with
+/// trailing slashes and trailing dots dropped (`/patients/`, `/patients.`
+/// and `/patients./` all mean `/patients`). An empty result means the root.
+fn normalize_path(raw: &str) -> String {
+    let end = raw.find(['?', '#']).unwrap_or(raw.len());
+    let trimmed = raw[..end].trim_end_matches(['/', '.']);
+    if trimmed.is_empty() {
+        String::from("/")
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// Bare paths (`/patients`, not inside a URL) in one whitespace-separated
+/// token: every `/`-led run after splitting on quotes, brackets, commas and
+/// the like, so both a lone `/patients` and `fetch("/patients")` match.
+/// `//host/...` runs are host leftovers, not paths, and are skipped.
+fn bare_paths_in_token(token: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for token in text.split_whitespace() {
-        let token =
-            token.trim_matches(|c: char| matches!(c, '"' | '\'' | '(' | ')' | '`' | ',' | ';'));
-        if token.len() < 2 || !token.starts_with('/') || token.contains("://") {
+    for part in token.split(|c: char| {
+        matches!(
+            c,
+            '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' | '`' | ',' | ';' | '<' | '>' | '='
+        )
+    }) {
+        if part.len() < 2 || !part.starts_with('/') || part.starts_with("//") {
             continue;
         }
-        let path = match token.find(['?', '#']) {
-            Some(index) => &token[..index],
-            None => token,
-        };
-        if path.len() > 1 && path.split('/').all(|segment| !segment.is_empty()) {
-            out.push(path.to_string());
+        if part.contains("://") {
+            continue;
+        }
+        let path = normalize_path(part);
+        if path.split('/').skip(1).all(|segment| !segment.is_empty()) {
+            out.push(path);
         }
     }
     out
@@ -718,14 +785,27 @@ mod tests {
 
     /// A store with one open flag on one memory citing `elements`.
     fn seed_single_flag(dir: &Path, memory: &str, claim: &str, elements: &[&str]) -> Store {
-        let mut store = Store::open(dir).unwrap();
-        store
-            .record_citation(citation(memory, claim, elements))
-            .unwrap();
         let v2 = std::path::absolute(fixture("contracts/patients-v2.yaml"))
             .unwrap()
             .to_string_lossy()
             .to_string();
+        seed_flag_with_versions(dir, memory, claim, elements, "v1", &v2)
+    }
+
+    /// A store with one open flag on one memory, with explicit contract
+    /// versions: the rename/removal tests point both at temp contracts.
+    fn seed_flag_with_versions(
+        dir: &Path,
+        memory: &str,
+        claim: &str,
+        elements: &[&str],
+        old_version: &str,
+        new_version: &str,
+    ) -> Store {
+        let mut store = Store::open(dir).unwrap();
+        store
+            .record_citation(citation(memory, claim, elements))
+            .unwrap();
         store
             .record_flag(Flag {
                 id: String::new(),
@@ -737,12 +817,25 @@ mod tests {
                     "vc2_test00000000000000000000000000000001".to_string(),
                 )],
                 severity: Severity::Review,
-                old_version: "v1".to_string(),
-                new_version: v2,
+                old_version: old_version.to_string(),
+                new_version: new_version.to_string(),
                 evidence: Some(claim.to_string()),
             })
             .unwrap();
         store
+    }
+
+    /// The element ID of the operation named `name` in `contract`.
+    fn operation_element(contract: &ContractIndex, name: &str) -> ElementId {
+        contract
+            .entities()
+            .iter()
+            .find_map(|entity| {
+                let location = contract.native_location(&ElementId(entity.id.clone()))?;
+                (location.operation_id.as_deref() == Some(name))
+                    .then(|| ElementId(entity.id.clone()))
+            })
+            .unwrap_or_else(|| panic!("operation {name} in contract"))
     }
 
     fn cli_for(dir: &Path) -> cli::Cli {
@@ -762,7 +855,11 @@ mod tests {
     }
 
     fn bash_hook(command: &str) -> String {
-        let escaped = command.replace('\\', "\\\\").replace('"', "\\\"");
+        let escaped = command
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r");
         hook_json(
             "/tmp/scratch/repo-a",
             "bash",
@@ -1106,6 +1203,278 @@ mod tests {
             elapsed < std::time::Duration::from_secs(5),
             "one call must stay well under hook timeouts, took {elapsed:?}"
         );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn bare_path_in_write_is_denied() {
+        let dir = temp_state_dir("bare");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        let input = hook_json(
+            "/tmp/scratch/repo-a",
+            "write_file",
+            "{\"content\":\"/patients\",\"path\":\"notes.txt\"}",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        let value = is_deny(code, &out);
+        let reason = value["hookSpecificOutput"]["permissionDecisionReason"]
+            .as_str()
+            .expect("reason is a string");
+        assert!(
+            reason.contains("GET /patients"),
+            "reason names what changed: {reason}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fetch_style_edit_is_denied() {
+        let dir = temp_state_dir("fetch");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        let input = hook_json(
+            "/tmp/scratch/repo-a",
+            "edit_file",
+            "{\"edits\":[{\"newText\":\"fetch(\\\"/patients\\\")\",\"oldText\":\"x\"}],\"path\":\"app.js\"}",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn trailing_slash_and_dot_paths_are_denied() {
+        let dir = temp_state_dir("slashdot");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        // Trailing slash on a URL still matches.
+        let input = bash_hook("curl -s http://127.0.0.1:8091/patients/");
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        // Trailing dot on a URL still matches.
+        let input = bash_hook("curl -s http://127.0.0.1:8091/patients.");
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        // Trailing dot on a bare path still matches.
+        let input = hook_json(
+            "/tmp/scratch/repo-a",
+            "write_file",
+            "{\"content\":\"see /patients. for the list\",\"path\":\"notes.txt\"}",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn mixed_method_chain_denies_flagged_fetch_in_both_orders() {
+        let dir = temp_state_dir("chain");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        // The flagged GET fetch denies even beside an unrelated DELETE.
+        let input = bash_hook(
+            "curl -s http://127.0.0.1:8091/patients; curl -X DELETE http://127.0.0.1:8091/patients/abc",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        // Same when the DELETE comes first: the -X must not leak across.
+        let input = bash_hook(
+            "curl -X DELETE http://127.0.0.1:8091/patients/abc && curl -s http://127.0.0.1:8091/patients",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        // Newline-separated too.
+        let input = bash_hook(
+            "curl -X DELETE http://127.0.0.1:8091/patients/abc\ncurl -s http://127.0.0.1:8091/patients",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn data_flag_means_post_for_its_fragment() {
+        let dir = temp_state_dir("dataflag");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        // -d means POST: another action, allowed against flagged GET.
+        let input = bash_hook("curl -d '{\"name\":\"x\"}' http://127.0.0.1:8091/patients");
+        let (code, out, err) = decide(&input, &cli);
+        is_allow(code, &out, &err);
+        // The -d must not leak into the next fragment either.
+        let input = bash_hook(
+            "curl -d '{\"name\":\"x\"}' http://127.0.0.1:8091/patients; curl -s http://127.0.0.1:8091/patients",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn delete_only_fragment_allows() {
+        let dir = temp_state_dir("deleteonly");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        // DELETE on an unflagged path is not the flagged GET /patients.
+        let input = bash_hook("curl -X DELETE http://127.0.0.1:8091/patients/abc");
+        let (code, out, err) = decide(&input, &cli);
+        is_allow(code, &out, &err);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Temp old/new contract pair: `getWidget` is renamed to
+    /// `getWidgetRenamed` on the same path, and `GET /gone` is removed.
+    const RENAME_OLD_YAML: &str = r#"openapi: 3.0.3
+info:
+  title: Rename repro service
+  version: 1.0.0
+paths:
+  /widget:
+    get:
+      operationId: getWidget
+      summary: Fetch the widget
+      responses:
+        "200":
+          description: The widget
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string }
+  /gone:
+    get:
+      operationId: getGone
+      summary: An endpoint that will be removed
+      responses:
+        "200": { description: Gone }
+"#;
+
+    const RENAME_NEW_YAML: &str = r#"openapi: 3.0.3
+info:
+  title: Rename repro service
+  version: 2.0.0
+paths:
+  /widget:
+    get:
+      operationId: getWidgetRenamed
+      summary: Fetch the widget
+      responses:
+        "200":
+          description: The widget
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string }
+"#;
+
+    /// A store with two open flags over the rename/removal pair: M9 cites
+    /// the renamed operation, M8 the removed one. Both flags name the temp
+    /// contracts as their old and new versions.
+    fn seed_rename_store(dir: &Path) -> Store {
+        let old = dir.join("old.yaml");
+        let new = dir.join("new.yaml");
+        std::fs::write(&old, RENAME_OLD_YAML).unwrap();
+        std::fs::write(&new, RENAME_NEW_YAML).unwrap();
+        let old_index = ContractIndex::load(&old).unwrap();
+        let widget = operation_element(&old_index, "getWidget").0;
+        let gone = operation_element(&old_index, "getGone").0;
+        let old_version = old.to_string_lossy().to_string();
+        let new_version = new.to_string_lossy().to_string();
+        let mut store = Store::open(dir).unwrap();
+        store
+            .record_citation(citation(
+                "M9",
+                "getWidget fetches the widget",
+                &[widget.as_str()],
+            ))
+            .unwrap();
+        store
+            .record_citation(citation(
+                "M8",
+                "GET /gone returns the gone thing",
+                &[gone.as_str()],
+            ))
+            .unwrap();
+        for (memory, claim) in [
+            ("M9", "getWidget fetches the widget"),
+            ("M8", "GET /gone returns the gone thing"),
+        ] {
+            store
+                .record_flag(Flag {
+                    id: String::new(),
+                    memory: MemoryRef {
+                        adapter: "muse-code".to_string(),
+                        id: memory.to_string(),
+                    },
+                    changes: vec![ChangeId(
+                        "vc2_test00000000000000000000000000000001".to_string(),
+                    )],
+                    severity: Severity::Review,
+                    old_version: old_version.clone(),
+                    new_version: new_version.clone(),
+                    evidence: Some(claim.to_string()),
+                })
+                .unwrap();
+        }
+        store
+    }
+
+    #[test]
+    fn rename_old_name_denies() {
+        let dir = temp_state_dir("rename");
+        seed_rename_store(&dir);
+        let cli = cli_for(&dir);
+        // The old operation name denies: the memory was written against it.
+        let input = hook_json(
+            "/tmp/scratch/repo-a",
+            "write_file",
+            "{\"content\":\"call getWidget() to fetch totals\",\"path\":\"notes.txt\"}",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        // The new name denies too: same element, new version.
+        let input = hook_json(
+            "/tmp/scratch/repo-a",
+            "write_file",
+            "{\"content\":\"call getWidgetRenamed() to fetch totals\",\"path\":\"notes.txt\"}",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        // The path denies under both names' shared method and path.
+        let input = bash_hook("curl -s http://127.0.0.1:8091/widget");
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn removed_endpoint_denies() {
+        let dir = temp_state_dir("removed");
+        seed_rename_store(&dir);
+        let cli = cli_for(&dir);
+        // The removed path denies: it resolves through the old contract.
+        let input = bash_hook("curl -s http://127.0.0.1:8091/gone");
+        let (code, out, _) = decide(&input, &cli);
+        let value = is_deny(code, &out);
+        let reason = value["hookSpecificOutput"]["permissionDecisionReason"]
+            .as_str()
+            .expect("reason is a string");
+        assert!(
+            reason.contains("M8"),
+            "reason names the removed endpoint's memory: {reason}"
+        );
+        // So does the removed operation name.
+        let input = hook_json(
+            "/tmp/scratch/repo-a",
+            "write_file",
+            "{\"content\":\"call getGone() for the old export\",\"path\":\"notes.txt\"}",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -80,23 +80,43 @@ in `testdata/muse/hooks/` and a seeded fixture store with M1's flag open.
    segment matches any single non-empty segment. `GET /patients/{id}`
    matches `/patients/42` but never `/patients`; `GET /patients` never
    matches `/patients/42`.
-2. **Queries are stripped, trailing slashes tolerated, methods compared
-   case-insensitively, paths case-sensitively.** `curl
-   ".../patients?cursor=abc&limit=100"` still matches `GET /patients`;
-   `curl -X POST .../patients` does not match a flagged `GET`.
-3. **One method per shell fragment.** An explicit `-X`/`--request` in a
-   `;`/`&&`/`||`-separated fragment applies to that fragment's URLs;
-   otherwise a fragment with data flags means POST, else GET.
-4. **Operation IDs and type names match as whole identifiers,
+2. **Queries are stripped, trailing slashes and trailing dots dropped,
+   methods compared case-insensitively, paths case-sensitively.** `curl
+   ".../patients?cursor=abc&limit=100"` still matches `GET /patients`,
+   as do `.../patients/` and `.../patients.`; `curl -X POST .../patients`
+   does not match a flagged `GET`.
+3. **One method per URL, from the nearest preceding flag in its
+   fragment.** The tool input is split into fragments at `;`, `&&`, `||`
+   and newlines (a lone `&` or `|` is not a boundary). Each URL or bare
+   path in a fragment takes the method of the nearest `-X`/`--request`
+   flag before it in that fragment; when no method flag precedes it, a
+   fragment carrying data flags (`-d`, `-F`, `--data*`, `--form*`) means
+   POST, else GET. So `curl -X DELETE .../patients/abc; curl
+   .../patients` still denies the flagged `GET` fetch, in either order.
+4. **Bare paths match too.** Each whitespace-separated token is split
+   further on quotes, brackets, backticks, commas, semicolons, angle
+   brackets and `=`; every `/`-led run that is neither a URL (no `://`)
+   nor a `//host` leftover counts, without its query or fragment, and only
+   when every segment after the leading slash is non-empty. So a
+   `write_file` content of exactly `/patients` denies, as does
+   `fetch("/patients")` in an edit.
+5. **Operation IDs and type names match as whole identifiers,
    case-sensitively.** `getStats` never matches `getStatistics` or
    `xgetStats`; `Stats` never matches `status` or `MyStats`.
-5. **Field names never match.** `patient_count` in a tool input does not
+6. **Field names never match.** `patient_count` in a tool input does not
    flag, by decision: field-level signals are too noisy, and the
    operation and type anchors carry the match.
-6. **The internal `submit_reminder_decision` tool always passes**, before
+7. **Each flag is matched through both its contracts.** Every cited
+   element is resolved through the flag's old version (what the memory
+   was written against) and its new version (what made it stale); a side
+   that fails to load is skipped. A rename therefore matches both names,
+   and a removed endpoint still matches through the old contract. When
+   no side yields a location, the action is allowed with a warning, never
+   blocked.
+8. **The internal `submit_reminder_decision` tool always passes**, before
    any state is read.
-7. **Unknown tool names pass unseen.** Allow unknown, deny known-bad.
-8. **Unknown event names pass silently**, so a future event the guard
+9. **Unknown tool names pass unseen.** Allow unknown, deny known-bad.
+10. **Unknown event names pass silently**, so a future event the guard
    does not know stays out of the agent's way.
 
 Only the host-independent part of a URL is matched: the path (and the
