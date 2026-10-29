@@ -3,8 +3,9 @@
 //! The transport is deliberately behind a small seam ([`HttpTransport`])
 //! so the client, its retry, parsing and usage/cost logic can be exercised
 //! offline with a fake transport serving recorded HTTP replies. The
-//! ureq-backed transport implementation lands with T3.3's dependency line
-//! and is wired in later; this module never touches `Cargo.toml`.
+//! ureq (already a dependency on main via T3.3) is not used directly here:
+//! the ureq-backed transport is wired in separately; this module never
+//! touches `Cargo.toml`.
 //!
 //! The key is read from the environment at call time (see
 //! [`BasetenModelClient::DEFAULT_ENV_VAR`], `BASETEN_API_KEY`), never stored,
