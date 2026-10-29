@@ -12,7 +12,7 @@ requires:   [T1.2, T3.1, T3.3, T4.3]
 fixture-ok: yes
 size:       S · mid
 owns:       src/curate.rs
-status:     in-review
+status:     done
 ```
 For each configured adapter, list memories, skip those already cited at their current text, run the curator against the current contract, and write citations. `--dry-run` prints what it would cite. A memory the curator ties to nothing is recorded as such, so it isn't asked again until its text changes.
 
@@ -56,7 +56,7 @@ Apply a person's decision to a proposal: approve (write the correction), edit th
 
 ## Exit Criteria
 
-- [ ] `doyle curate` cites memories from both systems, idempotently (T5.1).
+- [x] `doyle curate` cites memories from both systems, idempotently (T5.1).
 - [ ] `doyle check` produces flags with proposals (T5.2).
 - [ ] A decision lands in every system that holds the memory, and partial failure is visible (T5.3).
 - [ ] The demo runs offline end to end: curate, check, decide, with fixtures and replays only.
