@@ -56,7 +56,7 @@ requires:   [T2.2, T1.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/check.rs
-status:     in-review
+status:     done
 ```
 `doyle check OLD NEW`: load both contracts, diff, flag against the store, write the flags, print a report. `--format markdown|json`. Exit codes: 0 nothing flagged, 1 flags written, 2 error, so CI can fail a build on stale memory. Proposals are added in T5.2.
 
