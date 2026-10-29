@@ -8,12 +8,12 @@
 
 mod replay;
 
+pub mod baseten;
+pub mod meta;
+
 use std::hash::Hash;
 use std::hash::Hasher;
 
-// Re-exported for callers and tests; the allow keeps the gate quiet until
-// T1.5 turns the crate into a library.
-#[allow(unused_imports)]
 pub use replay::{RecordingClient, ReplayClient};
 
 use serde::{Deserialize, Serialize};

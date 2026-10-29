@@ -1,53 +1,33 @@
 //! Doyle: truth maintenance for agent memory.
 
-// The adapters have no in-crate user until P3 builds the real ones;
-// the allow keeps the gate quiet until then.
-#[allow(dead_code)]
-mod adapters;
-
-// The contract index has no in-crate user until T2.3 wires up `doyle check`;
-// the allow keeps the gate quiet until then.
-#[allow(dead_code)]
-mod contract;
-
-// The core has no in-crate user until T1.5 turns this into a library;
-// the allow keeps the gate quiet until then.
-#[allow(dead_code)]
-mod core;
-
-// The models have no in-crate user until T1.5 turns this into a library;
-// the allow keeps the gate quiet until then.
-#[allow(dead_code)]
-mod models;
-
 use std::process::ExitCode;
 
-const USAGE: &str = "\
-doyle: truth maintenance for agent memory
-
-Usage:
-  doyle check <OLD> <NEW>   Flag the memories a contract change has made stale
-  doyle serve               Run the review page
-";
+use doyle_tms::cli;
 
 fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    match args.first().map(String::as_str) {
-        Some("check") | Some("serve") => {
-            eprintln!("doyle {}: not implemented yet", args[0]);
-            ExitCode::from(2)
-        }
-        Some("-h") | Some("--help") => {
-            print!("{USAGE}");
+    match cli::parse() {
+        cli::ParseResult::Help(command) => {
+            print!("{}", cli::help_text(command.as_deref()));
             ExitCode::SUCCESS
         }
-        Some("-V") | Some("--version") => {
+        cli::ParseResult::Version => {
             println!("doyle {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
         }
-        _ => {
-            eprint!("{USAGE}");
+        cli::ParseResult::Error(message) => {
+            eprintln!("{message}");
             ExitCode::from(2)
         }
+        cli::ParseResult::Run(cli_value) => dispatch(cli_value),
+    }
+}
+
+fn dispatch(cli_value: cli::Cli) -> ExitCode {
+    match cli_value.command {
+        cli::Command::Curate => doyle_tms::curate::run(&cli_value),
+        cli::Command::Cite => doyle_tms::cite::run(&cli_value),
+        cli::Command::Check { .. } => doyle_tms::check::run(&cli_value),
+        cli::Command::Serve => doyle_tms::serve::run(&cli_value),
+        cli::Command::Guard => doyle_tms::guard::run(&cli_value),
     }
 }

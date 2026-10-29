@@ -6,10 +6,9 @@
 
 mod fake;
 
-// Re-exported for the core's tests now, and for the real adapters' conformance
-// runs once T1.5 turns the crate into a library; the allow keeps the gate
-// quiet until then.
-#[allow(unused_imports)]
+pub mod lambo;
+pub mod muse_code;
+
 pub use fake::FakeAdapter;
 
 use crate::core::{Memory, MemoryRef};
