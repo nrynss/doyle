@@ -4,6 +4,11 @@
 //! `ElementId` or by its native location (`GET /patients`, or
 //! `GET /patients 200` to pick a particular response). An element the
 //! contract does not have is refused, with the closest matches named.
+//!
+//! Resolution rules: an unqualified native location (`GET /patients`) with
+//! more than one matching entity defaults to the operation when one exists;
+//! a qualifier (`GET /patients 200`) that matches nothing is refused rather
+//! than falling through to another element.
 
 use std::collections::BTreeSet;
 use std::io::{self, Read};
@@ -13,7 +18,7 @@ use serde_json::Value;
 
 use crate::cli;
 use crate::contract::ContractIndex;
-use crate::core::{Citation, ElementId, MemoryRef};
+use crate::core::{Citation, ElementId, MemoryRef, Store};
 
 /// A citation as supplied to `doyle cite`.
 #[derive(Debug, Clone)]
@@ -35,7 +40,6 @@ pub enum CiteError {
         suggestions: Vec<String>,
     },
     Contract(String),
-    Store(String),
     Input(String),
 }
 
@@ -46,7 +50,6 @@ impl std::fmt::Display for CiteError {
                 write!(f, "unknown element: {spec}")
             }
             CiteError::Contract(m) => write!(f, "contract: {m}"),
-            CiteError::Store(m) => write!(f, "store: {m}"),
             CiteError::Input(m) => write!(f, "input: {m}"),
         }
     }
@@ -68,6 +71,12 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         return ExitCode::from(2);
     }
 
+    run_with_input(cli, &input, &state_dir)
+}
+
+/// Inner entry point: parse `input`, resolve, and record through the store.
+/// Split out so tests can feed piped input without touching process stdin.
+pub fn run_with_input(cli: &cli::Cli, input: &str, state_dir: &str) -> ExitCode {
     let trimmed = input.trim();
     let specs = match parse_specs(trimmed, cli) {
         Ok(s) => s,
@@ -82,10 +91,13 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         return ExitCode::from(2);
     }
 
-    if let Err(e) = std::fs::create_dir_all(&state_dir) {
-        eprintln!("doyle cite: io error: {e}");
-        return ExitCode::from(2);
-    }
+    let mut store = match Store::open(state_dir) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("doyle cite: {e}");
+            return ExitCode::from(2);
+        }
+    };
 
     for spec in &specs {
         let contract = match ContractIndex::load(&spec.contract) {
@@ -96,17 +108,11 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
             }
         };
 
-        let entities = match load_entities(&spec.contract) {
-            Ok(e) => e,
-            Err(m) => {
-                eprintln!("doyle cite: {m}");
-                return ExitCode::from(2);
-            }
-        };
+        let entities = contract.entities();
 
         let mut elements = Vec::new();
         for raw in &spec.elements {
-            match resolve_element(&entities, raw) {
+            match resolve_element(entities, raw) {
                 Ok(id) => elements.push(id),
                 Err(suggestions) => {
                     eprintln!("doyle cite: unknown element: {raw}");
@@ -137,35 +143,10 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
             confidence: spec.confidence,
         };
 
-        let line = match serde_json::to_string(&citation) {
-            Ok(l) => l,
-            Err(e) => {
-                eprintln!("doyle cite: json error: {e}");
-                return ExitCode::from(2);
-            }
-        };
-        let path = std::path::Path::new(&state_dir).join("citations.jsonl");
-        use std::io::Write;
-        let mut f = match std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-        {
-            Ok(f) => f,
-            Err(e) => {
-                eprintln!("doyle cite: io error: {e}");
-                return ExitCode::from(2);
-            }
-        };
-        if let Err(e) = writeln!(f, "{}", line) {
-            eprintln!("doyle cite: io error: {e}");
+        if let Err(e) = store.record_citation(citation) {
+            eprintln!("doyle cite: {e}");
             return ExitCode::from(2);
         }
-        let _ = f.flush();
-
-        // Keep the loaded contract index referenced so a future reader can
-        // see the connection; silence unused-variable warnings.
-        let _ = &contract;
     }
 
     let n = specs.len();
@@ -184,10 +165,12 @@ fn parse_specs(input: &str, cli: &cli::Cli) -> Result<Vec<CiteSpec>, CiteError> 
         return Err(CiteError::Input(String::from("no input on stdin")));
     }
 
-    // JSON path.
-    if trimmed.starts_with('{') || trimmed.starts_with('[') {
-        let value: Value = serde_json::from_str(trimmed)
-            .map_err(|e| CiteError::Input(format!("invalid JSON: {e}")))?;
+    // JSON path: try to parse the whole input as one JSON value. On failure
+    // (e.g. JSONL with two objects on two lines, or trailing characters) fall
+    // through to the per-line parse below instead of returning an error.
+    if (trimmed.starts_with('{') || trimmed.starts_with('['))
+        && let Ok(value) = serde_json::from_str::<Value>(trimmed)
+    {
         let mut specs = Vec::new();
         match value {
             Value::Array(items) => {
@@ -200,10 +183,6 @@ fn parse_specs(input: &str, cli: &cli::Cli) -> Result<Vec<CiteSpec>, CiteError> 
             }
             _ => return Err(CiteError::Input(String::from("expected object or array"))),
         }
-        // JSONL: if the first parse failed but there are multiple lines of JSON,
-        // the above would already have failed; handle JSONL separately below is
-        // not reached. Try JSONL as a fallback only when the whole input did not
-        // parse as one JSON value.
         return Ok(specs);
     }
 
@@ -244,6 +223,15 @@ fn parse_specs(input: &str, cli: &cli::Cli) -> Result<Vec<CiteSpec>, CiteError> 
                 spec.elements.push(l.to_string());
             }
         }
+    }
+    // Apply env fallbacks and required-field validation, mirroring the JSON
+    // path so a missing memory id or contract is refused.
+    apply_env(&mut spec);
+    if spec.memory_id.is_empty() {
+        return Err(CiteError::Input(String::from("memory id is required")));
+    }
+    if spec.contract.is_empty() {
+        return Err(CiteError::Input(String::from("contract path is required")));
     }
     Ok(vec![spec])
 }
@@ -492,9 +480,12 @@ pub fn resolve_element(
                         || (qualifier == "result" && kind.contains("result"))
                 })
                 .collect();
-            if !filtered.is_empty() {
-                candidates = filtered;
+            // A qualifier that matches nothing must refuse, not fall through
+            // to the unqualified (lowest-id-first) candidate set.
+            if filtered.is_empty() {
+                return Err(suggestions_for(entities, spec));
             }
+            candidates = filtered;
         }
 
         if !candidates.is_empty() {
@@ -643,5 +634,267 @@ mod tests {
     fn levenshtein_basic() {
         assert_eq!(levenshtein("kitten", "sitting"), 3);
         assert_eq!(levenshtein("", "abc"), 3);
+    }
+
+    #[test]
+    fn bogus_qualifier_refuses() {
+        let path = fixture("contracts/patients-v1.yaml");
+        let entities = load_entities(&path).unwrap();
+        // GET /patients 201 must refuse, not cite the 200 response.
+        assert!(resolve_element(&entities, "GET /patients 201").is_err());
+    }
+
+    #[test]
+    fn jsonl_two_objects_parses() {
+        let cli = cli::Cli {
+            command: cli::Command::Cite,
+            common: cli::CommonOpts::default(),
+        };
+        let input = format!(
+            "{{\"memory\":{{\"adapter\":\"muse-code\",\"id\":\"M1\"}},\"contract\":\"{}\",\"elements\":[\"GET /patients\"]}}\n{{\"memory\":{{\"adapter\":\"muse-code\",\"id\":\"M2\"}},\"contract\":\"{}\",\"elements\":[\"GET /patients\"]}}\n",
+            fixture("contracts/patients-v1.yaml"),
+            fixture("contracts/patients-v1.yaml")
+        );
+        let specs = parse_specs(&input, &cli).unwrap();
+        assert_eq!(specs.len(), 2);
+        assert_eq!(specs[0].memory_id, "M1");
+        assert_eq!(specs[1].memory_id, "M2");
+    }
+
+    #[test]
+    fn keyvalue_missing_memory_id_refused() {
+        let cli = cli::Cli {
+            command: cli::Command::Cite,
+            common: cli::CommonOpts::default(),
+        };
+        let input = format!(
+            "contract={}\nelement=GET /patients\n",
+            fixture("contracts/patients-v1.yaml")
+        );
+        let err = parse_specs(&input, &cli).unwrap_err();
+        match err {
+            CiteError::Input(m) => assert!(m.contains("memory id is required"), "{m}"),
+            other => panic!("expected Input, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn index_agreement_for_resolution() {
+        let path = fixture("contracts/patients-v1.yaml");
+        let entities = load_entities(&path).unwrap();
+        let index = ContractIndex::load(&path).unwrap();
+        for spec in [
+            "GET /patients",
+            "GET /patients 200",
+            "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+        ] {
+            let a = resolve_element(&entities, spec);
+            let b = resolve_element(index.entities(), spec);
+            assert_eq!(a, b, "mismatch for {spec}");
+        }
+    }
+
+    fn bin_path() -> String {
+        format!("{}/target/debug/doyle", env!("CARGO_MANIFEST_DIR"))
+    }
+
+    #[test]
+    fn cite_then_flags_exactly_m1() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        const LIST_PATIENTS: &str =
+            "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6";
+        const LIST_PATIENTS_200: &str =
+            "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba";
+        const GET_PATIENT: &str =
+            "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5";
+        const GET_PATIENT_404: &str =
+            "ve2_6add08d53def059f4e973257dc9e174a5398208bce2fa4d719e0418ca523349e";
+        const GET_STATS: &str =
+            "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c";
+        const PATIENT_COUNT: &str =
+            "ve2_99aaf77708e08db6ee0c7bd151e3044ef33e089e1bbe915fe889e7330b79058f";
+        const DECOMMISSION: &str =
+            "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846";
+
+        let v1 = fixture("contracts/patients-v1.yaml");
+        let v2 = fixture("contracts/patients-v2.yaml");
+        let tmp = std::env::temp_dir().join(format!("doyle-cite-l1-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let state = tmp.join("state");
+
+        let input = format!(
+            r#"[{{"memory":{{"adapter":"muse-code","id":"M1"}},"contract":"{c}","elements":["{a}","{b}"],"claim":"GET /patients returns every patient in one response"}},
+{{"memory":{{"adapter":"muse-code","id":"M2"}},"contract":"{c}","elements":["{d}","{e}"],"claim":"GET /patients/{{id}} returns 404"}},
+{{"memory":{{"adapter":"muse-code","id":"M3"}},"contract":"{c}","elements":["{f}","{g}"],"claim":"patient_count total"}},
+{{"memory":{{"adapter":"muse-code","id":"M4"}},"contract":"{c}","elements":["{h}"],"claim":"decommission permanent"}}]"#,
+            c = v1,
+            a = LIST_PATIENTS,
+            b = LIST_PATIENTS_200,
+            d = GET_PATIENT,
+            e = GET_PATIENT_404,
+            f = GET_STATS,
+            g = PATIENT_COUNT,
+            h = DECOMMISSION
+        );
+
+        let mut child = Command::new(bin_path())
+            .args(["cite", "--state-dir", state.to_str().unwrap()])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("spawn doyle");
+        child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert!(
+            out.status.success(),
+            "cite failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+
+        let store = Store::open(&state).unwrap();
+        assert_eq!(store.citations().len(), 4);
+
+        let old = ContractIndex::load(&v1).unwrap();
+        let new = ContractIndex::load(&v2).unwrap();
+        let changes = old.diff(&new).unwrap();
+        let flags = crate::core::flag_citations(
+            store.citations(),
+            &changes,
+            &old,
+            &store.open_flags(),
+            "v1",
+            "v2",
+        );
+        let ids: Vec<&str> = flags.iter().map(|f| f.memory.id.as_str()).collect();
+        assert_eq!(ids, vec!["M1"], "expected exactly {{M1}}, got {ids:?}");
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn cite_store_roundtrip_identity() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        const LIST_PATIENTS: &str =
+            "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6";
+
+        let v1 = fixture("contracts/patients-v1.yaml");
+        let tmp = std::env::temp_dir().join(format!("doyle-cite-rt-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let state = tmp.join("state");
+
+        let input = format!(
+            r#"{{"memory":{{"adapter":"muse-code","id":"M9"}},"contract":"{c}","elements":["{e}"],"claim":"hello","recorded_by":"curator","confidence":0.5}}"#,
+            c = v1,
+            e = LIST_PATIENTS
+        );
+
+        let mut child = Command::new(bin_path())
+            .args(["cite", "--state-dir", state.to_str().unwrap()])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("spawn doyle");
+        child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+
+        let store = Store::open(&state).unwrap();
+        assert_eq!(store.citations().len(), 1);
+        let c = &store.citations()[0];
+        assert_eq!(c.memory.adapter, "muse-code");
+        assert_eq!(c.memory.id, "M9");
+        assert_eq!(c.elements, vec![ElementId(LIST_PATIENTS.to_string())]);
+        assert_eq!(c.claim, "hello");
+        assert_eq!(c.recorded_by, "curator");
+        assert!((c.confidence - 0.5).abs() < 1e-6);
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn keyvalue_missing_memory_id_exits_2() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        let v1 = fixture("contracts/patients-v1.yaml");
+        let tmp = std::env::temp_dir().join(format!("doyle-cite-kv-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let state = tmp.join("state");
+
+        let input = format!("contract={}\nelement=GET /patients\n", v1);
+        let mut child = Command::new(bin_path())
+            .args(["cite", "--state-dir", state.to_str().unwrap()])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("spawn doyle");
+        child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn bogus_qualifier_exits_2() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        let v1 = fixture("contracts/patients-v1.yaml");
+        let tmp = std::env::temp_dir().join(format!("doyle-cite-bq-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        let state = tmp.join("state");
+
+        let input = format!(
+            r#"{{"memory":{{"adapter":"muse-code","id":"M1"}},"contract":"{c}","elements":["GET /patients 201"]}}"#,
+            c = v1
+        );
+        let mut child = Command::new(bin_path())
+            .args(["cite", "--state-dir", state.to_str().unwrap()])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("spawn doyle");
+        child
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+
+        let _ = std::fs::remove_dir_all(&tmp);
     }
 }

@@ -90,6 +90,13 @@ impl ContractIndex {
         self.by_id_str(&id.0)
     }
 
+    /// Every entity in the contract's neutral surface, in native order.
+    /// Added for cite resolution (cite-needed): lets callers enumerate entities
+    /// without re-parsing the contract.
+    pub fn entities(&self) -> &[Entity] {
+        &self.contract.entities
+    }
+
     /// The entity and its ancestors, nearest first: the entity itself, its
     /// parent, and so on up to the root. Empty when the ID is unknown.
     pub fn parent_chain(&self, id: &ElementId) -> Vec<&Entity> {
