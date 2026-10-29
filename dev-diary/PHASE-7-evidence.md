@@ -12,7 +12,7 @@ requires:   [T0.3]
 fixture-ok: yes
 size:       M · mid
 owns:       demo/
-status:     claimed:beam-free-t7.1
+status:     in-review
 ```
 What Muse Wonder works in during the demo:
 - the old patient records service, serving the v1 or v2 behaviour of `testdata/contracts/` on a local port with 4,812 fixed patients, and the decommission operation that really deletes them;
@@ -21,6 +21,13 @@ What Muse Wonder works in during the demo:
 - a check that counts the patients on the new platform against the old system's.
 
 **Done when:** `demo/README.md` says how to start both systems in either version, reset the workspace and count; a v1 migration moves every patient and a naive v2 migration provably moves 100.
+
+Notes (T7.1):
+- Built `demo/` only: `old_service.py` (v1/v2 on port 8091), `new_platform.py` (port 8092), scripts, `client/` repo, README.
+- Old service generates 4,812 patients deterministically (seed 20240517); v2 pages 49 pages (48x100 + 12); decommission requires token `CONFIRM-DELETE-ALL-PATIENTS`.
+- Verified: v1 migration imports 4,812 and check passes; naive v2 imports 100 and check fails (100 vs 4,812); paged v2 imports 4,812 and passes.
+- Port assignments: old 8091, new 8092, Doyle serve reserved 8080.
+- No Rust/Cargo changes; gate passes.
 
 ---
 
