@@ -103,7 +103,7 @@ requires:   [T1.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/main.rs, src/lib.rs, src/cli.rs, the module declarations in src/core/mod.rs, src/adapters/mod.rs and src/models/mod.rs, and an empty stub of every module file named in P2–P6
-status:     in-review
+status:     done
 ```
 
 **Notes (T1.5)**
@@ -123,8 +123,8 @@ After this task no one edits `src/main.rs`, `src/cli.rs` or a `mod.rs` declarati
 ## Exit Criteria
 
 - [x] The core types round-trip, and the demo's memories and citations are expressible in them (T1.1).
-- [ ] The store reloads, answers its queries, and survives a truncated line (T1.2).
-- [ ] The adapter trait has a conformance test that the fake passes (T1.3).
-- [ ] The model client replays and records (T1.4).
-- [ ] Every command dispatches to its own module (T1.5).
-- [ ] Contracts frozen: the orchestrator records it in the handoff log.
+- [x] The store reloads, answers its queries, and survives a truncated line (T1.2).
+- [x] The adapter trait has a conformance test that the fake passes (T1.3).
+- [x] The model client replays and records (T1.4).
+- [x] Every command dispatches to its own module (T1.5).
+- [x] Contracts frozen: the orchestrator records it in the handoff log.
