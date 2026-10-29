@@ -17,7 +17,7 @@ Doyle can. It:
 5. **Gets a person's sign-off.** `doyle serve` is the review page: what changed, what went stale, which agents relied on it, the proposal, and approve / retire / keep.
 6. **Guards the agent.** A Muse Code `PreToolUse` hook asks Doyle whether an action rests on a stale memory and blocks it with the reason.
 
-**The moment the demo is built around:** an agent confidently ships a backup that returns 200 and silently loses records, because its memory says the endpoint returns everything. With Doyle, the same agent is stopped, the memory is corrected in both the agent's built-in memory and Lambo, and the backup is right.
+**The moment the demo is built around: the Quiet Migration.** A veterinary clinic chain moves its patient records to a new platform, and Muse Wonder runs the migration as its ops agent. An earlier session saved a memory: `GET /patients` returns every patient in one response. The vendor's API has since moved to v2, which returns 100 patients and a cursor. Working through its plan, Wonder exports in one call (200), verifies the export against the same call (it matches), imports it (the count matches the export), and decommissions the old system. Every step looks right; 4,712 of 4,812 patient records, with vaccination histories and allergy notes, are gone for good, and the first sign is a client calling about a dog's medication allergy. With Doyle, the contract change flags that memory, the guard stops the export with the reason, a person approves the correction and sees which agent sessions relied on it, the correction lands in the agent's built-in memory and in Lambo, and Wonder pages through all 49 pages and keeps the old system until the counts match.
 
 ## Memory systems are clients
 

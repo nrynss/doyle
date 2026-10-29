@@ -51,24 +51,20 @@ requires:   []
 fixture-ok: yes
 size:       S · frontier
 owns:       testdata/contracts/, testdata/memories/, testdata/README.md
-status:     in-review
+status:     claimed:opus-t0.3
 ```
-The scenario every later task tests against. The user signs off the story; the agent writes the files.
+The scenario every later task tests against: the Quiet Migration (product.md, The moment the demo is built around). The user chose the story; the agent writes the files.
 
-- **The API:** a small records service as OpenAPI 3. `testdata/contracts/records-v1.yaml`: `GET /records` returns every record. `records-v2.yaml`: the same operation returns one page plus a `next_cursor`, with a `cursor` argument and a page-size default. Add at least one unrelated additive change in v2 (a new optional field elsewhere) so "additive flags nothing" has a case. Keep both small enough to read in one screen.
-- **The memories, as each system would hold them:**
-  - `testdata/memories/muse-code/`: a Muse Code memory folder in the verified format (`MEMORY.md` with frontmatter and inline notes, plus one per-topic file), holding the stale belief ("`GET /records` returns all records in one response"), one memory resting on an element that does not change, and one resting on the additively changed type.
-  - `testdata/memories/lambo/`: the same three as Lambo concepts, as JSON matching what Lambo's MCP tools return (T0.5 confirms the shape).
-- `testdata/README.md` says what each file is for, and which memory should be flagged by the v1 → v2 change and which should not.
+- **The API:** a veterinary clinic chain's patient records service as OpenAPI 3, `testdata/contracts/patients-v1.yaml` and `patients-v2.yaml`. In v1, `GET /patients` returns every patient. In v2 the same operation returns one page of 100 plus a `next_cursor`, with a `cursor` argument. `GET /patients/{id}` is unchanged. `GET /stats` reports `patient_count` in both, and gains one optional field in v2 (the additive case). The old system's decommission operation is in both and unchanged. Keep each file readable in one screen.
+- **The memories, as each system would hold them, with where they came from:**
+  - `testdata/memories/muse-code/`: a Muse Code memory folder in the verified format (`MEMORY.md` with frontmatter and inline notes, plus one per-topic file): the stale belief about `GET /patients`, one memory resting on the unchanged `GET /patients/{id}`, one on `GET /stats`, and one on the decommission operation.
+  - `testdata/memories/lambo/`: the same memories as Lambo concepts, written by an earlier agent (a reporting agent's session, not the migration's), as JSON matching what Lambo's MCP tools return. T0.5 confirms the shape.
+  - Which sessions relied on each memory, so the review page can name them.
+- `testdata/README.md`: the story told as the chain of steps and consequences, what each file is for, and the expected flag set.
 
-**Done when:** both contracts parse with `vimanam` (T0.6 records it); the expected flag set is written down in `testdata/README.md` before any flagging code exists; the user has signed off the story.
+**Done when:** both contracts parse with `vimanam` (T0.6 records it); the expected flag set is written down in `testdata/README.md` before any flagging code exists; the user has signed off the story as written there.
 
-**Notes (in review).**
-- **Built.** Two contracts with three operations each (`listRecords`, `getRecord`, `getStats`); a Muse Code memory folder (`MEMORY.md` with two inline notes and an index line, plus `records-stats.md`); the same three memories as a Lambo `lambo_derive` call and a `lambo_recall` result; `testdata/README.md` with the five-line story, what each file is for, and the expected flag set `{M1}`.
-- **Decided.** The additive change is on `Stats`, a type of its own, so the unchanged operation (`getRecord`) shares nothing that changes. `Record` stays identical in both versions and is the item type of `GET /records` in both, which makes the shared-`$ref` trap explicit: the change belongs to `listRecords`' response, not to `Record`. The stale note stays inline in `MEMORY.md`, the layout the annotation was verified on; the topic file holds a memory that is never flagged. M3 (`record_count` is the total) stays true, and the demo can use it to show the lost records.
-- **Lambo shapes** follow the published MCP reference; ids and scores are made up. T0.5 confirms them against a live server. `lambo_inspect` is not modelled, because its structured result is documented only in part.
-- **Vimanam.** The only binary on hand is 1.7.0 (`~/.local/bin`, `~/.cargo/bin`); the build in the Vimanam checkout reports 1.4.2. Both parse the contracts. 1.7.0's diff: one breaking (`GET /records` 200 `/type` `array` → `object`), one review (200 `/items` removed), six non-breaking (`cursor`, `limit`, `items`, `next_cursor`, `items` required, and `GET /stats` `oldest_created_at`); `GET /records/{id}` has no change. 1.7.0 has no inferred pagination change and uses `vc1_` IDs; the 2.x run is T0.6's.
-
+**History.** A first version was built around a records service and a one-call backup. The user found it too thin: one agent, one call, no consequence. It was replaced by the Quiet Migration on the user's decision.
 ---
 
 ### T0.4: Muse Code probes ★
@@ -129,7 +125,7 @@ status:     not-started
 ```
 Run Vimanam 2.x on the demo contracts, through its CLI and a scratch program using the library, and record what Doyle will get: the entity IDs for every operation, type and field touched, and the change facts (`subject`, `kind`, `severity`) for v1 → v2. Confirm the pagination change is reported, and with which severity. The scratch program is not committed; its output is.
 
-**Done when:** `testdata/vimanam/records-v1-v2.json` holds the v2 JSON diff and `testdata/vimanam/entities-v1.json` the v1 entity list; the handoff text says whether the pagination change is detected and how it is classified.
+**Done when:** `testdata/vimanam/patients-v1-v2.json` holds the v2 JSON diff and `testdata/vimanam/entities-v1.json` the v1 entity list; the handoff text says whether the pagination change is detected and how it is classified.
 
 ---
 

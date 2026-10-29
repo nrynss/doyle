@@ -58,7 +58,7 @@ size:       XS · light
 owns:       src/cite.rs
 status:     not-started
 ```
-Record a citation by hand: a memory reference, the contract, and an element given by its native location (`GET /records`) or its `ElementId`. Refuse an element the contract doesn't have, naming the closest matches.
+Record a citation by hand: a memory reference, the contract, and an element given by its native location (`GET /patients`) or its `ElementId`. Refuse an element the contract doesn't have, naming the closest matches.
 
 **Done when:** citing the demo's memories by hand and then running `doyle check` gives the expected flags; an unknown element is refused with suggestions.
 

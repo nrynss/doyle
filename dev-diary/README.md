@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0 in progress: T0.1, T0.2 and T0.4 are done; T0.3 waits on the user's sign-off; T0.5 is blocked on a Lambo session.
+**Current status:** P0 in progress: T0.1, T0.2 and T0.4 are done; T0.3 is being rebuilt for the Quiet Migration; T0.5 is blocked on a Lambo session.
 
 ---
 
@@ -132,7 +132,7 @@ keys (T0.2) + demo scenario and fixtures (T0.3) + Muse Code probes (T0.4) + Lamb
   -> video (T8.2) -> public (T8.3) -> submit (T8.4)
 ```
 
-The demo is built around one moment. Muse Wonder remembers that the records endpoint returns everything. The contract changes to return one page and a cursor. Without Doyle, the backup Wonder writes returns 200 and silently loses records. With Doyle, the guard stops it, the memory is corrected in Muse Code and Lambo, and the backup is right. Protect everything that moment depends on before anything else.
+The demo is built around one story, the Quiet Migration (product.md). Muse Wonder migrates a veterinary clinic chain's patient records, trusting an earlier session's memory that `GET /patients` returns everyone in one response. The API now pages. Without Doyle, every step of its plan passes its own check, the old system is decommissioned, and 4,712 of 4,812 records are gone for good. With Doyle, the guard stops the export, the correction lands in Muse Code and Lambo with the sessions that relied on it named, and the migration pages to the end and keeps the old system until the counts match. Protect everything that moment depends on before anything else.
 
 ---
 
@@ -140,7 +140,7 @@ The demo is built around one moment. Muse Wonder remembers that the records endp
 
 | Phase | Tasks complete | Status |
 |---|---|---|
-| P0 | 3 / 7 | T0.1, T0.2 and T0.4 done. T0.3 landed, in review until the user signs off the story. T0.5 is blocked on a Lambo session for Doyle (user decision). T0.6 is ready once T0.3 closes; T0.7 is ready. |
+| P0 | 3 / 7 | T0.1, T0.2 and T0.4 done. T0.3 reopened for the Quiet Migration story and re-dispatched. T0.5 is blocked on a Lambo session for Doyle (user decision). T0.6 is ready once T0.3 closes; T0.7 is ready. |
 | P1 | 0 / 5 | Waits for T0.3–T0.6. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
@@ -156,6 +156,7 @@ The demo is built around one moment. Muse Wonder remembers that the records endp
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T0.3 reopened: the Quiet Migration replaces the backup story, by the user's decision.** The first story (one agent, one call, one missing page) was too thin. The new one: Muse Wonder migrates a veterinary clinic chain's patient records on an earlier session's memory that `GET /patients` returns everyone; the API now pages; every step of its plan passes its own check, the old system is decommissioned, and 4,712 of 4,812 records are gone for good. Doyle stops the export and names the sessions that relied on the memory. product.md, this README, and P0, P2, P6 and P7 were updated to match. T0.3 is re-dispatched; the records fixtures it landed are replaced.
 - **T0.4 closed: Muse Code memory hash and hooks.** The memory folder is `<slug>-<FNV-1a 64 of the physical starting directory, 16 hex>`: keyed on where `muse` starts (not the git root), symlinks resolved, a linked worktree has its own memory; the slug is cut at 96 characters, so the adapter matches on the hash suffix. Hooks need no plugin: a `hooks` block in `~/.config/muse/settings.json` and `<starting directory>/.muse/hooks.json` (trusted workspace) both fire, in Claude Code's shape. Tool names are Muse's own (`bash`, `read_file`, `write_file`, `edit_file`, `add_memory`). Deny with `hookSpecificOutput.permissionDecision: deny`, or exit 2 with the reason on stderr; the agent sees `tool blocked by hook: <reason>`. SessionStart `additionalContext` reaches the agent. The hook also fires for Muse's internal `submit_reminder_decision`, which the guard must pass through. Hooks run with a cleared environment. Muse snapshots memory at session start, so an annotation must land before the session it is meant to change. Payloads in `testdata/muse/hooks/`, everything in `docs/muse-code.md`. 8 of 12 budgeted Wonder sessions; the user's `settings.json` restored byte-identical. Validated by the orchestrator: the hash recomputed independently against the recall test's folder, no private data in the files, `settings.json` holds no hooks, the gate passed on `main` after the merge.
 - **T0.5 blocked: no scratch session on the running Lambo.** The read half landed: `initialize`, `notifications/initialized`, `tools/list` and a probe of an unpinned session are recorded in `testdata/lambo/`, and `docs/lambo.md` gives every call's shape (write, correct, recall and inspect from Lambo's reference, not yet checked against the server). Nothing was written to any session. The running server (Lambo 0.8.0, the `lambo-dogfood` user service on :7700) pins only `lambo-dev`; `/mcp/s/<other>` returns 404. Getting a scratch session needs the user's choice (options in `docs/lambo.md`). Surprises: every response is SSE, `tools/list` has eight tools (`lambo_stale` is not in the reference's list), and the contradiction warning comes from the background daemon and needs the contradiction to be at least 60 seconds old, so the probe must wait before expecting it. Validated by the orchestrator: the diff holds only T0.5's paths, no key in the transcripts, the gate passed on `main` after the merge.
 - **T0.3 landed, waiting on the user's sign-off of the story.** `testdata/contracts/records-v1.yaml` and `records-v2.yaml`: `listRecords` goes from a bare array to a `RecordPage` (`items`, `next_cursor`; `cursor` and `limit`, default 100); `getRecord` is unchanged; `Stats` gains an optional `oldest_created_at`. Three memories in Muse Code format (`testdata/memories/muse-code/`) and as Lambo derive and recall JSON (`testdata/memories/lambo/`, shapes from Lambo's published MCP reference; T0.5 confirms them). Expected flag set in `testdata/README.md`: M1 only, with two traps written down (no flag through the shared `Record` type, and no flag from the additive changes on `listRecords` alone). Validated by the orchestrator: the diff holds only T0.3's paths, the gate passed in the worktree and on `main` after the merge.

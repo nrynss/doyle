@@ -21,7 +21,7 @@ status:     not-started
 
 No model call. Fast enough not to be felt (measure it). If Doyle's state can't be read, allow and print one warning to stderr: a broken guard never blocks the agent's work. `docs/guard.md` gives the hook configuration to paste.
 
-**Done when:** on the recorded payloads, the demo's backup `curl` against `GET /records` is denied with the reason, and unrelated calls pass; the SessionStart output is checked; the measured time per call is in the handoff text.
+**Done when:** on the recorded payloads, the demo's one-call export against `GET /patients` is denied with the reason, and unrelated calls pass; the SessionStart output is checked; the measured time per call is in the handoff text.
 
 **T6.1b (live):** register the guard in a scratch repository, open a flag, and watch `muse exec` on `muse-wonder-1.0` get denied and say why. Owns `tests/live_guard.rs`. Budget: three sessions.
 
