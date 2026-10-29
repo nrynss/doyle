@@ -3,3 +3,4 @@
 *.local.toml
 doyle.toml
 /.claude/worktrees/
+.doyle/
