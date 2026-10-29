@@ -18,6 +18,8 @@ Request keys cover model, system, user, schema and budget.
 | `m3_keep` (type-level review: optional `generated_at` on `Stats`) | `9b11e1023796c648` | keep | keep | patient_count remains required integer; v2 only adds optional generated_at |
 | `m4_keep_unchanged` (flag on `listPatients` pagination; memory cites unchanged `decommission`) | `bb2ac3f876aad226` | keep | keep | POST /admin/decommission is identical in v2; flag is unrelated GET /patients pagination. |
 
+Provenance note: `s1_retire`'s change/element IDs are constructed (shape mirrors the real S1 removal, IDs synthetic); all other cases' IDs come from `testdata/vimanam/`.
+
 4 / 4 match. Retire/keep replies carry `new_text: null`; the correct reply's
 `new_text` (192 chars, single line) passes `check_replacement_text` and states
 the paging truth (page object, up to 100 in `items`, `next_cursor`,
