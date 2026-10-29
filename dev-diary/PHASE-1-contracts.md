@@ -40,11 +40,17 @@ requires:   [T1.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/core/store.rs
-status:     claimed:beam-free-t1.2
+status:     in-review
 ```
 Doyle's own state in one directory (`.doyle/` by default, overridable): JSON Lines, append-only, one file per record kind (citations, flags, proposals, decisions), loaded into memory on open. Queries the later tasks need: citations by element, citations by memory, open flags (no decision yet), the decision for a proposal. A corrupt last line (a crash mid-write) is skipped with a warning, never a failure.
 
 **Done when:** tests cover append and reload, each query, a truncated last line, and two stores in two directories not seeing each other; `.doyle/` is in `.gitignore`.
+
+**Notes (T1.2)**
+- Built: `src/core/store.rs` with `Store`: `open(dir)` creates/loads a directory of JSON Lines files (`citations.jsonl`, `flags.jsonl`, `proposals.jsonl`, `decisions.jsonl`), append-only writes with newline-terminated lines, rebuilt into memory on open. Store assigns ids to flags, proposals and decisions (`flag-N`, `proposal-N`, `decision-N`, derived from existing records on reload). Queries: `citations()`/`citations_for_element()`/`citations_for_memory()`, `open_flags()` (flags with no decision behind any of their proposals), `decision_for_proposal()`. A line that fails to parse (including a truncated last line from a crash mid-write) is skipped with a warning on stderr; open never fails on it. `open_default()`/`DEFAULT_DIR` cover the `.doyle` default; the path is otherwise overridable via `open`.
+- Decided: filenames use the `.jsonl` extension; record methods are named `record_*` with `add/append/push/insert/create` aliases; queries offer `for`/`by`/`find` aliases; single-record getters return owned values (cloned) for easy assertion, with `_ref` variants for borrows. `StoreError` is a small enum over io/json with `Display`/`Error` impls, no new dependency. `open` creates the directory if missing.
+- Outside `owns`, one line: `mod store;` in `src/core/mod.rs`. No change to `Cargo.toml`/`Cargo.lock`. `.gitignore` was not edited per the ownership rule; the exact line to land is `.doyle/` (see report).
+- Surprised me: clippy's `collapsible_if` rejected the nested parse checks in `next_id`, fixed with a let-chain. rustfmt wanted the `load_jsonl` call on one line.
 
 ---
 

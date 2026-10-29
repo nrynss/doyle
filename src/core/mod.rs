@@ -3,6 +3,7 @@
 //! The core knows only the adapter contract, never a particular memory system.
 
 mod model;
+mod store;
 
 // Nothing uses the re-export until T1.5 turns the crate into a library;
 // the allow keeps the gate quiet until then.
