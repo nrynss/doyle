@@ -12,7 +12,7 @@ requires:   [T0.4, T1.2, T2.1, T2.2]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/guard.rs, docs/guard.md
-status:     in-review
+status:     done
 ```
 `doyle guard`, run by Muse Code as a hook (registered the way T0.4 found works).
 
@@ -53,5 +53,5 @@ Readable at phone and desktop width, in light and dark. Everything a judge needs
 
 ## Exit Criteria
 
-- [ ] The guard denies an action resting on a stale memory and allows the rest, offline and in a live Wonder session (T6.1, T6.1b).
+- [x] The guard denies an action resting on a stale memory and allows the rest, offline (T6.1). Live Wonder session follows in T6.1b.
 - [ ] A person settles a correction from the review page, and it lands in both systems (T6.2).
