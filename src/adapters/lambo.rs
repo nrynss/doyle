@@ -7,6 +7,9 @@ use super::{AdapterError, Capabilities, MemoryAdapter};
 use crate::core::{Memory, MemoryRef};
 use crate::mcp::{McpClient, McpError, Transport};
 
+/// Broad query used for watch. The `*` match-all behavior is unrecorded
+/// (no transcript shows a server response to `*`); live verification is
+/// deferred to T3.3b.
 pub const BROAD_WATCH_QUERY: &str = "*";
 
 /// `wait_ms` passed to `lambo_stats` after a derive. Kept strictly below the
@@ -14,6 +17,11 @@ pub const BROAD_WATCH_QUERY: &str = "*";
 /// with margin so the receipt wait cannot outlive the HTTP call carrying it.
 pub const STATS_WAIT_MS: u64 = 4000;
 
+/// Lambo adapter over MCP.
+///
+/// Restart-loss disclosure: the supersede and scope caches are process-local;
+/// after a restart, reads lose recorded warnings and scopes until the next
+/// in-process supersede.
 pub struct LamboAdapter {
     name: String,
     agent_id: String,
@@ -292,9 +300,7 @@ impl MemoryAdapter for LamboAdapter {
             self.recall_warnings
                 .borrow()
                 .iter()
-                .find(|w| {
-                    w.contains("Contradicted") && (w.contains(id) || w.contains(&short_id(id)))
-                })
+                .find(|w| w.contains("Contradicted"))
                 .and_then(|w| parse_contradicted_id(w))
         } else {
             None
@@ -756,6 +762,7 @@ mod tests {
         next: u32,
         derives: u32,
         receipts: std::collections::HashMap<String, Vec<String>>,
+        warnings: Vec<String>,
     }
 
     fn scripted_server() -> (FakeTransport, std::sync::Arc<std::sync::Mutex<SrvState>>) {
@@ -819,7 +826,20 @@ mod tests {
                             .and_then(|x| x.as_str())
                             .unwrap_or("")
                             .to_string();
-                        st.concepts.push((cid.clone(), content));
+                        let against = c
+                            .get("against")
+                            .and_then(|a| a.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+                        let is_contradiction = !against.is_empty();
+                        st.concepts.push((cid.clone(), content.clone()));
+                        if is_contradiction {
+                            let corr_short = cid.chars().take(8).collect::<String>();
+                            st.warnings.push(format!(
+                                "\u{26a0} Contradicted at 2026-10-29T15:07:26Z by doyle-probe: \"{}\" (id {})",
+                                content, corr_short
+                            ));
+                        }
                         created.push(cid);
                     }
                     st.derives += 1;
@@ -860,11 +880,12 @@ mod tests {
                     let hits: Vec<serde_json::Value> = st.concepts.iter().map(|(cid, content)| {
                         serde_json::json!({"node_id": cid, "content": content, "concept_type":"Logic", "score":1.0, "is_canonical":false, "blast_radius":null})
                     }).collect();
+                    let warnings = st.warnings.clone();
                     let msg = serde_json::json!({
                         "jsonrpc":"2.0","id": rid,
                         "result": {
                             "content":[{"type":"text","text":"ctx"}],
-                            "structuredContent":{"context":"ctx", "hits": hits, "warnings":[]},
+                            "structuredContent":{"context":"ctx", "hits": hits, "warnings": warnings},
                             "isError": false
                         }
                     });
@@ -1118,5 +1139,33 @@ mod tests {
         // Need stale_id in content cache? read not required. supersede returns corr_full.
         let r = adapter.supersede(stale_id, corr_text).unwrap();
         assert_eq!(r.id, corr_full);
+    }
+
+    #[test]
+    fn recall_warning_reaches_read() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        let stale = adapter.write("stale mem", "s").unwrap();
+        let corr_text = "corr text";
+        let corr = adapter.supersede(&stale.id, corr_text).unwrap();
+        // Drop the local supersede cache so the read must use the recall path.
+        adapter.supersede_cache.borrow_mut().clear();
+        // Populate recall warnings via a recall (list).
+        let _ = adapter.list("stale").ok();
+        let read = adapter.read(&stale.id).unwrap();
+        assert!(
+            read.text.contains("\u{26a0} Contradicted"),
+            "warning did not reach read output: {}",
+            read.text
+        );
+        assert!(
+            read.text.contains(&corr.id[..8]),
+            "correction id did not reach read output: {}",
+            read.text
+        );
     }
 }

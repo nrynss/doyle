@@ -297,10 +297,17 @@ pub trait MemoryAdapter {
     ///   yet (matched by file path) and persists the reported set in
     ///   Doyle's state dir.
     /// * Lambo recalls a broad query (`top_k` 50) for concepts it has not
-    ///   reported yet (matched by node ID) and persists the reported IDs
-    ///   likewise. `lambo_stale` is NOT the watch source: it lists direct
+    ///   reported yet (matched by node ID), keeping the reported IDs in an
+    ///   in-memory `HashSet` (process-local; a restart re-reports
+    ///   everything). `lambo_stale` is NOT the watch source: it lists direct
     ///   dependents of contradicted concepts (docs/lambo.md), not new
     ///   memories.
+    ///   The broad query is `BROAD_WATCH_QUERY` (`"*"`); its match-all
+    ///   behavior is unrecorded (no transcript shows a server response to
+    ///   `*`) and live verification is deferred to T3.3b.
+    ///   Restart-loss disclosure: the supersede and scope caches are
+    ///   process-local, so after a restart reads lose recorded warnings and
+    ///   scopes until the next in-process supersede.
     fn watch(&self) -> Result<Vec<Memory>, AdapterError> {
         Err(AdapterError::unsupported(self.name(), "watch"))
     }
