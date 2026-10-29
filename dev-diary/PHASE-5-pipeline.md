@@ -12,7 +12,7 @@ requires:   [T1.2, T3.1, T3.3, T4.3]
 fixture-ok: yes
 size:       S · mid
 owns:       src/curate.rs
-status:     not-started
+status:     claimed:beam-free-t5.1
 ```
 For each configured adapter, list memories, skip those already cited at their current text, run the curator against the current contract, and write citations. `--dry-run` prints what it would cite. A memory the curator ties to nothing is recorded as such, so it isn't asked again until its text changes.
 
@@ -26,7 +26,7 @@ requires:   [T2.3, T4.4]
 fixture-ok: yes
 size:       S · mid
 owns:       src/check.rs
-status:     not-started
+status:     claimed:beam-free-t5.2
 ```
 Extend T2.3: after flagging, run the re-check on each new flag, write proposals, and include them in both report formats. `--no-recheck` keeps T2.3's behaviour for CI without a key.
 
