@@ -33,7 +33,7 @@ requires:   [T3.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/muse_code/write.rs
-status:     not-started
+status:     claimed:beam-free-t3.2
 ```
 Write a new note; annotate a note in place (`[STALE per Doyle: …]`, the form the recall test proved); supersede a note (the correction replaces it, with a one-line trace of what it replaced). Every write keeps the frontmatter valid, keeps the index in step, writes atomically (temporary file and rename), and respects Muse Code's `.muse-memory.lock`. Annotations are short and plain (README, guideline 7).
 
