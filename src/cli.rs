@@ -25,6 +25,8 @@ pub enum Command {
         old: String,
         /// New contract version.
         new: String,
+        /// Output format: markdown or json.
+        format: String,
     },
     /// Run the review page and the judges' page.
     Serve,
@@ -82,7 +84,17 @@ pub fn parse_from(args: &[String]) -> ParseResult {
         return ParseResult::Help(Some(command_name));
     }
 
-    let (common, positionals) = match parse_common_and_positionals(rest) {
+    // check-specific: -f/--format <markdown|json>
+    let (format, parse_rest) = if command_name == "check" {
+        match extract_check_format(rest) {
+            Ok(v) => v,
+            Err(e) => return ParseResult::Error(format!("doyle: {e}")),
+        }
+    } else {
+        (String::from("markdown"), rest.to_vec())
+    };
+
+    let (common, positionals) = match parse_common_and_positionals(&parse_rest) {
         Ok(v) => v,
         Err(e) => return ParseResult::Error(format!("doyle: {e}")),
     };
@@ -113,6 +125,7 @@ pub fn parse_from(args: &[String]) -> ParseResult {
             Command::Check {
                 old: positionals[0].clone(),
                 new: positionals[1].clone(),
+                format,
             }
         }
         "serve" => {
@@ -135,6 +148,40 @@ pub fn parse_from(args: &[String]) -> ParseResult {
     };
 
     ParseResult::Run(Cli { command, common })
+}
+
+fn extract_check_format(args: &[String]) -> Result<(String, Vec<String>), String> {
+    let mut format = String::from("markdown");
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        let a = &args[i];
+        if a == "-f" || a == "--format" {
+            i += 1;
+            if i >= args.len() {
+                return Err(String::from("missing value for --format"));
+            }
+            let v = args[i].clone();
+            if v != "markdown" && v != "json" {
+                return Err(format!("unknown format: {v}"));
+            }
+            format = v;
+        } else if let Some(value) = a.strip_prefix("--format=") {
+            if value != "markdown" && value != "json" {
+                return Err(format!("unknown format: {value}"));
+            }
+            format = value.to_string();
+        } else if let Some(value) = a.strip_prefix("-f=") {
+            if value != "markdown" && value != "json" {
+                return Err(format!("unknown format: {value}"));
+            }
+            format = value.to_string();
+        } else {
+            out.push(a.clone());
+        }
+        i += 1;
+    }
+    Ok((format, out))
 }
 
 fn parse_common_and_positionals(args: &[String]) -> Result<(CommonOpts, Vec<String>), String> {
@@ -238,7 +285,8 @@ doyle check: diff two contract versions, flag cited memories, run the re-check, 
 Usage:
   doyle check <OLD> <NEW> [OPTIONS]
 
-Shared options:
+Options:
+  -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
   -v, --verbose           Verbose output

@@ -10,7 +10,11 @@ use crate::core::{Citation, Flag};
 
 /// Run the `check` command.
 pub fn run(cli: &cli::Cli) -> ExitCode {
-    match execute(cli, "markdown") {
+    let format = match &cli.command {
+        cli::Command::Check { format, .. } => format.clone(),
+        _ => String::from("markdown"),
+    };
+    match execute(cli, &format) {
         Ok((code, out)) => {
             print!("{}", out);
             code
@@ -26,7 +30,7 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
 /// printing. `format` is `"markdown"` or `"json"`.
 pub fn execute(cli: &cli::Cli, format: &str) -> Result<(ExitCode, String), String> {
     let (old_path, new_path) = match &cli.command {
-        cli::Command::Check { old, new } => (old.clone(), new.clone()),
+        cli::Command::Check { old, new, .. } => (old.clone(), new.clone()),
         _ => return Err(String::from("doyle check: expected a Check command")),
     };
 
@@ -135,7 +139,9 @@ pub fn render_json(old_path: &str, new_path: &str, flags: &[Flag]) -> String {
         "new": new_path,
         "flags": flag_values,
     });
-    serde_json::to_string_pretty(&value).unwrap_or_else(|_| String::from("{}"))
+    let mut s = serde_json::to_string_pretty(&value).unwrap_or_else(|_| String::from("{}"));
+    s.push('\n');
+    s
 }
 
 fn severity_word(s: crate::core::Severity) -> &'static str {
@@ -203,6 +209,7 @@ mod tests {
             command: cli::Command::Check {
                 old: fixture("contracts/patients-v1.yaml"),
                 new: fixture("contracts/patients-v2.yaml"),
+                format: "markdown".to_string(),
             },
             common: cli::CommonOpts {
                 state_dir: Some(dir.to_string_lossy().to_string()),
@@ -212,6 +219,94 @@ mod tests {
         let (code, out) = execute(&cli, "markdown").unwrap();
         assert_eq!(code, ExitCode::from(1));
         assert!(out.contains("M1"), "report should name M1: {out}");
+        assert!(
+            out.contains("vc2_9bedbbb47825fa87ea41aa38342d0492948286a7dd4a5ecbb378310261df6841"),
+            "report should contain breaking change id: {out}"
+        );
+        assert!(
+            out.contains("vc2_d7e1b2acbebe45b089106951b949710e3112d1586ed74cfe5fab47d702987277"),
+            "report should contain constraint change id: {out}"
+        );
+        assert!(
+            out.contains("vc2_d82adaee7e47799b8027d3c1b9f458e16be8a20df1696186f351369f07e011e0"),
+            "report should contain pagination change id: {out}"
+        );
+        assert!(
+            out.contains("breaking"),
+            "report should say breaking: {out}"
+        );
+        assert!(
+            out.contains("GET /patients returns every patient in one response"),
+            "report should contain evidence: {out}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn demo_flags_m1_json() {
+        let dir = temp_state_dir("demo-json");
+        seed_citations(&dir);
+        let old = fixture("contracts/patients-v1.yaml");
+        let new = fixture("contracts/patients-v2.yaml");
+        let cli = cli::Cli {
+            command: cli::Command::Check {
+                old: old.clone(),
+                new: new.clone(),
+                format: "json".to_string(),
+            },
+            common: cli::CommonOpts {
+                state_dir: Some(dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let (code, out) = execute(&cli, "json").unwrap();
+        assert_eq!(code, ExitCode::from(1));
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let f = &v["flags"][0];
+        assert_eq!(f["memory"]["id"], "M1");
+        let changes = f["changes"].as_array().unwrap();
+        assert_eq!(changes.len(), 3);
+        let ids: Vec<&str> = changes.iter().map(|x| x.as_str().unwrap()).collect();
+        assert!(
+            ids.contains(&"vc2_9bedbbb47825fa87ea41aa38342d0492948286a7dd4a5ecbb378310261df6841")
+        );
+        assert!(
+            ids.contains(&"vc2_d7e1b2acbebe45b089106951b949710e3112d1586ed74cfe5fab47d702987277")
+        );
+        assert!(
+            ids.contains(&"vc2_d82adaee7e47799b8027d3c1b9f458e16be8a20df1696186f351369f07e011e0")
+        );
+        assert_eq!(f["severity"], "breaking");
+        assert_eq!(f["old_version"], old);
+        assert_eq!(f["new_version"], new);
+        assert_eq!(
+            f["evidence"],
+            "GET /patients returns every patient in one response"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rerun_exits_zero_and_store_holds_one_flag() {
+        let dir = temp_state_dir("rerun");
+        seed_citations(&dir);
+        let cli = cli::Cli {
+            command: cli::Command::Check {
+                old: fixture("contracts/patients-v1.yaml"),
+                new: fixture("contracts/patients-v2.yaml"),
+                format: "markdown".to_string(),
+            },
+            common: cli::CommonOpts {
+                state_dir: Some(dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let (code1, _) = execute(&cli, "markdown").unwrap();
+        assert_eq!(code1, ExitCode::from(1));
+        let (code2, _) = execute(&cli, "markdown").unwrap();
+        assert_eq!(code2, ExitCode::SUCCESS);
+        let store = Store::open(&dir).unwrap();
+        assert_eq!(store.flags().len(), 1);
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -224,6 +319,7 @@ mod tests {
             command: cli::Command::Check {
                 old: v1.clone(),
                 new: v1,
+                format: "markdown".to_string(),
             },
             common: cli::CommonOpts {
                 state_dir: Some(dir.to_string_lossy().to_string()),
