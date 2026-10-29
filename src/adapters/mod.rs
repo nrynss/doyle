@@ -153,7 +153,7 @@ pub trait MemoryAdapter {
         self.capabilities().supports(operation)
     }
 
-    /// List every memory the adapter can see: id, text and last updated.
+    /// Search the memories the adapter can see: id, text and last updated.
     ///
     /// Search, not enumerate: `query` is free text and the adapter returns
     /// the memories matching it, in its own order (insertion for the fake,
