@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0 in progress: T0.1, T0.2, T0.4 and T0.5 are done; T0.3 waits on the user's sign-off of the Quiet Migration story.
+**Current status:** P0 in progress: T0.1–T0.5 are done; T0.6 (the Vimanam 2.x run) is with an agent; T0.7 is ready.
 
 ---
 
@@ -140,7 +140,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 | Phase | Tasks complete | Status |
 |---|---|---|
-| P0 | 4 / 7 | T0.1, T0.2, T0.4 and T0.5 done. T0.3 rebuilt for the Quiet Migration, in review until the user signs off the story. T0.6 is ready once T0.3 closes; T0.7 is ready. |
+| P0 | 5 / 7 | T0.1–T0.5 done. T0.6 is with an agent. T0.7 is ready. |
 | P1 | 0 / 5 | Waits for T0.3–T0.6. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
@@ -156,6 +156,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T0.3 closed: the user signed off the Quiet Migration story** as written in `testdata/README.md`. T0.6 is dispatched.
 - **T0.3 rebuilt and landed, waiting on the user's sign-off of the Quiet Migration story.** `testdata/contracts/patients-v1.yaml` and `patients-v2.yaml` (an invented clinic chain, Fernwhistle Veterinary Group): `listPatients` changes from a bare array of every `Patient` to a `PatientPage` (`items`, `next_cursor`; `cursor`, and `limit` defaulting to and capped at 100). `getPatient`, `decommission` (`POST /admin/decommission`, with a confirmation token) and `Patient` (with vaccinations and allergies) are unchanged; `Stats` gains an optional `generated_at`. Four memories, written by an earlier reporting session (`muse-wonder-reporting`), in Muse Code format and as Lambo derive and recall JSON; `testdata/memories/provenance.json` names the sessions that relied on each. `testdata/README.md` tells the story in eight numbered steps and gives the expected flag set `{M1}`, with the shared-`Patient` and additive-change traps. Numbers agree throughout: 4,812 patients, 49 pages (48 of 100 and one of 12), 100 exported, 4,712 lost. The records fixtures are removed. Vimanam 1.7.0 parses both contracts (1 breaking, 6 non-breaking, 1 review; no pagination kind), so T0.6 confirms with 2.x. Validated by the orchestrator: the diff holds only T0.3's paths, no private data, the gate passed on `main` after the merge. The clinic name was checked by eye only; search it before the repository goes public (T8.3).
 - **T0.5 closed: Lambo's write half recorded, and the warning confirmed.** By the user's decision the shared writer (`lambo-dogfood.service`, `~/lambo-dogfood/bin/serve-http.sh`) now pins `lambo-dev`, `doyle` and `doyle-probe`, with `lambo-dev` first so `/mcp` is unchanged; restart took about 3 seconds and `session_leases` shows the HTTP writer holding all three. Recorded against `doyle-probe`: derive (a receipt, applied within the wait), recall, inspect, a correction with `against`, and recall again. The stale memory's recall carries `⚠ Contradicted … (id <correction>)` immediately, not after the 60 seconds the docs suggested. `lambo_stale` lists only `depends_on` dependents. Transcripts `testdata/lambo/05`–`15`, the server's ledger path replaced with `~`; `docs/lambo.md` rewritten from them. Done by the orchestrator directly.
 - **T0.3 reopened: the Quiet Migration replaces the backup story, by the user's decision.** The first story (one agent, one call, one missing page) was too thin. The new one: Muse Wonder migrates a veterinary clinic chain's patient records on an earlier session's memory that `GET /patients` returns everyone; the API now pages; every step of its plan passes its own check, the old system is decommissioned, and 4,712 of 4,812 records are gone for good. Doyle stops the export and names the sessions that relied on the memory. product.md, this README, and P0, P2, P6 and P7 were updated to match. T0.3 is re-dispatched; the records fixtures it landed are replaced.

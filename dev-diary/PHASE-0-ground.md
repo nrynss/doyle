@@ -51,7 +51,7 @@ requires:   []
 fixture-ok: yes
 size:       S · frontier
 owns:       testdata/contracts/, testdata/memories/, testdata/README.md
-status:     in-review
+status:     done
 ```
 The scenario every later task tests against: the Quiet Migration (product.md, The moment the demo is built around). The user chose the story; the agent writes the files.
 
@@ -130,7 +130,7 @@ requires:   [T0.3]
 fixture-ok: yes
 size:       XS · light
 owns:       testdata/vimanam/
-status:     not-started
+status:     claimed:haiku-t0.6
 ```
 Run Vimanam 2.x on the demo contracts, through its CLI and a scratch program using the library, and record what Doyle will get: the entity IDs for every operation, type and field touched, and the change facts (`subject`, `kind`, `severity`) for v1 → v2. Confirm the pagination change is reported, and with which severity. The scratch program is not committed; its output is.
 
@@ -156,7 +156,7 @@ product.md's open question: a real public API upgrade with visible stakes (payme
 
 - [x] The repository builds and the gate passes in CI (T0.1).
 - [ ] Every key Doyle needs is named in `.env.example`, and access is confirmed (T0.2).
-- [ ] The demo contracts and seed memories exist, with the expected flag set written down (T0.3).
+- [x] The demo contracts and seed memories exist, with the expected flag set written down (T0.3).
 - [x] The memory folder hash, hook registration and hook payloads are settled with evidence (T0.4).
 - [x] Lambo's calls are recorded, and the warning on a contradicted memory is confirmed (T0.5).
 - [ ] Vimanam's view of the demo change is recorded (T0.6).
