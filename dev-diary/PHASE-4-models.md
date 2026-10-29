@@ -12,7 +12,7 @@ requires:   [T1.4, T0.2]
 fixture-ok: yes
 size:       S · mid
 owns:       src/models/meta.rs
-status:     not-started
+status:     claimed:beam-free-t4.1
 ```
 A `ModelClient` for the Meta Model API (Muse Spark for the re-check): structured output against the request's JSON schema, reasoning effort, usage and cost read from the reply, retries on rate limits and 5xx with a cap, the key from the environment (T0.2). Never logs the key or the request headers.
 

@@ -12,7 +12,7 @@ requires:   [T1.3, T0.4]
 fixture-ok: yes
 size:       M · mid
 owns:       src/adapters/muse_code/mod.rs, src/adapters/muse_code/locate.rs, src/adapters/muse_code/parse.rs
-status:     not-started
+status:     claimed:beam-free-t3.1
 ```
 Find a repository's memory scopes: the private per-project folder under `~/.local/share/muse/memory/projects/` (by the derivation T0.4 settled, or its recorded fallback) and the shared `<repo>/.agents/memory/`. Parse `MEMORY.md` and topic files: frontmatter, inline notes, index lines pointing at files. Each note becomes a `Memory` with a stable `MemoryRef` (scope, file, and the note's position or name) that survives an unrelated edit to the same file.
 
@@ -44,7 +44,7 @@ requires:   [T1.3, T0.5]
 fixture-ok: yes
 size:       M · mid
 owns:       src/adapters/lambo.rs, src/mcp.rs, Cargo.toml (the ureq line), Cargo.lock
-status:     not-started
+status:     claimed:beam-free-t3.3
 ```
 A minimal MCP client over streamable HTTP in `src/mcp.rs` (initialize, call a tool, read the result), used by the adapter. The adapter lists and reads memories in a configured Lambo session, writes new ones, and corrects one by deriving the correction with `against` naming the stale memory (supersede). Annotate maps to the same contradiction, so recall warns. The agent id Doyle writes under is stable and configured, never per call.
 

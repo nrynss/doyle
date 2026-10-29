@@ -56,7 +56,7 @@ requires:   [T2.2, T1.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/check.rs
-status:     not-started
+status:     claimed:beam-free-t2.3
 ```
 `doyle check OLD NEW`: load both contracts, diff, flag against the store, write the flags, print a report. `--format markdown|json`. Exit codes: 0 nothing flagged, 1 flags written, 2 error, so CI can fail a build on stale memory. Proposals are added in T5.2.
 
@@ -70,7 +70,7 @@ requires:   [T1.2, T2.1, T1.5]
 fixture-ok: yes
 size:       XS · light
 owns:       src/cite.rs
-status:     not-started
+status:     claimed:beam-free-t2.4
 ```
 Record a citation by hand: a memory reference, the contract, and an element given by its native location (`GET /patients`) or its `ElementId`. Refuse an element the contract doesn't have, naming the closest matches.
 
