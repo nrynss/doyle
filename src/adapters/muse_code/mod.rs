@@ -151,7 +151,7 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::SystemTime;
 
-    static HOME_LOCK: Mutex<()> = Mutex::new(());
+    pub(crate) static HOME_LOCK: Mutex<()> = Mutex::new(());
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
     fn temp_dir(label: &str) -> PathBuf {

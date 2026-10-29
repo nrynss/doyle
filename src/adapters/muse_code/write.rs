@@ -471,14 +471,13 @@ mod tests {
     use super::*;
     use crate::adapters::muse_code::MuseCodeAdapter;
     use crate::adapters::muse_code::parse;
+    use crate::adapters::muse_code::tests::HOME_LOCK;
     use std::fs;
     use std::path::PathBuf;
     use std::process::Command;
-    use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::SystemTime;
 
-    static HOME_LOCK: Mutex<()> = Mutex::new(());
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
     fn temp_dir(label: &str) -> PathBuf {
