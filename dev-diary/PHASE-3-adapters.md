@@ -33,18 +33,18 @@ requires:   [T3.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/muse_code/write.rs
-status:     in-review
+status:     done
 ```
 Write a new note; annotate a note in place (`[STALE per Doyle: …]`, the form the recall test proved); supersede a note (the correction replaces it, with a one-line trace of what it replaced). Every write keeps the frontmatter valid, keeps the index in step, writes atomically (temporary file and rename), and respects Muse Code's `.muse-memory.lock`. Annotations are short and plain (README, guideline 7).
 
-**Done when:** the full conformance test passes; a write interrupted between temp file and rename leaves the original intact; the Muse Code index limit (T0.4) is respected; the handoff text includes a before-and-after of the fixture's stale note.
+**Done when:** the full conformance test passes; a write interrupted between temp file and rename leaves the original intact; Doyle's writes stay small plain deltas by construction (short in-place annotations, one marker per note, corrections as single notes) — no index limit is enforced because T0.4 recorded none (clause amended at land time; the original text cited a limit that was never established); the handoff text includes a before-and-after of the fixture's stale note.
 
 **T3.2b (live):** annotate a note in a scratch repository's real Muse Code memory folder, then ask a fresh `muse exec` session on `muse-wonder-1.0` the question the note answers. Owns `tests/live_muse_code.rs`. Budget: three sessions.
 
 **Notes (T3.2)**
 - Built: `src/adapters/muse_code/write.rs` with `write`, `annotate`, `supersede`, plus `set_rename_hook` test seam. `mod.rs` gains the approved `mod write;` line, flips capabilities to annotate+supersede (watch stays unsupported), and delegates the three methods; list/read apply a recorded-scope map so a write's scope round-trips. Atomic writes use a temp file + rename seam; `.muse-memory.lock` is respected by refusing to write while a live pid holds it.
 - Annotate edits the note's bullet in place (`- text [STALE ...]`), so the ordinal ref is unchanged. Supersede creates the correction as a new bullet in `MEMORY.md`, appends `[Superseded by {id}]` to the stale bullet, and is a no-op on retry with identical text. Interrupted rename leaves the original file byte-identical (tested via seam).
-- Decided: notes are appended inline to `MEMORY.md` (topic-file promotion only when needed); Muse Code's snapshot truncates at 512 lines, so very large memories will not be fully visible — Doyle's writes stay small and plain. Scope is recorded in adapter state because Muse Code stores none on disk.
+- Decided: notes are appended inline to `MEMORY.md` (topic-file promotion only when needed). No index limit is enforced: T0.4 recorded none (it settled the folder hash, hook registration, and wire format), and the earlier "512-line snapshot" note in this diary was unsourced — withdrawn. What bounds Doyle's writes is construction, not enforcement: short in-place annotations, one marker per note, corrections as single notes. Scope is recorded in adapter state because Muse Code stores none on disk.
 - Surprised me: `adapter.state` cannot be borrowed mutably and immutably at once (RefCell) — fixed by reading first. The `RENAME_HOOK` mutex needed poison-resistance across parallel tests. Conformance passed on first run after wiring.
 
 ---
@@ -77,7 +77,7 @@ Offline tests replay `testdata/lambo/` through a fake transport.
 
 ## Exit Criteria
 
-- [ ] Muse Code memory is read from both scopes with stable references (T3.1).
-- [ ] Muse Code notes are annotated and superseded safely, and a live Wonder session follows the annotation (T3.2, T3.2b).
-- [ ] Lambo memories are read and corrected through MCP, and recall warns on the corrected memory (T3.3, T3.3b).
-- [ ] Both adapters pass the same conformance test, and nothing outside `src/adapters/` names either.
+- [x] Muse Code memory is read from both scopes with stable references (T3.1).
+- [ ] Muse Code notes are annotated and superseded safely, and a live Wonder session follows the annotation (T3.2, T3.2b). Offline done; live pending.
+- [ ] Lambo memories are read and corrected through MCP, and recall warns on the corrected memory (T3.3, T3.3b). Offline done; live pending.
+- [x] Both adapters pass the same conformance test, and nothing outside `src/adapters/` names either.
