@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0 in progress: T0.1–T0.5 are done; T0.6 (the Vimanam 2.x run) is with an agent; T0.7 is ready.
+**Current status:** P0's critical tasks are done (T0.1–T0.6); T0.7 is ready. P1 can start with T1.1.
 
 ---
 
@@ -140,8 +140,8 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 | Phase | Tasks complete | Status |
 |---|---|---|
-| P0 | 5 / 7 | T0.1–T0.5 done. T0.6 is with an agent. T0.7 is ready. |
-| P1 | 0 / 5 | Waits for T0.3–T0.6. |
+| P0 | 6 / 7 | T0.1–T0.6 done. T0.7 (a second real upgrade, off the critical path) is ready. |
+| P1 | 0 / 5 | Ready: T1.1 can start. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
 | P4 | 0 / 4 | Waits for P1. |
@@ -156,6 +156,9 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T0.6 closed: Vimanam 2.0's view of the Quiet Migration.** Vimanam 2.0.0, installed into a scratch root (not globally), gives 11 change facts for v1 → v2; the CLI's JSON and the library agree on every change ID. Pagination is detected: `pagination_changed` on `listPatients`, severity `review` (native `pagination_inferred`). M1 is flagged by the breaking `field_type_changed` (`array` → `object`) on `listPatients`' 200 response, the `review` `constraint_changed` on the same response, and the pagination fact. `getPatient`, `Patient` and `decommission` have no change facts. Entity IDs for the five elements later tasks cite are in `testdata/vimanam/README.md`; all are the same in v1 and v2. Files: `testdata/vimanam/` (JSON diff, Markdown diff, v1 and v2 entities, change facts). Validated by the orchestrator: the change facts read back from the JSON, no private paths, the gate passed on `main` after the merge.
+  - **Risk for T2.2:** the optional `generated_at` added to the `Stats` type is `review` at the type level but non-breaking on `getStats`' response, so a naive "review flags" rule would flag M3. Written into T2.2.
+  - **Vimanam issue texts, for the user to file:** (1) "An optional field added to a named type is `review` at the type level but `non_breaking` on the response that references it": `Stats.generated_at` in this repository's `testdata/contracts/patients-v*.yaml`. (2) "The Markdown diff omits the pagination and type-level facts the JSON carries": the Markdown says 1 to review, the JSON summary 3, and the Markdown lists neither `pagination_changed` nor the two type-level facts.
 - **T0.3 closed: the user signed off the Quiet Migration story** as written in `testdata/README.md`. T0.6 is dispatched.
 - **T0.3 rebuilt and landed, waiting on the user's sign-off of the Quiet Migration story.** `testdata/contracts/patients-v1.yaml` and `patients-v2.yaml` (an invented clinic chain, Fernwhistle Veterinary Group): `listPatients` changes from a bare array of every `Patient` to a `PatientPage` (`items`, `next_cursor`; `cursor`, and `limit` defaulting to and capped at 100). `getPatient`, `decommission` (`POST /admin/decommission`, with a confirmation token) and `Patient` (with vaccinations and allergies) are unchanged; `Stats` gains an optional `generated_at`. Four memories, written by an earlier reporting session (`muse-wonder-reporting`), in Muse Code format and as Lambo derive and recall JSON; `testdata/memories/provenance.json` names the sessions that relied on each. `testdata/README.md` tells the story in eight numbered steps and gives the expected flag set `{M1}`, with the shared-`Patient` and additive-change traps. Numbers agree throughout: 4,812 patients, 49 pages (48 of 100 and one of 12), 100 exported, 4,712 lost. The records fixtures are removed. Vimanam 1.7.0 parses both contracts (1 breaking, 6 non-breaking, 1 review; no pagination kind), so T0.6 confirms with 2.x. Validated by the orchestrator: the diff holds only T0.3's paths, no private data, the gate passed on `main` after the merge. The clinic name was checked by eye only; search it before the repository goes public (T8.3).
 - **T0.5 closed: Lambo's write half recorded, and the warning confirmed.** By the user's decision the shared writer (`lambo-dogfood.service`, `~/lambo-dogfood/bin/serve-http.sh`) now pins `lambo-dev`, `doyle` and `doyle-probe`, with `lambo-dev` first so `/mcp` is unchanged; restart took about 3 seconds and `session_leases` shows the HTTP writer holding all three. Recorded against `doyle-probe`: derive (a receipt, applied within the wait), recall, inspect, a correction with `against`, and recall again. The stale memory's recall carries `⚠ Contradicted … (id <correction>)` immediately, not after the 60 seconds the docs suggested. `lambo_stale` lists only `depends_on` dependents. Transcripts `testdata/lambo/05`–`15`, the server's ledger path replaced with `~`; `docs/lambo.md` rewritten from them. Done by the orchestrator directly.

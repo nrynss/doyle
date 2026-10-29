@@ -32,6 +32,8 @@ Given the citation index and a set of changes, produce flags (architecture.md, F
 
 Rules that need interpreting are this task's to decide and write down: where ancestor propagation stops (a field change flags the operation returning its type, but not every other operation in the service), and how a change to a shared type reaches memories citing operations that use it.
 
+Vimanam 2.0 rates the optional field added to the `Stats` type as `review` at the type level (T0.6, `testdata/vimanam/README.md`, row 9) while the same field on `getStats`' response is non-breaking. M3 must not be flagged by it: decide here how a type-level `review` on an added optional field propagates, and write the rule down.
+
 **Done when:** on the demo, exactly the memories `testdata/README.md` names are flagged, with the right change IDs; the additive change flags nothing; tests cover each propagation path and the no-duplicate rule; the propagation rules are written under this task.
 
 ---
