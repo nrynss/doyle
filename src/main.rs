@@ -1,5 +1,10 @@
 //! Doyle: truth maintenance for agent memory.
 
+// The adapters have no in-crate user until P3 builds the real ones;
+// the allow keeps the gate quiet until then.
+#[allow(dead_code)]
+mod adapters;
+
 // The contract index has no in-crate user until T2.3 wires up `doyle check`;
 // the allow keeps the gate quiet until then.
 #[allow(dead_code)]

@@ -60,13 +60,19 @@ requires:   [T1.1, T0.4, T0.5]
 fixture-ok: yes
 size:       S · frontier
 owns:       src/adapters/mod.rs, src/adapters/fake.rs
-status:     claimed:muse-spark-t1.3
+status:     in-review:muse-spark-t1.3
 ```
 The `MemoryAdapter` trait (architecture.md, The plug-in seams). Required: `name`, `list`, `read`, `write`. Optional, declared through a capabilities value: `annotate`, `supersede`, `watch`; calling one an adapter lacks returns a typed "unsupported", never a panic. Errors say which adapter and which memory.
 
 Design it against both real systems before either adapter exists: the Muse Code note format (T0.4, T0.3) and Lambo's calls (T0.5). Then write an in-memory fake that implements every capability, for the core's tests.
 
 **Done when:** the fake passes a shared conformance test (list, read, write, annotate, supersede) that P3's adapters will run too; the trait's docs say, for each method, what Muse Code and Lambo will do with it.
+
+**Notes (T1.3)**
+- Built: `src/adapters/mod.rs` holds `MemoryAdapter` (required `name`/`capabilities`/`list`/`read`/`write`; optional `annotate`/`supersede`/`watch` with default bodies returning `AdapterError::Unsupported`), `Capabilities { annotate, supersede, watch }` with `NONE`/`ALL` and `supports(op)`, `AdapterError { NotFound, Unsupported, Backend }` whose `Display` names the adapter and, where one is involved, the memory. `src/adapters/fake.rs` holds `FakeAdapter` (in-memory, every capability, deterministic `mem-N` IDs and timestamps, `with_capabilities` for a reduced set). 7 tests: the shared `check_conformance` run against the full and the reduced fake, plus fake-specific annotation/supersede visibility, ID order and error-message tests.
+- Decided: `list` returns full `Memory` values (id, text, updated_at), matching the product's "list or read memories (id, text, last updated)". `write` takes `(text, scope)` and the adapter mints the ID, since neither system takes Doyle's IDs. `watch` reports each memory once, drained by a baseline call at the start of the conformance run so pre-existing memories don't count as new. The conformance runner is capability-aware: it exercises an optional op when claimed and asserts the typed `Unsupported` when not, so one test fits adapters with different capabilities. Each trait method's docs say what the Muse Code adapter (note files, `[STALE ...]` append, folder rescan) and the Lambo adapter (`lambo_recall`/`lambo_derive`+receipt wait/`against`, recall polling) will do, grounded in `docs/muse-code.md` and `docs/lambo.md`.
+- Outside `owns`, one line: `mod adapters;` in `src/main.rs`, first to keep the declaration list alphabetical (`adapters` sorts before `contract`), with a scoped `#[allow(dead_code)]` and a scoped `#[allow(unused_imports)]` on the `FakeAdapter` re-export, mirroring the T1.1/T2.1 precedent; T1.5 relocates both. No change to `Cargo.toml`/`Cargo.lock`: std only (`RefCell`, `HashMap`), no new dependency.
+- Surprised me: clippy's `collapsible_if` rejects the nested borrow-safe form of the `watch` drain and wants the let-chain back once the order list is cloned; and a `pub use` in a private binary module trips `unused_imports`, not `dead_code`, so it needs its own scoped allow.
 
 ---
 
