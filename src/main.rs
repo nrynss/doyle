@@ -1,5 +1,10 @@
 //! Doyle: truth maintenance for agent memory.
 
+// The core has no in-crate user until T1.5 turns this into a library;
+// the allow keeps the gate quiet until then.
+#[allow(dead_code)]
+mod core;
+
 use std::process::ExitCode;
 
 const USAGE: &str = "\
