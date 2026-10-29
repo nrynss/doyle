@@ -12,7 +12,7 @@ requires:   [T0.3]
 fixture-ok: yes
 size:       M · mid
 owns:       demo/
-status:     in-review
+status:     done
 ```
 What Muse Wonder works in during the demo:
 - the old patient records service, serving the v1 or v2 behaviour of `testdata/contracts/` on a local port with 4,812 fixed patients, and the decommission operation that really deletes them;
