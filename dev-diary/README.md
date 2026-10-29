@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0 done (T0.1–T0.7); T1.1 done. T1.2, T1.3, T1.4 and T1.5 are ready; P1 runs them one at a time.
+**Current status:** P0 done (T0.1–T0.7); T1.1, T1.2 and T2.1 done. T1.3, T1.4 and T1.5 are ready; P1 runs them one at a time.
 
 ---
 
@@ -141,7 +141,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | Phase | Tasks complete | Status |
 |---|---|---|
 | P0 | 7 / 7 | Done. T0.7 (second real upgrade) closed on the user's pick of Stripe Charges → PaymentIntents. |
-| P1 | 1 / 5 | T1.1 done. T1.2 next. |
+| P1 | 2 / 5 | T1.2 done. T1.3 next. |
 | P2 | 1 / 4 | T2.1 done early (task-deps met); rest waits for T1.2. |
 | P3 | 0 / 3 | Waits for P1. |
 | P4 | 0 / 4 | Waits for P1. |
@@ -156,6 +156,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T1.2 closed: the state store.** `src/core/store.rs` holds `Store`: JSONL files per record kind, append-only, rebuilt on open, store-assigned `flag-N`/`proposal-N`/`decision-N` ids, queries for citations by element/memory, open flags (no decision behind any proposal), decision for proposal; corrupt lines skipped with a stderr warning. 22 tests including id-continuity across reopen and the decided-plus-pending-proposal rule. Adversarial review found 3 load-bearing gaps (gitignore line outside `owns`, two untested behaviors); remediation added tests only, re-review clean. Orchestrator landed the `.doyle/` gitignore line with the merge. Outside `owns`, approved: `mod store;` in `src/core/mod.rs` (T1.5 relocates). Gate passed on `main` after the merge.
 - **T2.1 closed: the contract index.** `src/contract.rs` holds `ContractIndex` (one parse via Vimanam 2.0.0's public `adapt`, default features off), `NativeLocation`, `ContractError` (file + Vimanam's reason). Queries: entity, parent chain (self-first, cycle-guarded), referencers (direct only, native order), native location, diff (facts untouched). 7 tests pin the demo against `testdata/vimanam/` (32/38 entities in order, 11 changes with M1's three facts on their subjects, severities 1/3/7 per the fixtures' own summary — the orchestrator's brief wrongly suggested 1/6/1, which is the second pair's count, and the review corrected it). Adversarial review by Muse Spark 1.3 Contributor: clean, no load-bearing findings; 6 test-strength nits recorded on the branch report for later tasks. Outside `owns`, approved: the single `mod contract;` line in `src/main.rs` (T1.1 precedent; T1.5 relocates). Validated by the orchestrator: replay-grade fixture match, no `src/core/` contact, gate passed on `main` after the merge.
 - **T1.1 closed: the core model.** `src/core/model.rs` holds `ElementId` and `ChangeId` (transparent wrappers around Vimanam's `ve2_`/`vc2_` strings), `MemoryRef` (adapter name as a plain string), `Memory`, `Citation`, `Severity { Breaking, Review }` (non-breaking cannot be written, so it cannot flag), `Flag`, `Proposal`/`ProposalAction` and `Decision`/`DecisionVerdict`, with 12 serde tests. The Quiet Migration's M1–M4 and M1's flag → proposal → decision are built from the real fixture IDs. Decided in the task, for later tasks to build on: the store assigns `Flag.id`, `Proposal.id`/`flag_id` and `Decision.id`/`proposal_id`; `Flag.severity` is the highest of its changes; `updated_at` is optional (Muse Code notes carry none); timestamps are RFC 3339 strings, so no time crate. Validated by the orchestrator: every test ID maps to the right entity or change in `testdata/vimanam/`, `src/core/` mentions Muse Code and Lambo only as test data, the gate passed in the worktree and on `main`. Outside `owns`, approved: `mod core;` in `src/main.rs` with a scoped allow. That became a rule in PHASE-1: until T1.5, each P1 task adds its own module's declaration line, and T1.5 moves them into `lib.rs`. Surprise: clippy flags `serde_json::to_value(&temporary)` as a needless borrow.
 - **The user assigns agents and models.** From P1 on the user chooses who implements each task and on which model; the orchestrator prepares the worktree and brief, then validates, lands and closes as before. T1.1 is the first, in its own worktree outside the repository.
