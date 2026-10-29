@@ -150,11 +150,17 @@ requires:   []
 fixture-ok: no
 size:       M · frontier
 owns:       testdata/contracts/second/, docs/second-upgrade.md
-status:     claimed:opencode-t0.7
+status:     in-review
 ```
 product.md's open question: a real public API upgrade with visible stakes (payments, auth, personal data) where a memory written against the old version would cause harm. Find candidates, capture both versions from their public sources, run Vimanam on them, and write three to five memories an agent plausibly would have saved. The user picks one.
 
 **Done when:** `docs/second-upgrade.md` lists the candidates with their source links and diffs; the chosen pair and its memories are in `testdata/contracts/second/`; the user has chosen.
+
+**Notes (in review)**
+- Built: `testdata/contracts/second/` (hand-written `second-v1.yaml`/`second-v2.yaml` for invented Bellflower Market payments, `memories.md` with S1–S4 in Muse Code format, `README.md` provenance note with the unpaid-shipment story and expected flag set `{S1, S2}`) and `docs/second-upgrade.md` (three candidates with verified source links, recommendation of Stripe Charges → PaymentIntents, recorded Vimanam output). Vimanam 2.0.0 installed into `/tmp/opencode/vimanam2` (`--locked` worked); CLI JSON and library diff agree on all 8 change IDs. Both contracts parse; `getCharge`/`createRefund` subtrees have no facts.
+- Decided: recommend the payments candidate — silent harm (ship-then-never-paid) is Doyle's shape, and the fixture mirrors T0.3 (one breaking removal, additive additions, unchanged controls with a shared-`$ref` trap on `Charge`). B (GitHub OAuth Authorizations removal) and C (Google OOB deprecation) are real and verified but fail loudly, kept as evaluation contrast. Memories: S1 severely harmful stale, S2 mildly harmful stale, S3/S4 true controls.
+- Surprised me: the Markdown/JSON gap from T0.6 reproduced exactly on a new pair — Markdown says "0 to review" while JSON says 1 (the `ChargeRequest` type_removed). Also, Vimanam grades a removed request type as `review` while the removed operation itself is `breaking`, so S2's flag rides a review fact the way M1's did.
+- Vimanam issue text for the handoff log: "The Markdown diff omits the type-level facts the JSON carries (second pair: JSON 1 breaking / 6 non-breaking / 1 review; Markdown prints 1 / 3 / 0, listing only endpoints)".
 
 ---
 

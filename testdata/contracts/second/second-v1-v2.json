@@ -1,0 +1,1994 @@
+{
+  "schema_version": 2,
+  "generator": {
+    "name": "vimanam",
+    "version": "2.0.0"
+  },
+  "old": {
+    "file_sha256": "5d7629609d26ae8d32c5073c311c89a596747fc9313dd0c8d0ff4ed844cc5eb1",
+    "contract": {
+      "format": "openapi",
+      "title": "Bellflower Market payments",
+      "version": "1.0.0",
+      "entities": [
+        {
+          "id": "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536",
+          "kind": "service",
+          "name": "API",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/services/API",
+            "resolved": false
+          },
+          "attributes": {},
+          "references": []
+        },
+        {
+          "id": "ve2_c48f48c1b04af8187da6a8b1e7323dfa4f119dab72ba947f8385262e464862f7",
+          "kind": "operation",
+          "name": "createCharge",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/charges",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "createCharge",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_42f9c206f8c121952762c2c6543b0188b6d2208648e2f0e506914eb9e329dbd8",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_c48f48c1b04af8187da6a8b1e7323dfa4f119dab72ba947f8385262e464862f7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/charges",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ChargeRequest"
+            }
+          },
+          "references": [
+            "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80"
+          ]
+        },
+        {
+          "id": "ve2_f9170b1e865b08e6164f796c708b1e488980f589d9d744b8fe36188c4717284d",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_c48f48c1b04af8187da6a8b1e7323dfa4f119dab72ba947f8385262e464862f7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/charges",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Charge"
+          },
+          "references": [
+            "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7"
+          ]
+        },
+        {
+          "id": "ve2_8f6f6dc1221dfa192bcbc570f108de703b59daaae3fc9bdc4d6620c8a0d75742",
+          "kind": "result",
+          "name": "402",
+          "parent": "ve2_c48f48c1b04af8187da6a8b1e7323dfa4f119dab72ba947f8385262e464862f7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/charges",
+            "parameter_in": null,
+            "status": "402",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "kind": "operation",
+          "name": "getCharge",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getCharge",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_e94de5cef03666f0b9f8d64e18f36d400c53abbcee5945fc10ecd6f4afb5f93f",
+          "kind": "argument",
+          "name": "id",
+          "parent": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": "path",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_a8b7643300c4c8f2332497c6deea2ada4d0244f77336f3414b19a4de46d2b225",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Charge"
+          },
+          "references": [
+            "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7"
+          ]
+        },
+        {
+          "id": "ve2_d9ba7078bad3be21e29c29827528deede334713b783d60ab6921fe89ad481e84",
+          "kind": "result",
+          "name": "404",
+          "parent": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": null,
+            "status": "404",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_77adf5d29d567ad79d84f58999ccf59e09c6c35620fbd6a3d0fe9c5dae96304b",
+          "kind": "operation",
+          "name": "createRefund",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/refunds",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "createRefund",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_66f4d8d6a3016482898e9b40afdc51bf82f9eb072ff9911130734cc3077c346d",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_77adf5d29d567ad79d84f58999ccf59e09c6c35620fbd6a3d0fe9c5dae96304b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/refunds",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RefundRequest"
+            }
+          },
+          "references": [
+            "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91"
+          ]
+        },
+        {
+          "id": "ve2_0fa5a1d286855170eaed38493b076c8dfcdbe43f4f6452cb09dab6742d7bf4bd",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_77adf5d29d567ad79d84f58999ccf59e09c6c35620fbd6a3d0fe9c5dae96304b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/refunds",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Refund"
+          },
+          "references": [
+            "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb"
+          ]
+        },
+        {
+          "id": "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80",
+          "kind": "type",
+          "name": "ChargeRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/ChargeRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "card_token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount",
+              "currency",
+              "card_token"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_ab36f9b2ee9070d23d7de97cbe31cbba4b3e46e2d9e6ed9280d6e5a377e05301",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_30797e485664654cbc62280188b270de25ee114619e9267d997f6b41dbeb43a6",
+          "kind": "field",
+          "name": "currency",
+          "parent": "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/currency",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_29bf09ff59fabc6bc3b98f569e775f6a9d9fc840ccab32303b85d3cc6fa413a8",
+          "kind": "field",
+          "name": "card_token",
+          "parent": "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/card_token",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "kind": "type",
+          "name": "Charge",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Charge",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "succeeded"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "amount",
+              "currency",
+              "status"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f45e3dc9531862018e9762add4281a5250a05e73c780050156780db853827180",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f75553245301ac8ac5bc88e3b7a9b26f8f52e347a7aca2095b056bf266e4b969",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_fbadd5c2db930aefeb3fba042f31a55c5446df632bcfb7de129f2a7d5e6d7238",
+          "kind": "field",
+          "name": "currency",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/currency",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_0df522cab7437dec3e83796026315484d5cf54d50af228bfee4712b72716d7e0",
+          "kind": "field",
+          "name": "status",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "enum": [
+              "succeeded"
+            ],
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_d98454fb0075c8097daa8478809fc7c054d73061cc8b0a04ee46eee596e77df0",
+          "kind": "value",
+          "name": "\"succeeded\"",
+          "parent": "ve2_0df522cab7437dec3e83796026315484d5cf54d50af228bfee4712b72716d7e0",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "value": "succeeded"
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91",
+          "kind": "type",
+          "name": "RefundRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/RefundRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "charge_id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "charge_id",
+              "amount"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_73221b670bca6919ff44ec94783810407e941ee5baec9729c039d78f8143a161",
+          "kind": "field",
+          "name": "charge_id",
+          "parent": "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/charge_id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f0d2c5771c2727d6584de6b2b1d9419ad192d58533859ad0d2c0be51522639da",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "kind": "type",
+          "name": "Refund",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Refund",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "charge_id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "charge_id",
+              "amount"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_32468b5bfe837ee22ab59afbce8d90f32a9e42025ca532e0e98b92b87021dbce",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_5793b5f7ec6a631d6b3eb3d11fea1ba8264f708db917c9800c7908b76b13caea",
+          "kind": "field",
+          "name": "charge_id",
+          "parent": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/charge_id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_857fe032bee5b3cdc01ac58aa2f55c751ddb1daa91e625c7bd5415afd5d13e59",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        }
+      ]
+    }
+  },
+  "new": {
+    "file_sha256": "6ba48c773139e526811062a8ddfa222d1e8b6d8d140eb64550ecb89007fc1594",
+    "contract": {
+      "format": "openapi",
+      "title": "Bellflower Market payments",
+      "version": "2.0.0",
+      "entities": [
+        {
+          "id": "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536",
+          "kind": "service",
+          "name": "API",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/services/API",
+            "resolved": false
+          },
+          "attributes": {},
+          "references": []
+        },
+        {
+          "id": "ve2_896cbf231c3bf5fc7957730d1d54b7dce14926e3bc17895f095d52c956377884",
+          "kind": "operation",
+          "name": "createPayment",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "createPayment",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_0f908f3acfdbc618969e6e92ba355a4f0d603385a5e847abe1bf553e4c49add5",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_896cbf231c3bf5fc7957730d1d54b7dce14926e3bc17895f095d52c956377884",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PaymentRequest"
+            }
+          },
+          "references": [
+            "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9"
+          ]
+        },
+        {
+          "id": "ve2_bb3026e877e77eb95f961938899b20e6b08d2d706712332ae4ae2bd6049b4e32",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_896cbf231c3bf5fc7957730d1d54b7dce14926e3bc17895f095d52c956377884",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Payment"
+          },
+          "references": [
+            "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f"
+          ]
+        },
+        {
+          "id": "ve2_e821f9cb7e57dc78dfe16982cc66b7578e6608a26c97f8fc773828cb453f2acb",
+          "kind": "result",
+          "name": "402",
+          "parent": "ve2_896cbf231c3bf5fc7957730d1d54b7dce14926e3bc17895f095d52c956377884",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments",
+            "parameter_in": null,
+            "status": "402",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_80b3aaf586772b3de81d40be7b577422e5d17d30ee59b8836ab5778d0ad40f98",
+          "kind": "operation",
+          "name": "confirmPayment",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments/{id}/confirm",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "confirmPayment",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f95aa8b2999b881b13942091ebe03a2cebbc4b70b3e0d8eaac0cbbc4a4c936f1",
+          "kind": "argument",
+          "name": "id",
+          "parent": "ve2_80b3aaf586772b3de81d40be7b577422e5d17d30ee59b8836ab5778d0ad40f98",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments/{id}/confirm",
+            "parameter_in": "path",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_966d24504593507cda377b237b790c572aa5400f8267a8e86fadafca4c9accd5",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_80b3aaf586772b3de81d40be7b577422e5d17d30ee59b8836ab5778d0ad40f98",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments/{id}/confirm",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ConfirmRequest"
+            }
+          },
+          "references": [
+            "ve2_9a9df48e4ba75a2c0c87c98ba1bc8de03ddd9ce4b5b736b18df977c7be69a0ac"
+          ]
+        },
+        {
+          "id": "ve2_5da03d603edac76ee913ef4efcf69ac5e139aeaf87e34fda6c5f716b250c251b",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_80b3aaf586772b3de81d40be7b577422e5d17d30ee59b8836ab5778d0ad40f98",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/payments/{id}/confirm",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Payment"
+          },
+          "references": [
+            "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f"
+          ]
+        },
+        {
+          "id": "ve2_9701d0fd289ff395e704c587882826e87b209ea2fbc145d2db150e298a0de73d",
+          "kind": "operation",
+          "name": "getPayment",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/payments/{id}",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getPayment",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_ae7061a0de192d1371ac602ef47f4e006656dabb76b4fe7c7a2f3e487b5cd9e2",
+          "kind": "argument",
+          "name": "id",
+          "parent": "ve2_9701d0fd289ff395e704c587882826e87b209ea2fbc145d2db150e298a0de73d",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/payments/{id}",
+            "parameter_in": "path",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_8bfc8058a628556e3875353d4842ff092b2d6c4909de8b6bc15d7b29a9f44ed5",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_9701d0fd289ff395e704c587882826e87b209ea2fbc145d2db150e298a0de73d",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/payments/{id}",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Payment"
+          },
+          "references": [
+            "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f"
+          ]
+        },
+        {
+          "id": "ve2_ffb7f24aba9b15a4a847af86464b97cd269fffe44e7144cda41b8c68a3169784",
+          "kind": "result",
+          "name": "404",
+          "parent": "ve2_9701d0fd289ff395e704c587882826e87b209ea2fbc145d2db150e298a0de73d",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/payments/{id}",
+            "parameter_in": null,
+            "status": "404",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "kind": "operation",
+          "name": "getCharge",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getCharge",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_e94de5cef03666f0b9f8d64e18f36d400c53abbcee5945fc10ecd6f4afb5f93f",
+          "kind": "argument",
+          "name": "id",
+          "parent": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": "path",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_a8b7643300c4c8f2332497c6deea2ada4d0244f77336f3414b19a4de46d2b225",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Charge"
+          },
+          "references": [
+            "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7"
+          ]
+        },
+        {
+          "id": "ve2_d9ba7078bad3be21e29c29827528deede334713b783d60ab6921fe89ad481e84",
+          "kind": "result",
+          "name": "404",
+          "parent": "ve2_3ac3b84b85fc19acb662f0525768c123b1f62b1aa25401d93a4bbe86bfee3bc5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/charges/{id}",
+            "parameter_in": null,
+            "status": "404",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_77adf5d29d567ad79d84f58999ccf59e09c6c35620fbd6a3d0fe9c5dae96304b",
+          "kind": "operation",
+          "name": "createRefund",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/refunds",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "createRefund",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_66f4d8d6a3016482898e9b40afdc51bf82f9eb072ff9911130734cc3077c346d",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_77adf5d29d567ad79d84f58999ccf59e09c6c35620fbd6a3d0fe9c5dae96304b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/refunds",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RefundRequest"
+            }
+          },
+          "references": [
+            "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91"
+          ]
+        },
+        {
+          "id": "ve2_0fa5a1d286855170eaed38493b076c8dfcdbe43f4f6452cb09dab6742d7bf4bd",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_77adf5d29d567ad79d84f58999ccf59e09c6c35620fbd6a3d0fe9c5dae96304b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/refunds",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Refund"
+          },
+          "references": [
+            "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb"
+          ]
+        },
+        {
+          "id": "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9",
+          "kind": "type",
+          "name": "PaymentRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/PaymentRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "card_token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount",
+              "currency",
+              "card_token"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_07abc11307b67129fb260151995e04d9f6acbcea0dc952f1f3d309fa3cc0898b",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_2484c78a90c1de2a2621fd2fcd10a7305a55c55eb43a3ca72a95d916505c847d",
+          "kind": "field",
+          "name": "currency",
+          "parent": "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/currency",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_a8ff7cef53f9b0cf8c961e0708a80423798eecc26021bd59a6bbde437bb1e73f",
+          "kind": "field",
+          "name": "card_token",
+          "parent": "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/card_token",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_9a9df48e4ba75a2c0c87c98ba1bc8de03ddd9ce4b5b736b18df977c7be69a0ac",
+          "kind": "type",
+          "name": "ConfirmRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/ConfirmRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "return_url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "return_url"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_08e474fb29c3a29f3aaf4525b3c6ca228d2fcb5041924ed7b49996ea1fb353e6",
+          "kind": "field",
+          "name": "return_url",
+          "parent": "ve2_9a9df48e4ba75a2c0c87c98ba1bc8de03ddd9ce4b5b736b18df977c7be69a0ac",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/return_url",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "format": "uri",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+          "kind": "type",
+          "name": "Payment",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Payment",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "requires_confirmation",
+                  "succeeded"
+                ]
+              },
+              "client_secret": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "amount",
+              "currency",
+              "status",
+              "client_secret"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_a96490604fa15b25aa7e299b427b0bc244425683588550b8a773637b36319daf",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_e63f172cdf3b1037a9f584108f2230792adc583531793c7ec99284125cd12ee0",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_9e28489853f48ed519c70c38738fba542ea0054d9069aa540262d4b5590789f6",
+          "kind": "field",
+          "name": "currency",
+          "parent": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/currency",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_b1578aba4b586016045ef2ad4cde239faf106cd3f4abdd24eb73e16a40383c36",
+          "kind": "field",
+          "name": "status",
+          "parent": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "enum": [
+              "requires_confirmation",
+              "succeeded"
+            ],
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f07eab1b61660fc092bd95e810bb706d2e6364290c2666ea46397d6b68ac78f4",
+          "kind": "value",
+          "name": "\"requires_confirmation\"",
+          "parent": "ve2_b1578aba4b586016045ef2ad4cde239faf106cd3f4abdd24eb73e16a40383c36",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "value": "requires_confirmation"
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_6aa61562ea558b8f663b6360c451ced03e0a5149a23dd31d540526799dd10b24",
+          "kind": "value",
+          "name": "\"succeeded\"",
+          "parent": "ve2_b1578aba4b586016045ef2ad4cde239faf106cd3f4abdd24eb73e16a40383c36",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "value": "succeeded"
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f41f4c530a15e768a4ac3abc5395152cae05d1030d11771fe9d11682bf050dbf",
+          "kind": "field",
+          "name": "client_secret",
+          "parent": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/client_secret",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "kind": "type",
+          "name": "Charge",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Charge",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "succeeded"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "amount",
+              "currency",
+              "status"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f45e3dc9531862018e9762add4281a5250a05e73c780050156780db853827180",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f75553245301ac8ac5bc88e3b7a9b26f8f52e347a7aca2095b056bf266e4b969",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_fbadd5c2db930aefeb3fba042f31a55c5446df632bcfb7de129f2a7d5e6d7238",
+          "kind": "field",
+          "name": "currency",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/currency",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_0df522cab7437dec3e83796026315484d5cf54d50af228bfee4712b72716d7e0",
+          "kind": "field",
+          "name": "status",
+          "parent": "ve2_767cf91906c38274325472d9c1feeaf7bc09c4ba22ce73279055c0830880a5d7",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "enum": [
+              "succeeded"
+            ],
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_d98454fb0075c8097daa8478809fc7c054d73061cc8b0a04ee46eee596e77df0",
+          "kind": "value",
+          "name": "\"succeeded\"",
+          "parent": "ve2_0df522cab7437dec3e83796026315484d5cf54d50af228bfee4712b72716d7e0",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/status",
+            "resolved": false
+          },
+          "attributes": {
+            "value": "succeeded"
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91",
+          "kind": "type",
+          "name": "RefundRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/RefundRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "charge_id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "charge_id",
+              "amount"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_73221b670bca6919ff44ec94783810407e941ee5baec9729c039d78f8143a161",
+          "kind": "field",
+          "name": "charge_id",
+          "parent": "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/charge_id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_f0d2c5771c2727d6584de6b2b1d9419ad192d58533859ad0d2c0be51522639da",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_bd7a7f9089a59e053918c14073f0f675e54fbf475071b6e5d3e0213de9927a91",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "kind": "type",
+          "name": "Refund",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Refund",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "charge_id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "charge_id",
+              "amount"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_32468b5bfe837ee22ab59afbce8d90f32a9e42025ca532e0e98b92b87021dbce",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_5793b5f7ec6a631d6b3eb3d11fea1ba8264f708db917c9800c7908b76b13caea",
+          "kind": "field",
+          "name": "charge_id",
+          "parent": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/charge_id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_857fe032bee5b3cdc01ac58aa2f55c751ddb1daa91e625c7bd5415afd5d13e59",
+          "kind": "field",
+          "name": "amount",
+          "parent": "ve2_7570a6fea518bd76d788521c3f229243ac11dddf2403960563f12e165f4ef6bb",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/amount",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        }
+      ]
+    }
+  },
+  "summary": {
+    "operations_added": 3,
+    "operations_removed": 1,
+    "operations_changed": 0,
+    "breaking": 1,
+    "non_breaking": 6,
+    "review": 1
+  },
+  "changes": [
+    {
+      "id": "vc2_cf9ac926b119bb097260520a9c8e51090f1ebd73c7fac667049c5e967a0cffba",
+      "subject": "ve2_c48f48c1b04af8187da6a8b1e7323dfa4f119dab72ba947f8385262e464862f7",
+      "kind": "operation_removed",
+      "severity": "breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "POST",
+        "path": "/charges",
+        "parameter_in": null,
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "endpoint_removed",
+      "details": {
+        "was_deprecated": false
+      }
+    },
+    {
+      "id": "vc2_ef929def3588cb8e1d76433c1d57ba288cbc5ad6f8bc14b50d341059f4eaac86",
+      "subject": "ve2_896cbf231c3bf5fc7957730d1d54b7dce14926e3bc17895f095d52c956377884",
+      "kind": "operation_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "POST",
+        "path": "/payments",
+        "parameter_in": null,
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "endpoint_added",
+      "details": {}
+    },
+    {
+      "id": "vc2_cb29fb3d9cc3b0c0de0f81bc4333940184b0bddb240618c03d59b0d1ad41ccfc",
+      "subject": "ve2_80b3aaf586772b3de81d40be7b577422e5d17d30ee59b8836ab5778d0ad40f98",
+      "kind": "operation_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "POST",
+        "path": "/payments/{id}/confirm",
+        "parameter_in": null,
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "endpoint_added",
+      "details": {}
+    },
+    {
+      "id": "vc2_f67305928acf2da5dbf67746a4c776c5540be3daa210a695523d2f551a8efb8c",
+      "subject": "ve2_9701d0fd289ff395e704c587882826e87b209ea2fbc145d2db150e298a0de73d",
+      "kind": "operation_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/payments/{id}",
+        "parameter_in": null,
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "endpoint_added",
+      "details": {}
+    },
+    {
+      "id": "vc2_e84251ba4635b4b1c2cdffd32e98b23a496b3b361f9196a7c53f41f24484cabf",
+      "subject": "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80",
+      "kind": "type_removed",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/ChargeRequest",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {}
+    },
+    {
+      "id": "vc2_23137fa1e8f96ba55f32181d7f0366d9d427e591e527320b2c2fefa39ad8d854",
+      "subject": "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9",
+      "kind": "type_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/PaymentRequest",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {}
+    },
+    {
+      "id": "vc2_e8777102c70de081aa5c4fea8e319e8190d33269744ad5f1f3af0587490876e4",
+      "subject": "ve2_9a9df48e4ba75a2c0c87c98ba1bc8de03ddd9ce4b5b736b18df977c7be69a0ac",
+      "kind": "type_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/ConfirmRequest",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {}
+    },
+    {
+      "id": "vc2_aed11226a6b250fe099ce3e798ac0fd79e9437c9d6bda7beada41c59c6587ce8",
+      "subject": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+      "kind": "type_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/Payment",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {}
+    }
+  ]
+}

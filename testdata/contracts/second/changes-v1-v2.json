@@ -1,0 +1,164 @@
+[
+  {
+    "id": "vc2_cf9ac926b119bb097260520a9c8e51090f1ebd73c7fac667049c5e967a0cffba",
+    "subject": "ve2_c48f48c1b04af8187da6a8b1e7323dfa4f119dab72ba947f8385262e464862f7",
+    "kind": "operation_removed",
+    "severity": "breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": "POST",
+      "path": "/charges",
+      "parameter_in": null,
+      "status": null,
+      "pointer": "",
+      "resolved": false
+    },
+    "native_kind": "endpoint_removed",
+    "details": {
+      "was_deprecated": false
+    }
+  },
+  {
+    "id": "vc2_ef929def3588cb8e1d76433c1d57ba288cbc5ad6f8bc14b50d341059f4eaac86",
+    "subject": "ve2_896cbf231c3bf5fc7957730d1d54b7dce14926e3bc17895f095d52c956377884",
+    "kind": "operation_added",
+    "severity": "non_breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": "POST",
+      "path": "/payments",
+      "parameter_in": null,
+      "status": null,
+      "pointer": "",
+      "resolved": false
+    },
+    "native_kind": "endpoint_added",
+    "details": {}
+  },
+  {
+    "id": "vc2_cb29fb3d9cc3b0c0de0f81bc4333940184b0bddb240618c03d59b0d1ad41ccfc",
+    "subject": "ve2_80b3aaf586772b3de81d40be7b577422e5d17d30ee59b8836ab5778d0ad40f98",
+    "kind": "operation_added",
+    "severity": "non_breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": "POST",
+      "path": "/payments/{id}/confirm",
+      "parameter_in": null,
+      "status": null,
+      "pointer": "",
+      "resolved": false
+    },
+    "native_kind": "endpoint_added",
+    "details": {}
+  },
+  {
+    "id": "vc2_f67305928acf2da5dbf67746a4c776c5540be3daa210a695523d2f551a8efb8c",
+    "subject": "ve2_9701d0fd289ff395e704c587882826e87b209ea2fbc145d2db150e298a0de73d",
+    "kind": "operation_added",
+    "severity": "non_breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": "GET",
+      "path": "/payments/{id}",
+      "parameter_in": null,
+      "status": null,
+      "pointer": "",
+      "resolved": false
+    },
+    "native_kind": "endpoint_added",
+    "details": {}
+  },
+  {
+    "id": "vc2_e84251ba4635b4b1c2cdffd32e98b23a496b3b361f9196a7c53f41f24484cabf",
+    "subject": "ve2_b136d3799d1b3246cf61afbf65c3cc0bfa63a55f7b54e0d97aef964410bcbe80",
+    "kind": "type_removed",
+    "severity": "review",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": null,
+      "path": null,
+      "parameter_in": null,
+      "status": null,
+      "pointer": "/types/ChargeRequest",
+      "resolved": false
+    },
+    "native_kind": "surface_changed",
+    "details": {}
+  },
+  {
+    "id": "vc2_23137fa1e8f96ba55f32181d7f0366d9d427e591e527320b2c2fefa39ad8d854",
+    "subject": "ve2_ac788a1ed8591b25015a9d09842148c2d0c24f2912359c4058031a13a18b46a9",
+    "kind": "type_added",
+    "severity": "non_breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": null,
+      "path": null,
+      "parameter_in": null,
+      "status": null,
+      "pointer": "/types/PaymentRequest",
+      "resolved": false
+    },
+    "native_kind": "surface_changed",
+    "details": {}
+  },
+  {
+    "id": "vc2_e8777102c70de081aa5c4fea8e319e8190d33269744ad5f1f3af0587490876e4",
+    "subject": "ve2_9a9df48e4ba75a2c0c87c98ba1bc8de03ddd9ce4b5b736b18df977c7be69a0ac",
+    "kind": "type_added",
+    "severity": "non_breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": null,
+      "path": null,
+      "parameter_in": null,
+      "status": null,
+      "pointer": "/types/ConfirmRequest",
+      "resolved": false
+    },
+    "native_kind": "surface_changed",
+    "details": {}
+  },
+  {
+    "id": "vc2_aed11226a6b250fe099ce3e798ac0fd79e9437c9d6bda7beada41c59c6587ce8",
+    "subject": "ve2_3a9dab31baa21d9cb1e7393a662fe4ed92888395de26a5c317ae95c291a6e82f",
+    "kind": "type_added",
+    "severity": "non_breaking",
+    "impacts": [
+      "source"
+    ],
+    "native": {
+      "format": "openapi",
+      "method": null,
+      "path": null,
+      "parameter_in": null,
+      "status": null,
+      "pointer": "/types/Payment",
+      "resolved": false
+    },
+    "native_kind": "surface_changed",
+    "details": {}
+  }
+]
