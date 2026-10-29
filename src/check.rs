@@ -8,7 +8,7 @@ use crate::contract::ContractIndex;
 use crate::core::Store;
 use crate::core::flag_citations;
 use crate::core::{Citation, Flag, Proposal, ProposalAction};
-use crate::models::{ModelClient, ReplayClient};
+use crate::models::{ModelClient, ModelError, ReplayClient};
 use crate::prompts::recheck;
 
 /// Run the `check` command.
@@ -86,33 +86,94 @@ pub fn execute_with_model(
     }
     let written: Vec<Flag> = store.flags()[before..].to_vec();
 
-    // Re-check: run on each new flag unless --no-recheck.
+    // Re-check: run on each open flag that has no proposal yet, unless
+    // --no-recheck. Retry policy (L1): a flag that is still open and has no
+    // proposal is treated as still needing work, so a rerun re-attempts the
+    // re-check for it instead of skipping it. The flag itself is never
+    // duplicated: `flag_citations` still dedups by (adapter, memory id) via
+    // the store's open flags, so only the re-check step repeats. Once a
+    // proposal has been recorded for a flag, it is skipped on subsequent
+    // runs (no duplicate proposals). A flag that gets no proposal (replay
+    // miss or parse failure) emits a per-flag diagnostic on stderr and stays
+    // proposal-less, so the next run retries it.
     let mut proposals: Vec<Proposal> = Vec::new();
     if !no_recheck {
-        for f in &written {
+        let targets: Vec<Flag> = store
+            .open_flags()
+            .into_iter()
+            .filter(|f| store.proposals_for_flag(&f.id).is_empty())
+            .collect();
+        for f in &targets {
             let citation = citations.iter().find(|c| c.memory == f.memory).cloned();
             let input = build_recheck_input(f, citation.as_ref(), &changes, &old, &new);
             let request = recheck::build_request(&input);
-            if let Ok(resp) = client.complete(&request)
-                && let Ok(parsed) = recheck::parse_response(&resp.value)
-            {
-                let proposal = Proposal {
-                    id: String::new(),
-                    flag_id: f.id.clone(),
-                    action: parsed.action,
-                    rationale: parsed.rationale,
-                    proposed_by: recheck::MODEL.to_string(),
-                };
-                let pid = store
-                    .record_proposal(proposal.clone())
-                    .map_err(|e| e.to_string())?;
-                if let Some(p) = store.proposal(&pid) {
-                    proposals.push(p);
-                } else {
-                    proposals.push(Proposal {
-                        id: pid,
-                        ..proposal
-                    });
+            match client.complete(&request) {
+                Ok(resp) => match recheck::parse_response(&resp.value) {
+                    Ok(parsed) => {
+                        let proposal = Proposal {
+                            id: String::new(),
+                            flag_id: f.id.clone(),
+                            action: parsed.action,
+                            rationale: parsed.rationale,
+                            proposed_by: recheck::MODEL.to_string(),
+                        };
+                        let pid = store
+                            .record_proposal(proposal.clone())
+                            .map_err(|e| e.to_string())?;
+                        if let Some(p) = store.proposal(&pid) {
+                            proposals.push(p);
+                        } else {
+                            proposals.push(Proposal {
+                                id: pid,
+                                ..proposal
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "doyle check: flag {} ({}/{}) got no proposal: parse failure: {} (model {}, changes {})",
+                            f.id,
+                            f.memory.adapter,
+                            f.memory.id,
+                            e,
+                            recheck::MODEL,
+                            f.changes
+                                .iter()
+                                .map(|c| c.0.as_str())
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        );
+                    }
+                },
+                Err(ModelError::ReplayMiss { key }) => {
+                    eprintln!(
+                        "doyle check: flag {} ({}/{}) got no proposal: replay miss (key {}) (model {}, changes {})",
+                        f.id,
+                        f.memory.adapter,
+                        f.memory.id,
+                        key,
+                        recheck::MODEL,
+                        f.changes
+                            .iter()
+                            .map(|c| c.0.as_str())
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    );
+                }
+                Err(other) => {
+                    eprintln!(
+                        "doyle check: flag {} ({}/{}) got no proposal: model error: {} (model {}, changes {})",
+                        f.id,
+                        f.memory.adapter,
+                        f.memory.id,
+                        other,
+                        recheck::MODEL,
+                        f.changes
+                            .iter()
+                            .map(|c| c.0.as_str())
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    );
                 }
             }
         }
@@ -146,15 +207,44 @@ fn build_recheck_input(
     new: &ContractIndex,
 ) -> recheck::RecheckInput {
     // If a committed measurement case matches this flag's change set, reuse it
-    // verbatim so the replay client can serve the recorded reply.
+    // verbatim so the replay client can serve the recorded reply. The reuse
+    // is gated on more than the change-id set (L2): it also requires the
+    // cited memory (adapter + id) and the claim to match the case, so a
+    // different memory that happens to share the change set falls through to
+    // the generic live-built request instead of receiving another memory's
+    // verbatim input.
     let mut ids: Vec<&str> = flag.changes.iter().map(|c| c.0.as_str()).collect();
     ids.sort();
+    let claim_matches = |case_claim: &str| {
+        if let Some(cit) = citation {
+            cit.claim == case_claim
+        } else {
+            flag.evidence.as_deref() == Some(case_claim)
+        }
+    };
+    // The committed cases are pinned to specific memories; only those
+    // memories are eligible for verbatim reuse (the recorded replies are
+    // for them). A case with no pinned memory never reuses.
+    let case_memory = |name: &str| -> Option<(&'static str, &'static str)> {
+        match name {
+            "m1_correct" => Some(("muse-code", "M1")),
+            _ => None,
+        }
+    };
     for case in recheck::measurement_cases() {
         let mut cids: Vec<&str> = case.input.changes.iter().map(|c| c.id.as_str()).collect();
         cids.sort();
-        if cids == ids {
-            return case.input.clone();
+        if cids != ids {
+            continue;
         }
+        if !claim_matches(&case.input.claim) {
+            continue;
+        }
+        match case_memory(case.name) {
+            Some((adapter, id)) if flag.memory.adapter == adapter && flag.memory.id == id => {}
+            _ => continue,
+        }
+        return case.input.clone();
     }
 
     // Generic fallback.
@@ -542,6 +632,24 @@ mod tests {
         assert_eq!(f["memory"]["id"], "M1");
         let changes = f["changes"].as_array().unwrap();
         assert_eq!(changes.len(), 3);
+        assert!(
+            changes.iter().any(
+                |c| c == "vc2_9bedbbb47825fa87ea41aa38342d0492948286a7dd4a5ecbb378310261df6841"
+            ),
+            "breaking change id missing: {out}"
+        );
+        assert!(
+            changes.iter().any(
+                |c| c == "vc2_d7e1b2acbebe45b089106951b949710e3112d1586ed74cfe5fab47d702987277"
+            ),
+            "constraint change id missing: {out}"
+        );
+        assert!(
+            changes.iter().any(
+                |c| c == "vc2_d82adaee7e47799b8027d3c1b9f458e16be8a20df1696186f351369f07e011e0"
+            ),
+            "pagination change id missing: {out}"
+        );
         assert_eq!(f["severity"], "breaking");
         assert_eq!(f["old_version"], old);
         assert_eq!(f["new_version"], new);
@@ -699,10 +807,15 @@ mod tests {
         let p = &f["proposal"];
         assert!(p.is_object(), "flag must carry proposal: {out}");
         assert_eq!(p["action"], "correct", "must be correct: {out}");
-        // The proposal obj doesn't include new_text currently; check store.
+        // JSON proposal carries new_text too; the store is authoritative.
         let store = Store::open(&dir).unwrap();
         let proposals = store.proposals();
         assert!(!proposals.is_empty(), "proposal written: {out}");
+        assert_eq!(
+            proposals[0].flag_id,
+            store.flags()[0].id,
+            "proposal.flag_id must equal the written flag's store id"
+        );
         match &proposals[0].action {
             crate::core::ProposalAction::Correct { new_text } => {
                 crate::prompts::recheck::check_replacement_text(new_text)
@@ -715,6 +828,247 @@ mod tests {
             }
             other => panic!("expected correct, got {other:?}"),
         }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // L1: replay miss emits a per-flag diagnostic on stderr (not stdout),
+    // and the exit code is preserved (flags written -> 1).
+    #[test]
+    fn l1_replay_miss_diagnostic_on_stderr() {
+        use std::process::Command;
+        let dir = temp_state_dir("l1-miss");
+        seed_citations(&dir);
+        // Empty replay dir forces a replay miss for every flag.
+        let empty_replay = temp_state_dir("l1-empty-replay");
+        let bin = format!("{}/target/debug/doyle", env!("CARGO_MANIFEST_DIR"));
+        let out = Command::new(&bin)
+            .args([
+                "check",
+                fixture("contracts/patients-v1.yaml").as_str(),
+                fixture("contracts/patients-v2.yaml").as_str(),
+                "--state-dir",
+                dir.to_str().unwrap(),
+                "--format",
+                "json",
+            ])
+            .env("DOYLE_RECHECK_REPLAY_DIR", empty_replay.to_str().unwrap())
+            .output()
+            .expect("spawn doyle");
+        // Exit code preserved: flags written -> 1.
+        assert_eq!(
+            out.status.code(),
+            Some(1),
+            "stderr: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        // Diagnostic on stderr, not stdout.
+        assert!(
+            stderr.contains("got no proposal") && stderr.contains("replay miss"),
+            "stderr must name flag + replay miss: {stderr}"
+        );
+        assert!(
+            !stdout.contains("got no proposal"),
+            "diagnostic must not appear on stdout: {stdout}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&empty_replay);
+    }
+
+    // L1 retry policy: a proposal-less open flag is re-attempted on rerun.
+    #[test]
+    fn l1_retry_rechecks_proposal_less_flag() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct FlakyClient {
+            calls: AtomicUsize,
+        }
+        impl crate::models::ModelClient for FlakyClient {
+            fn complete(
+                &self,
+                _request: &crate::models::ModelRequest,
+            ) -> Result<crate::models::ModelResponse, crate::models::ModelError> {
+                let n = self.calls.fetch_add(1, Ordering::SeqCst);
+                if n == 0 {
+                    Err(crate::models::ModelError::ReplayMiss {
+                        key: "first-miss".to_string(),
+                    })
+                } else {
+                    Ok(crate::models::ModelResponse {
+                        value: serde_json::json!({
+                            "action": "correct",
+                            "new_text": "GET /patients returns one page of up to 100 plus next_cursor",
+                            "rationale": "v2 pages at 100 with a cursor"
+                        }),
+                        usage: crate::models::Usage::NONE,
+                    })
+                }
+            }
+        }
+        let dir = temp_state_dir("l1-retry");
+        seed_citations(&dir);
+        let cli = cli::Cli {
+            command: cli::Command::Check {
+                old: fixture("contracts/patients-v1.yaml"),
+                new: fixture("contracts/patients-v2.yaml"),
+                format: "markdown".to_string(),
+                no_recheck: false,
+            },
+            common: cli::CommonOpts {
+                state_dir: Some(dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let client = FlakyClient {
+            calls: AtomicUsize::new(0),
+        };
+        // First run: replay miss -> no proposal.
+        let (code1, _) = execute_with_model(&cli, "markdown", false, &client).unwrap();
+        assert_eq!(code1, ExitCode::from(1));
+        let store = Store::open(&dir).unwrap();
+        assert!(store.proposals().is_empty(), "first run must not propose");
+        // Second run: re-attempt succeeds -> proposal recorded.
+        let (code2, _) = execute_with_model(&cli, "markdown", false, &client).unwrap();
+        let _ = code2;
+        let store = Store::open(&dir).unwrap();
+        assert!(
+            !store.proposals().is_empty(),
+            "retry must propose once the reply exists"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // L2: two flags sharing a change-id set but citing different memories:
+    // the second must not receive the first's verbatim input (fallback path).
+    #[test]
+    fn l2_shared_set_different_memory_no_verbatim_reuse() {
+        let dir = temp_state_dir("l2-shared");
+        // Seed two citations: M1 (demo claim, reuses case) and M2 (different
+        // memory, same cited elements -> same change set).
+        {
+            let mut store = Store::open(&dir).unwrap();
+            let citation_m1 = crate::core::Citation {
+                memory: crate::core::MemoryRef {
+                    adapter: "muse-code".to_string(),
+                    id: "M1".to_string(),
+                },
+                elements: vec![
+                    ElementId(LIST_PATIENTS.to_string()),
+                    ElementId(LIST_PATIENTS_200.to_string()),
+                ],
+                claim: "GET /patients returns every patient in one response".to_string(),
+                recorded_by: "curator".to_string(),
+                confidence: 0.9,
+            };
+            let citation_m2 = crate::core::Citation {
+                memory: crate::core::MemoryRef {
+                    adapter: "muse-code".to_string(),
+                    id: "M2".to_string(),
+                },
+                elements: vec![
+                    ElementId(LIST_PATIENTS.to_string()),
+                    ElementId(LIST_PATIENTS_200.to_string()),
+                ],
+                claim: "M2 remembers patients differently".to_string(),
+                recorded_by: "curator".to_string(),
+                confidence: 0.9,
+            };
+            store.record_citation(citation_m1).unwrap();
+            store.record_citation(citation_m2).unwrap();
+        }
+        let cli = cli::Cli {
+            command: cli::Command::Check {
+                old: fixture("contracts/patients-v1.yaml"),
+                new: fixture("contracts/patients-v2.yaml"),
+                format: "json".to_string(),
+                no_recheck: false,
+            },
+            common: cli::CommonOpts {
+                state_dir: Some(dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let (code, out) = execute(&cli, "json").unwrap();
+        assert_eq!(code, ExitCode::from(1));
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        let _flags = v["flags"].as_array().unwrap();
+        // Find proposals per flag via store.
+        let store = Store::open(&dir).unwrap();
+        let proposals = store.proposals();
+        // M1 (demo) should have a proposal (reuse -> replay hit).
+        let m1_proposals: Vec<_> = proposals
+            .iter()
+            .filter(|p| {
+                store
+                    .flags()
+                    .iter()
+                    .any(|f| f.id == p.flag_id && f.memory.id == "M1")
+            })
+            .collect();
+        assert!(
+            !m1_proposals.is_empty(),
+            "M1 should propose via reuse: {out}"
+        );
+        // M2 must NOT receive the verbatim case input -> fallback -> replay
+        // miss -> no proposal.
+        let m2_proposals: Vec<_> = proposals
+            .iter()
+            .filter(|p| {
+                store
+                    .flags()
+                    .iter()
+                    .any(|f| f.id == p.flag_id && f.memory.id == "M2")
+            })
+            .collect();
+        assert!(
+            m2_proposals.is_empty(),
+            "M2 must not reuse M1's verbatim input: {out}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // N4: --no-recheck makes zero model calls.
+    #[test]
+    fn n4_no_recheck_zero_model_calls() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct CountingClient {
+            calls: AtomicUsize,
+        }
+        impl crate::models::ModelClient for CountingClient {
+            fn complete(
+                &self,
+                _request: &crate::models::ModelRequest,
+            ) -> Result<crate::models::ModelResponse, crate::models::ModelError> {
+                self.calls.fetch_add(1, Ordering::SeqCst);
+                Ok(crate::models::ModelResponse {
+                    value: serde_json::json!({"action":"keep","rationale":"x"}),
+                    usage: crate::models::Usage::NONE,
+                })
+            }
+        }
+        let dir = temp_state_dir("n4-norecheck");
+        seed_citations(&dir);
+        let cli = cli::Cli {
+            command: cli::Command::Check {
+                old: fixture("contracts/patients-v1.yaml"),
+                new: fixture("contracts/patients-v2.yaml"),
+                format: "markdown".to_string(),
+                no_recheck: true,
+            },
+            common: cli::CommonOpts {
+                state_dir: Some(dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let client = CountingClient {
+            calls: AtomicUsize::new(0),
+        };
+        let (_code, _out) = execute_with_model(&cli, "markdown", true, &client).unwrap();
+        assert_eq!(
+            client.calls.load(Ordering::SeqCst),
+            0,
+            "no-recheck must make zero model calls"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
