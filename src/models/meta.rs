@@ -9,7 +9,9 @@
 //! The key is read from the environment at call time (see
 //! [`MetaModelClient::DEFAULT_ENV_VAR`], `MODEL_API_KEY`), never stored,
 //! never logged, and never placed in an error or `Display` output.
-
+//!
+//! Conformance to the request's JSON schema is server-enforced via
+//! `response_format`; this client only parses the returned JSON.
 use crate::models::{ModelClient, ModelError, ModelRequest, ModelResponse, Usage};
 
 /// A single HTTP response as seen by the client.
@@ -298,7 +300,15 @@ fn parse_usage(body: &serde_json::Value) -> Usage {
 }
 
 fn first_lines(s: &str, n: usize) -> String {
-    s.lines().take(n).collect::<Vec<_>>().join("\n")
+    // Line-bounded AND char-bounded: a single-line body (e.g. one huge JSON
+    // reply) must not drag an unbounded blob into an error message.
+    const MAX_CHARS: usize = 500;
+    let joined = s.lines().take(n).collect::<Vec<_>>().join("\n");
+    if joined.chars().count() <= MAX_CHARS {
+        joined
+    } else {
+        joined.chars().take(MAX_CHARS).collect()
+    }
 }
 
 #[cfg(test)]
@@ -536,5 +546,212 @@ mod tests {
             msg.contains("not { valid json") || msg.contains("not {"),
             "msg: {msg}"
         );
+    }
+
+    #[test]
+    fn request_body_and_auth_header_are_pinned() {
+        env_guard();
+        let captured_body = Arc::new(std::sync::Mutex::new(String::new()));
+        let captured_headers = Arc::new(std::sync::Mutex::new(Vec::<(String, String)>::new()));
+        let calls = Arc::new(AtomicUsize::new(0));
+        struct CapturingAll {
+            body: Arc<std::sync::Mutex<String>>,
+            headers: Arc<std::sync::Mutex<Vec<(String, String)>>>,
+            calls: Arc<AtomicUsize>,
+        }
+        impl HttpTransport for CapturingAll {
+            fn post(
+                &self,
+                _url: &str,
+                headers: &[(&str, &str)],
+                body: &str,
+            ) -> Result<HttpResponse, HttpTransportError> {
+                *self.body.lock().unwrap() = body.to_string();
+                *self.headers.lock().unwrap() = headers
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect();
+                self.calls.fetch_add(1, Ordering::SeqCst);
+                Ok(HttpResponse {
+                    status: 200,
+                    body: ok_body(),
+                })
+            }
+        }
+        let transport = CapturingAll {
+            body: captured_body.clone(),
+            headers: captured_headers.clone(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport)).with_reasoning_effort("high");
+        let req = sample_request();
+        let _ = client.complete(&req).expect("ok");
+        let body_text = captured_body.lock().unwrap().clone();
+        let body: serde_json::Value =
+            serde_json::from_str(&body_text).expect("captured body is json");
+        assert_eq!(body["model"], req.model);
+        assert_eq!(body["response_format"]["json_schema"]["schema"], req.schema);
+        assert_eq!(body["max_tokens"], 100);
+        assert_eq!(body["reasoning_effort"], "high");
+        let headers = captured_headers.lock().unwrap().clone();
+        let auth = headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("Authorization"))
+            .map(|(_, v)| v.clone())
+            .expect("Authorization header present");
+        assert!(auth.starts_with("Bearer "), "auth: {auth}");
+    }
+
+    #[test]
+    fn long_single_line_body_is_bounded_in_error() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = "x".repeat(10_000);
+        let transport = FakeTransport {
+            status: 200,
+            body: body.clone(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let err = client.complete(&sample_request()).expect_err("must fail");
+        let msg = err.to_string();
+        assert!(msg.len() <= 700, "unbounded error: {} chars", msg.len());
+    }
+
+    #[test]
+    fn transport_error_retries_then_gives_up() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        struct FailingTransport {
+            calls: Arc<AtomicUsize>,
+        }
+        impl HttpTransport for FailingTransport {
+            fn post(
+                &self,
+                _url: &str,
+                _headers: &[(&str, &str)],
+                _body: &str,
+            ) -> Result<HttpResponse, HttpTransportError> {
+                self.calls.fetch_add(1, Ordering::SeqCst);
+                Err(HttpTransportError {
+                    message: "connection refused".to_string(),
+                })
+            }
+        }
+        let transport = FailingTransport {
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport)).with_max_retries(2);
+        let err = client.complete(&sample_request()).expect_err("must fail");
+        let msg = err.to_string();
+        assert!(msg.contains("muse-spark-1.3"), "missing model id: {msg}");
+        assert_eq!(calls.load(Ordering::SeqCst), 3, "attempts");
+    }
+
+    fn body_with_usage(usage: serde_json::Value, top_level_cost: Option<f64>) -> String {
+        let mut v = serde_json::json!({
+            "id": "resp-u",
+            "choices": [{"message": {"role": "assistant", "content": "{\"answer\": 7}"}}],
+            "usage": usage,
+        });
+        if let Some(c) = top_level_cost {
+            v["cost"] = serde_json::json!(c);
+        }
+        v.to_string()
+    }
+
+    #[test]
+    fn usage_cost_usd_spelling() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = body_with_usage(
+            serde_json::json!({"prompt_tokens": 3, "completion_tokens": 4, "cost_usd": 0.02}),
+            None,
+        );
+        let transport = FakeTransport {
+            status: 200,
+            body,
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let resp = client.complete(&sample_request()).expect("ok");
+        assert_eq!(resp.usage.input_tokens, Some(3));
+        assert_eq!(resp.usage.output_tokens, Some(4));
+        assert_eq!(resp.usage.cost_usd, Some(0.02));
+    }
+
+    #[test]
+    fn usage_total_cost_spelling() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = body_with_usage(
+            serde_json::json!({"prompt_tokens": 3, "completion_tokens": 4, "total_cost": 0.03}),
+            None,
+        );
+        let transport = FakeTransport {
+            status: 200,
+            body,
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let resp = client.complete(&sample_request()).expect("ok");
+        assert_eq!(resp.usage.cost_usd, Some(0.03));
+    }
+
+    #[test]
+    fn usage_top_level_cost() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = body_with_usage(
+            serde_json::json!({"prompt_tokens": 3, "completion_tokens": 4}),
+            Some(0.04),
+        );
+        let transport = FakeTransport {
+            status: 200,
+            body,
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let resp = client.complete(&sample_request()).expect("ok");
+        assert_eq!(resp.usage.cost_usd, Some(0.04));
+    }
+
+    #[test]
+    fn usage_input_output_tokens_spelling() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = body_with_usage(
+            serde_json::json!({"input_tokens": 11, "output_tokens": 22, "cost": 0.05}),
+            None,
+        );
+        let transport = FakeTransport {
+            status: 200,
+            body,
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let resp = client.complete(&sample_request()).expect("ok");
+        assert_eq!(resp.usage.input_tokens, Some(11));
+        assert_eq!(resp.usage.output_tokens, Some(22));
+        assert_eq!(resp.usage.cost_usd, Some(0.05));
+    }
+
+    #[test]
+    fn usage_absent_is_all_none() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = serde_json::json!({
+            "id": "resp-n",
+            "choices": [{"message": {"role": "assistant", "content": "{\"answer\": 9}"}}]
+        })
+        .to_string();
+        let transport = FakeTransport {
+            status: 200,
+            body,
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let resp = client.complete(&sample_request()).expect("ok");
+        assert_eq!(resp.usage, Usage::NONE);
     }
 }
