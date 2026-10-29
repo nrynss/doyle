@@ -28,7 +28,7 @@ requires:   [T1.2, T2.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/core/flag.rs
-status:     in-review
+status:     done
 ```
 Given the citation index and a set of changes, produce flags (architecture.md, Flagging): the subject, its ancestors, and entities referencing its named type. `NonBreaking` flags nothing; `Breaking` flags; `Review` flags, marked for review. One flag per memory per check, listing every change behind it. A memory already flagged and not yet decided is not flagged twice.
 
