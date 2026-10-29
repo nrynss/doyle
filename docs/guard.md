@@ -87,7 +87,9 @@ in `testdata/muse/hooks/` and a seeded fixture store with M1's flag open.
    does not match a flagged `GET`.
 3. **One method per URL, from the nearest preceding flag in its
    fragment.** The tool input is split into fragments at `;`, `&&`, `||`
-   and newlines (a lone `&` or `|` is not a boundary). Each URL or bare
+   and newlines outside single and double quotes (a backslash escapes the
+   next character inside quotes, so a quoted separator never splits; a
+   lone `&` or `|` is not a boundary). Each URL or bare
    path in a fragment takes the method of the nearest `-X`/`--request`
    flag before it in that fragment; when no method flag precedes it, a
    fragment carrying data flags (`-d`, `-F`, `--data*`, `--form*`) means

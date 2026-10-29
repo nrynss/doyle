@@ -438,15 +438,28 @@ fn extract_fragment_candidates(fragment: &str, out: &mut Vec<Candidate>) {
     }
 }
 
-/// Command boundaries: a fragment ends at `;`, `&&`, `||` or a newline.
-/// A lone `&` (background) or `|` (pipe) is not a boundary: the right-hand
-/// side still runs under the same command.
+/// Command boundaries: a fragment ends at `;`, `&&`, `||` or a newline,
+/// but only outside single and double quotes, so a `-d` payload containing
+/// a separator (e.g. `-d '{"a":"b;c"}'`) stays one fragment alongside its
+/// data flag. A backslash escapes the next character inside quotes, so an
+/// escaped quote does not end the quoted run. A lone `&` (background) or
+/// `|` (pipe) is not a boundary: the right-hand side still runs under the
+/// same command.
 fn split_fragments(text: &str) -> Vec<&str> {
     let mut out = Vec::new();
     let mut start = 0;
+    let mut quote: Option<char> = None;
     let mut indices = text.char_indices().peekable();
     while let Some((index, c)) = indices.next() {
-        if c == ';' || c == '\n' || c == '\r' {
+        if let Some(open) = quote {
+            if c == '\\' {
+                indices.next();
+            } else if c == open {
+                quote = None;
+            }
+        } else if c == '\'' || c == '"' {
+            quote = Some(c);
+        } else if c == ';' || c == '\n' || c == '\r' {
             out.push(&text[start..index]);
             start = index + c.len_utf8();
         } else if (c == '&' || c == '|') && indices.peek().is_some_and(|(_, next)| *next == c) {
@@ -1305,6 +1318,34 @@ mod tests {
         // The -d must not leak into the next fragment either.
         let input = bash_hook(
             "curl -d '{\"name\":\"x\"}' http://127.0.0.1:8091/patients; curl -s http://127.0.0.1:8091/patients",
+        );
+        let (code, out, _) = decide(&input, &cli);
+        is_deny(code, &out);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn data_flag_with_quoted_separators_stays_one_fragment() {
+        let dir = temp_state_dir("quoteddata");
+        seed_demo_store(&dir);
+        let cli = cli_for(&dir);
+        // Each quoted separator would have split the fragment and dropped
+        // the -d context pre-fix, misclassifying the POST as GET (deny).
+        // M1 flags GET /patients; these POSTs are another action: allow.
+        for command in [
+            "curl -d '{\"a\":\"b;c\"}' http://127.0.0.1:8091/patients",
+            "curl -d '{\"a\":\"b&&c\"}' http://127.0.0.1:8091/patients",
+            "curl -d '{\"a\":\"b||c\"}' http://127.0.0.1:8091/patients",
+            "curl -d '{\"a\": \"b\",\n\"c\": \"d\"}' http://127.0.0.1:8091/patients",
+            "curl -d '{\"a\":\"b\\\";c\"}' http://127.0.0.1:8091/patients",
+        ] {
+            let (code, out, err) = decide(&bash_hook(command), &cli);
+            is_allow(code, &out, &err);
+        }
+        // A real boundary after the quoted payload still splits: the
+        // flagged GET fetch in the second fragment denies.
+        let input = bash_hook(
+            "curl -d '{\"a\":\"b;c\"}' http://127.0.0.1:8091/patients; curl -s http://127.0.0.1:8091/patients",
         );
         let (code, out, _) = decide(&input, &cli);
         is_deny(code, &out);
