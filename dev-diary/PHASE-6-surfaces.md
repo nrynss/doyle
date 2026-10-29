@@ -12,7 +12,7 @@ requires:   [T0.4, T1.2, T2.1, T2.2]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/guard.rs, docs/guard.md
-status:     not-started
+status:     claimed:muse-spark-t6.1
 ```
 `doyle guard`, run by Muse Code as a hook (registered the way T0.4 found works).
 
