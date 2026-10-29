@@ -1,0 +1,63 @@
+{
+  "_fixture": "Fixture. Shapes follow docs/lambo.md (Lambo's published MCP reference, not yet checked against a running server; T0.5 confirms). Node ids and scores are invented. The recall Doyle (or the migration agent) gets once M1-M4 are stored, before any correction.",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "lambo_recall",
+      "arguments": {
+        "agent_id": "muse-wonder-migration",
+        "query": "Fernwhistle patients API export GET /patients /stats decommission",
+        "top_k": 5
+      }
+    }
+  },
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic] (score 1.31, id 5e1d0a73)\n\nGET /patients/{id} returns 404 for an unknown patient id [Logic] (score 1.05, id a94c2f18)\n\nGET /stats patient_count is the total number of patients [Logic] (score 0.93, id 2d7b86e0)\n\nPOST /admin/decommission is permanent once confirmed; there is no undo [Logic] (score 0.70, id f03a9c51)"
+      }
+    ],
+    "structuredContent": {
+      "context": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic] (score 1.31, id 5e1d0a73)\n\nGET /patients/{id} returns 404 for an unknown patient id [Logic] (score 1.05, id a94c2f18)\n\nGET /stats patient_count is the total number of patients [Logic] (score 0.93, id 2d7b86e0)\n\nPOST /admin/decommission is permanent once confirmed; there is no undo [Logic] (score 0.70, id f03a9c51)",
+      "hits": [
+        {
+          "node_id": "5e1d0a73-8c24-4b19-a6f0-3d92e1c7b508",
+          "content": "GET /patients returns every patient in one response; one call exports the whole clinic",
+          "concept_type": "Logic",
+          "score": 1.3127,
+          "is_canonical": false,
+          "blast_radius": null
+        },
+        {
+          "node_id": "a94c2f18-27d5-4e6a-9b03-c81f5a2d7e64",
+          "content": "GET /patients/{id} returns 404 for an unknown patient id",
+          "concept_type": "Logic",
+          "score": 1.0452,
+          "is_canonical": false,
+          "blast_radius": null
+        },
+        {
+          "node_id": "2d7b86e0-f13a-4c87-8e5d-6a0b94c21f37",
+          "content": "GET /stats patient_count is the total number of patients",
+          "concept_type": "Logic",
+          "score": 0.9318,
+          "is_canonical": false,
+          "blast_radius": null
+        },
+        {
+          "node_id": "f03a9c51-6b7e-4d20-a1c8-57e4d09b3a82",
+          "content": "POST /admin/decommission is permanent once confirmed; there is no undo",
+          "concept_type": "Logic",
+          "score": 0.7046,
+          "is_canonical": false,
+          "blast_radius": null
+        }
+      ],
+      "warnings": []
+    },
+    "isError": false
+  }
+}

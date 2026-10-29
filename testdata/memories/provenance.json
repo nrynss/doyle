@@ -1,0 +1,124 @@
+{
+  "_fixture": "Invented. Who wrote each memory and which later sessions acted on it, for the review page's 'who relied on it'. Muse Code notes carry no source, so this comes from session logs, not from the notes. Sessions are listed in the order they ran.",
+  "repository": "clinic-ops",
+  "sessions": [
+    {
+      "id": "report-1",
+      "agent": "muse-wonder-reporting",
+      "contract": "v1",
+      "purpose": "Build the monthly patient-count report"
+    },
+    {
+      "id": "report-2",
+      "agent": "muse-wonder-reporting",
+      "contract": "v1",
+      "purpose": "Monthly patient-count report"
+    },
+    {
+      "id": "report-3",
+      "agent": "muse-wonder-reporting",
+      "contract": "v1",
+      "purpose": "Monthly patient-count report"
+    },
+    {
+      "id": "migration-1",
+      "agent": "muse-wonder-migration",
+      "contract": "v2",
+      "purpose": "Migrate patient records to the new platform and decommission the old system"
+    }
+  ],
+  "memories": [
+    {
+      "id": "M1",
+      "text": "GET /patients returns every patient in one response; one call exports the whole clinic",
+      "muse_code": {
+        "file": "MEMORY.md"
+      },
+      "lambo": {
+        "node_id": "5e1d0a73"
+      },
+      "written_by": "report-1",
+      "relied_on_by": [
+        {
+          "session": "report-2",
+          "step": "count patients",
+          "how": "one GET /patients, counted"
+        },
+        {
+          "session": "report-3",
+          "step": "count patients",
+          "how": "one GET /patients, counted"
+        },
+        {
+          "session": "migration-1",
+          "step": "export",
+          "how": "one GET /patients taken as the whole clinic"
+        },
+        {
+          "session": "migration-1",
+          "step": "verify",
+          "how": "export compared with a second single GET /patients"
+        }
+      ]
+    },
+    {
+      "id": "M2",
+      "text": "GET /patients/{id} returns 404 for an unknown patient id",
+      "muse_code": {
+        "file": "MEMORY.md"
+      },
+      "lambo": {
+        "node_id": "a94c2f18"
+      },
+      "written_by": "report-1",
+      "relied_on_by": [
+        {
+          "session": "report-2",
+          "step": "check a report row",
+          "how": "404 read as patient removed"
+        }
+      ]
+    },
+    {
+      "id": "M3",
+      "text": "GET /stats patient_count is the total number of patients",
+      "muse_code": {
+        "file": "patients-stats.md"
+      },
+      "lambo": {
+        "node_id": "2d7b86e0"
+      },
+      "written_by": "report-1",
+      "relied_on_by": [
+        {
+          "session": "report-2",
+          "step": "cross-check the count",
+          "how": "report total compared with patient_count"
+        },
+        {
+          "session": "report-3",
+          "step": "cross-check the count",
+          "how": "report total compared with patient_count"
+        }
+      ]
+    },
+    {
+      "id": "M4",
+      "text": "POST /admin/decommission is permanent once confirmed; there is no undo",
+      "muse_code": {
+        "file": "MEMORY.md"
+      },
+      "lambo": {
+        "node_id": "f03a9c51"
+      },
+      "written_by": "report-1",
+      "relied_on_by": [
+        {
+          "session": "migration-1",
+          "step": "decommission",
+          "how": "run last, after the import count matched the export"
+        }
+      ]
+    }
+  ]
+}

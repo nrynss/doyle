@@ -1,8 +1,9 @@
 ---
 type: reference
-description: Records service API
+description: Fernwhistle patient records API
 ---
 
-- GET /records returns all records in one response; a backup can fetch it once
-- GET /records/{id} returns 404 when the record does not exist
-- [Records stats](records-stats.md) — what GET /stats reports
+- GET /patients returns every patient in one response; one call exports the whole clinic
+- GET /patients/{id} returns 404 for an unknown patient id
+- POST /admin/decommission is permanent once confirmed; there is no undo
+- [Patient stats](patients-stats.md) — what GET /stats reports

@@ -51,7 +51,7 @@ requires:   []
 fixture-ok: yes
 size:       S · frontier
 owns:       testdata/contracts/, testdata/memories/, testdata/README.md
-status:     claimed:opus-t0.3
+status:     in-review
 ```
 The scenario every later task tests against: the Quiet Migration (product.md, The moment the demo is built around). The user chose the story; the agent writes the files.
 
@@ -65,6 +65,13 @@ The scenario every later task tests against: the Quiet Migration (product.md, Th
 **Done when:** both contracts parse with `vimanam` (T0.6 records it); the expected flag set is written down in `testdata/README.md` before any flagging code exists; the user has signed off the story as written there.
 
 **History.** A first version was built around a records service and a one-call backup. The user found it too thin: one agent, one call, no consequence. It was replaced by the Quiet Migration on the user's decision.
+
+**Notes (in review)**
+- Built: `patients-v1.yaml` and `patients-v2.yaml` for an invented clinic chain, Fernwhistle Veterinary Group (operations `listPatients`, `getPatient`, `getStats`, `decommission`); four memories in Muse Code format (M1, M2 and M4 inline in `MEMORY.md`, M3 in `patients-stats.md`) and as Lambo derive and recall JSON; `testdata/memories/provenance.json` for "who relied on it"; `testdata/README.md` with the story as eight numbered steps, the files, and the expected flag set `{M1}`. The records fixtures are removed.
+- Decided: v2's `limit` has a maximum of 100 as well as a default of 100, so no single call can return everyone and the 49 pages are forced. All four memories come from one earlier session, `report-1` of `muse-wonder-reporting`, so the review page has one origin to show and three later sessions that relied on it. The migration's checks are written so each passes on its own terms: the verify step repeats the export's single call, and the import is checked against the export, never against `patient_count`. Every fixture JSON file carries a `_fixture` field saying its ids and scores are invented. No dates anywhere; sessions are ordered by position in `provenance.json`.
+- Vimanam 1.7.0 parses both contracts. `vimanam diff` on v1 → v2: 1 breaking (`GET /patients` 200 `array` → `object`), 6 non-breaking (`cursor`, `limit`, `items`, `next_cursor`, `items` required, `GET /stats` `generated_at`), 1 review (`GET /patients` 200 `/items` removed). It reports nothing on `getPatient` or `decommission`. A v1-against-v1 diff reports no changes. 1.7.0 has no pagination kind; T0.6 runs 2.x.
+- Surprised me: 1.7.0 reports the loss of the array's `items` as the review item, not the pagination itself, so whether 2.x names the change as pagination is still T0.6's question.
+
 ---
 
 ### T0.4: Muse Code probes ★

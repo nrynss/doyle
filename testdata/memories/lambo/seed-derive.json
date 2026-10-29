@@ -1,20 +1,32 @@
 {
-  "name": "lambo_derive",
-  "arguments": {
-    "agent_id": "muse-wonder-1.0",
-    "concepts": [
-      {
-        "content": "GET /records returns all records in one response; a backup can fetch it once",
-        "concept_type": "logic"
-      },
-      {
-        "content": "GET /records/{id} returns 404 when the record does not exist",
-        "concept_type": "logic"
-      },
-      {
-        "content": "GET /stats record_count is the total number of records",
-        "concept_type": "logic"
+  "_fixture": "Fixture. Shapes follow docs/lambo.md (Lambo's published MCP reference, not yet checked against a running server; T0.5 confirms). Node ids and scores are invented. This is the call the reporting agent's session made, before the vendor moved to v2.",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "tools/call",
+    "params": {
+      "name": "lambo_derive",
+      "arguments": {
+        "agent_id": "muse-wonder-reporting",
+        "concepts": [
+          {
+            "content": "GET /patients returns every patient in one response; one call exports the whole clinic",
+            "concept_type": "logic"
+          },
+          {
+            "content": "GET /patients/{id} returns 404 for an unknown patient id",
+            "concept_type": "logic"
+          },
+          {
+            "content": "GET /stats patient_count is the total number of patients",
+            "concept_type": "logic"
+          },
+          {
+            "content": "POST /admin/decommission is permanent once confirmed; there is no undo",
+            "concept_type": "logic"
+          }
+        ]
       }
-    ]
+    }
   }
 }

@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: Fernwhistle Veterinary Group patient records
+  version: 2.0.0
+paths:
+  /patients:
+    get:
+      operationId: listPatients
+      summary: List patients, one page at a time
+      parameters:
+        - { name: cursor, in: query, required: false, schema: { type: string } }
+        - { name: limit, in: query, required: false, schema: { type: integer, default: 100, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: One page of patients
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PatientPage" }
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      summary: Get one patient
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The patient
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Patient" }
+        "404": { description: No patient with this id }
+  /stats:
+    get:
+      operationId: getStats
+      summary: Record counts
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Stats" }
+  /admin/decommission:
+    post:
+      operationId: decommission
+      summary: Permanently delete all patient data held by this system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DecommissionRequest" }
+      responses:
+        "200": { description: All data deleted }
+        "400": { description: Confirmation token does not match }
+components:
+  schemas:
+    Patient:
+      type: object
+      required: [id, name, species, owner_id, vaccinations, allergies]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        species: { type: string }
+        breed: { type: string }
+        owner_id: { type: string }
+        vaccinations: { type: array, items: { $ref: "#/components/schemas/Vaccination" } }
+        allergies: { type: array, items: { $ref: "#/components/schemas/Allergy" } }
+    PatientPage:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Patient" } }
+        next_cursor: { type: string, nullable: true }
+    Vaccination:
+      type: object
+      required: [vaccine, given_on]
+      properties: { vaccine: { type: string }, given_on: { type: string, format: date }, due_on: { type: string, format: date } }
+    Allergy:
+      type: object
+      required: [substance, reaction]
+      properties: { substance: { type: string }, reaction: { type: string } }
+    Stats:
+      type: object
+      required: [patient_count]
+      properties:
+        patient_count: { type: integer }
+        generated_at: { type: string, format: date-time }
+    DecommissionRequest:
+      type: object
+      required: [confirmation_token]
+      properties: { confirmation_token: { type: string } }
