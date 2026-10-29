@@ -97,13 +97,15 @@ requires:   []
 fixture-ok: no
 size:       S · light
 owns:       testdata/lambo/, docs/lambo.md
-status:     claimed:haiku-t0.5
+status:     blocked
 ```
 Turn "Lambo is reached as a client" into recorded calls Doyle can be built against without a running server.
 
 - Speak MCP over streamable HTTP to a running Lambo (`initialize`, `tools/list`, then `lambo_recall`, `lambo_inspect`, `lambo_derive`) in a scratch session, not the user's working session.
 - Write a memory, then a correction with `against` naming it, and record whether recall then warns on the memory itself.
 - Record each request and response as JSON in `testdata/lambo/` (no key, no personal data), and the session handshake.
+
+**Notes (blocked, not in review).** The read half is done: `initialize`, `notifications/initialized` and `tools/list` are recorded in `testdata/lambo/`, and `docs/lambo.md` lists the calls with their shapes. The write half is not done. The running server (Lambo 0.8.0) pins only `lambo-dev`; `/mcp/s/<scratch>` answers 404, and the docs show no scratch session reachable without a configuration change and a restart of that server. No write was sent. Options and the choice are in `docs/lambo.md`, "Addressing a session other than `lambo-dev`". The warning on a contradicted memory is therefore not observed. Unblock by choosing one of the three options there, then the write steps run.
 
 **Done when:** `docs/lambo.md` lists the calls Doyle needs with their request and response shapes; the transcripts are in `testdata/lambo/`; the warning on recall was seen, or the gap is written as issue text in the handoff log.
 
