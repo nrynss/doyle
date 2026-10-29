@@ -957,6 +957,7 @@ mod tests {
                     ElementId(LIST_PATIENTS_200.to_string()),
                 ],
                 claim: "GET /patients returns every patient in one response".to_string(),
+                source_text: "GET /patients returns every patient in one response; one call exports the whole clinic".to_string(),
                 recorded_by: "curator".to_string(),
                 confidence: 0.9,
             };
@@ -970,6 +971,7 @@ mod tests {
                     ElementId(LIST_PATIENTS_200.to_string()),
                 ],
                 claim: "M2 remembers patients differently".to_string(),
+                source_text: "M2 remembers patients differently".to_string(),
                 recorded_by: "curator".to_string(),
                 confidence: 0.9,
             };
