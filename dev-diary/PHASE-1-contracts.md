@@ -14,7 +14,7 @@ requires:   [T0.3, T0.6]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/core/mod.rs, src/core/model.rs, Cargo.toml, Cargo.lock
-status:     not-started
+status:     claimed:muse-wonder-t1.1
 ```
 The types in architecture.md's core model table: `ElementId`, `MemoryRef`, `Memory`, `Citation`, `Flag`, `Proposal`, `Decision`, with serde round-trips. `ElementId` and the change IDs wrap Vimanam's strings without re-deriving them. `MemoryRef` names its adapter by a string the adapter declares, never an enum of known systems, so a new adapter needs no change here.
 

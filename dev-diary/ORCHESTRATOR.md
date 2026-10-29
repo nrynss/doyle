@@ -43,6 +43,14 @@ A task is **ready** when its status is `not-started`, every task in `requires` i
 | frontier | Opus |
 | user | none; the orchestrator prepares, the user acts |
 
+**Muse Code as the implementer (user decision).** From P1 on, implementation goes to Muse Code sessions the user runs, on Meta's models: `muse-wonder-1.0` for frontier and mid tasks, `muse-spark-1.3` for light ones (Wonder Full needs a subscription this account doesn't have). The orchestrator still prepares, validates, lands and closes. For a Muse Code task:
+1. Claim the task on `main` and commit.
+2. Cut the worktree by hand from local `main`: `git worktree add ~/work/doyle-worktrees/<id> -b task-<id> main`. It lives outside the repository so Muse Code's memory for it is its own (Muse keys memory on the directory it starts in).
+3. Write the brief (the template below) to a file outside the repository and give the user the command to start Muse Code in the worktree with it.
+4. When the user says the session is done, validate exactly as for any implementer (step 4), then land (step 5) and close (step 6).
+
+Muse Code reads `AGENTS.md` once the workspace is trusted, so the rules there reach it. It must commit on its branch, never push or merge.
+
 ### 3. Dispatch
 
 Always in the background, always in its own worktree (`isolation: worktree`). A new worktree is cut from `origin/main`, not the local `main`. If local `main` is ahead, either push first (with the user's approval) or tell the worker in the brief to move its new branch to the brief's commit before starting, and to stop if it can't. Use the brief template below. A worker starts cold, so the brief carries everything it needs: what to read, what to build, what it may touch, how to prove it, and what to report.

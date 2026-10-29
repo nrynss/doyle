@@ -141,7 +141,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | Phase | Tasks complete | Status |
 |---|---|---|
 | P0 | 6 / 7 | T0.1–T0.6 done. T0.7 (a second real upgrade, off the critical path) is ready. |
-| P1 | 0 / 5 | Ready: T1.1 can start. |
+| P1 | 0 / 5 | T1.1 is with Muse Code. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
 | P4 | 0 / 4 | Waits for P1. |
@@ -156,6 +156,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **Implementation moves to Muse Code, by the user's decision.** From P1 on, tasks are built in Muse Code sessions the user runs on Meta's models (`muse-wonder-1.0`, `muse-spark-1.3`); the orchestrator prepares the worktree and brief, then validates, lands and closes as before (ORCHESTRATOR.md). T1.1 is the first.
 - **T0.6 closed: Vimanam 2.0's view of the Quiet Migration.** Vimanam 2.0.0, installed into a scratch root (not globally), gives 11 change facts for v1 → v2; the CLI's JSON and the library agree on every change ID. Pagination is detected: `pagination_changed` on `listPatients`, severity `review` (native `pagination_inferred`). M1 is flagged by the breaking `field_type_changed` (`array` → `object`) on `listPatients`' 200 response, the `review` `constraint_changed` on the same response, and the pagination fact. `getPatient`, `Patient` and `decommission` have no change facts. Entity IDs for the five elements later tasks cite are in `testdata/vimanam/README.md`; all are the same in v1 and v2. Files: `testdata/vimanam/` (JSON diff, Markdown diff, v1 and v2 entities, change facts). Validated by the orchestrator: the change facts read back from the JSON, no private paths, the gate passed on `main` after the merge.
   - **Risk for T2.2:** the optional `generated_at` added to the `Stats` type is `review` at the type level but non-breaking on `getStats`' response, so a naive "review flags" rule would flag M3. Written into T2.2.
   - **Vimanam issue texts, for the user to file:** (1) "An optional field added to a named type is `review` at the type level but `non_breaking` on the response that references it": `Stats.generated_at` in this repository's `testdata/contracts/patients-v*.yaml`. (2) "The Markdown diff omits the pagination and type-level facts the JSON carries": the Markdown says 1 to review, the JSON summary 3, and the Markdown lists neither `pagination_changed` nor the two type-level facts.
