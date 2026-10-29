@@ -62,15 +62,91 @@ either API.
 
 - Budget 512 starved both models (empty replies, `finish_reason: length` on
   meta). Raised to 2048 in `build_curator_request`; committed.
-- Baseten returned the ID list under `rests_on` instead of `element_ids`
-  (it accepts the JSON schema but does not enforce it). The system prompt
-  now names the exact fields, and the parser accepts the one observed alias.
-  M1 with the alias still scored 2/2.
+- The parser accepts `rests_on` as a purely defensive alias for the
+  `element_ids` field. It was never observed live: all 32 committed replies
+  carry the ID list under `element_ids` (grep for `"rests_on"` over this
+  directory finds zero hits outside `rests_on_nothing`). The system prompt
+  names the exact reply fields, and the alias path is covered only by a
+  synthetic unit test in `src/prompts/curator.rs`. Scores are unaffected
+  either way, since every recorded reply parsed through the primary field.
 - Three cases needed `reasoning_effort: low` after three default-effort
-  length failures each (M3/meta, M4/baseten, X12/baseten; recorded requests
-  carry the effort that produced them). Default effort burned the whole
-  2048-token budget on reasoning for these inputs; low effort answered in
-  310–744 output tokens with full marks on M3 and M4.
+  length failures each (M3/meta, M4/baseten, X12/baseten). Default effort
+  burned the whole 2048-token budget on reasoning for these inputs; low
+  effort answered with full marks on M3 and M4 (per-file output-token
+  counts are in the effort ledger below). Note: `reasoning_effort` is a
+  setting on the model client, not part of the recorded request envelope,
+  so the effort that produced each file is listed in the ledger, not read
+  from the recordings.
+
+## Effort ledger
+
+`reasoning_effort` lives on the model client (`with_reasoning_effort`), not
+in `ModelRequest`, so it is NOT in any committed recording: every
+`request` object in this directory holds exactly the keys `budget`,
+`model`, `schema`, `system`, `user` (verified over all 32 files). The
+effort setting that produced each file is therefore listed here. Output
+tokens are each reply's `usage.output_tokens`, verified from the
+recordings.
+
+Low effort (`reasoning_effort: "low"`):
+
+- `M3-meta.json` — low — 744 output tokens.
+- `M4-baseten.json` — low — 466 output tokens.
+- `X12-baseten.json` — low — 310 output tokens.
+
+Default effort (all other 29 files):
+
+- `M1-meta.json` — default — 1408 output tokens.
+- `M1-baseten.json` — default — 634 output tokens.
+- `M2-meta.json` — default — 1896 output tokens.
+- `M2-baseten.json` — default — 1975 output tokens.
+- `M3-baseten.json` — default — 1685 output tokens.
+- `M4-meta.json` — default — 1504 output tokens.
+- `X1-meta.json` — default — 1591 output tokens.
+- `X1-baseten.json` — default — 1183 output tokens.
+- `X2-meta.json` — default — 1276 output tokens.
+- `X2-baseten.json` — default — 985 output tokens.
+- `X3-meta.json` — default — 1224 output tokens.
+- `X3-baseten.json` — default — 1199 output tokens.
+- `X4-meta.json` — default — 1228 output tokens.
+- `X4-baseten.json` — default — 1005 output tokens.
+- `X5-meta.json` — default — 1993 output tokens.
+- `X5-baseten.json` — default — 1240 output tokens.
+- `X6-meta.json` — default — 1329 output tokens.
+- `X6-baseten.json` — default — 1717 output tokens.
+- `X7-meta.json` — default — 1181 output tokens.
+- `X7-baseten.json` — default — 1514 output tokens.
+- `X8-meta.json` — default — 362 output tokens.
+- `X8-baseten.json` — default — 538 output tokens.
+- `X9-meta.json` — default — 1397 output tokens.
+- `X9-baseten.json` — default — 1418 output tokens.
+- `X10-meta.json` — default — 1651 output tokens.
+- `X10-baseten.json` — default — 1755 output tokens.
+- `X11-meta.json` — default — 698 output tokens.
+- `X11-baseten.json` — default — 1588 output tokens.
+- `X12-meta.json` — default — 1866 output tokens.
+
+## Single-case retry ledger
+
+The 46-call total breaks down as 2 failed probes at budget 512, 2 ok
+probes, 32 full-run first attempts (4 of which length-failed), 7
+single-case retries, and 3 low-effort recoveries. The per-case breakdown
+of the 7 retries cannot be reconstructed from the committed evidence:
+each recording holds only its final successful reply (no attempt counter,
+timestamp, or failure record), and no driver log was committed. One line
+per retry, as far as the evidence goes:
+
+1. Re-run of a length-failed full-run first attempt — case undetermined from committed evidence.
+2. Re-run of a length-failed full-run first attempt — case undetermined from committed evidence.
+3. Re-run of a length-failed full-run first attempt — case undetermined from committed evidence.
+4. Re-run of a length-failed full-run first attempt — case undetermined from committed evidence.
+5. Further single-case retry after an empty or truncated reply — case and trigger undetermined from committed evidence.
+6. Further single-case retry after an empty or truncated reply — case and trigger undetermined from committed evidence.
+7. Further single-case retry after an empty or truncated reply — case and trigger undetermined from committed evidence.
+
+(Lines 1–4 must include the re-runs that completed the 32-file set after
+the 4 full-run length failures; the 3 low-effort recoveries listed above
+are counted separately as the final attempts for their cases.)
 
 ## Files
 

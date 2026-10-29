@@ -170,9 +170,11 @@ pub fn parse_curator_value(
     let object = value.as_object().ok_or_else(|| CuratorParseError {
         message: "reply is not an object".to_string(),
     })?;
-    // Muse Spark Open on Baseten accepts the JSON schema but does not enforce
-    // it: it has answered with "rests_on" for the ID list. Accept that one
-    // observed alias; anything else malformed still fails by field.
+    // Defensive alias only, never observed live: every committed reply
+    // uses "element_ids" for the ID list. Accept "rests_on" anyway in case
+    // a model ignores the schema's field name; anything else malformed
+    // still fails by field. Covered by a synthetic unit test, not by a
+    // recording.
     let raw_ids = object
         .get("element_ids")
         .or_else(|| object.get("rests_on"))
@@ -358,7 +360,9 @@ mod tests {
     }
 
     #[test]
-    fn baseten_rests_on_alias_is_accepted() {
+    // Synthetic-only: "rests_on" was never observed in a live reply; the
+    // parser accepts it defensively.
+    fn defensive_rests_on_alias_is_accepted() {
         let allow = allowed(&["ve2_real"]);
         let value = serde_json::json!({
             "rests_on": ["ve2_real"],
