@@ -1,0 +1,12 @@
+{
+  "value": {
+    "action": "keep",
+    "new_text": null,
+    "rationale": "POST /admin/decommission is identical in v2; flag is unrelated GET /patients pagination."
+  },
+  "usage": {
+    "input_tokens": 610,
+    "output_tokens": 755,
+    "cost_usd": null
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "value": {
+    "action": "retire",
+    "new_text": null,
+    "rationale": "POST /charges (createCharge) was removed in v2 so the claim no longer applies."
+  },
+  "usage": {
+    "input_tokens": 544,
+    "output_tokens": 1247,
+    "cost_usd": null
+  }
+}

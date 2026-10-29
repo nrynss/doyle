@@ -1,0 +1,12 @@
+{
+  "value": {
+    "action": "correct",
+    "new_text": "GET /patients returns a PatientPage object with up to 100 patients in items and a next_cursor for continuation, with optional cursor and limit query parameters defaulting to and capped at 100.",
+    "rationale": "GET /patients changed from bare array of every patient to paginated pages of up to 100 with next_cursor."
+  },
+  "usage": {
+    "input_tokens": 843,
+    "output_tokens": 1861,
+    "cost_usd": null
+  }
+}

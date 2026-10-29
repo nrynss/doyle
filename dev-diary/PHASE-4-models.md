@@ -80,13 +80,22 @@ requires:   [T4.1, T2.2]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/prompts/recheck.rs, testdata/replies/recheck/
-status:     claimed:muse-spark-t4.4
+status:     in-review:muse-spark-t4.4
 ```
 Given a flagged memory, its citation, the changes behind the flag, and the old and new versions of each cited element, propose: **correct** (with replacement text that is true of the new contract, short and plain), **retire** (the memory no longer applies), or **keep** (the change doesn't touch what the memory claims), with a one-line rationale. Replacement text quotes nothing from the contract that could read as an instruction (README, guideline 7).
 
 Measure on the demo's flag and on cases built to need each answer, including a flag the re-check should answer with keep.
 
 **Done when:** the prompt and schema are in `src/prompts/recheck.rs`; recordings replay offline; each answer type is produced where expected, and the handoff text gives the measured results.
+
+**Notes (T4.4)**
+- Built: `src/prompts/recheck.rs` — `system_prompt`, `response_schema` (action enum correct/retire/keep + nullable new_text + rationale), `RecheckInput`/`ChangeFact`/`CitedElement`, `build_user_prompt`/`build_request` (model `muse-spark-1.3`, 2000 output-token cap), `parse_response` (correct needs non-empty guideline-7-clean new_text; retire/keep need empty new_text), `check_replacement_text` (the operational guideline-7 rule: ≤280 chars, single line, no markdown, no clause opening with an instruction verb from `FORBIDDEN_CLAUSE_OPENERS`, no contract-derived instruction phrase from `FORBIDDEN_CONTRACT_PHRASES`), and `measurement_cases` (4 fixed cases with expected answers).
+- Cases: `m1_correct` (demo M1 → correct), `s1_retire` (removed POST /charges, second-upgrade shape → retire), `m3_keep` (type-level review adding optional generated_at → keep), `m4_keep_unchanged` (pagination flag on an element the decommission memory never cites → keep).
+- Measured live on Muse Spark via T4.1's client (scratch driver + RecordingClient outside the repo; recordings committed under `testdata/replies/recheck/` with `MEASUREMENT.md`): 4/4 match. Spend: 6 calls of a 50-call cap (1 failed probe at a 500-token cap — reasoning ate it all, content null — then 4 scoring calls + 1 re-run after a driver-side match-string bug; no 429/5xx retries). Usage 2591 in / 4617 out tokens total; API reports no cost field.
+- Decided: output cap 2000 (probe evidence); retire-steering line "do not rewrite the memory to be about a different endpoint"; recordings named `<request_key>.json` for `ReplayClient`.
+- Tests: 17 in-module (schema, request, parse accept/reject, wordlist accept/reject, 4 offline replays incl. guideline-7 + paging-truth asserts on the correct text). Full gate passes with the mod line present.
+- Surprised me: the 500-token probe failed purely on reasoning spend (498 reasoning tokens, finish_reason length) — the wire shape (base URL, model id, json_schema) was confirmed fine. Also the model is non-deterministic across identical calls (two correct texts for M1, both valid).
+- For the orchestrator at land time: add `pub mod recheck;` to `src/prompts/mod.rs` (T4.3 owns that file; the line was verified locally and reverted, so this branch's committed `mod.rs` is untouched). The gate result above was obtained with the line present; re-verify after adding.
 
 ---
 

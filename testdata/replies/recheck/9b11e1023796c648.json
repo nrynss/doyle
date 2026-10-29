@@ -1,0 +1,12 @@
+{
+  "value": {
+    "action": "keep",
+    "new_text": null,
+    "rationale": "patient_count remains required integer; v2 only adds optional generated_at"
+  },
+  "usage": {
+    "input_tokens": 594,
+    "output_tokens": 754,
+    "cost_usd": null
+  }
+}
