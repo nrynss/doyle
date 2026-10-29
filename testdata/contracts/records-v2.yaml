@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: Records
+  version: 2.0.0
+paths:
+  /records:
+    get:
+      operationId: listRecords
+      summary: List records, one page at a time
+      parameters:
+        - { name: cursor, in: query, required: false, schema: { type: string } }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        "200":
+          description: One page of records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecordPage" }
+  /records/{id}:
+    get:
+      operationId: getRecord
+      summary: Get one record
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Record" }
+        "404":
+          description: No record with this id
+  /stats:
+    get:
+      operationId: getStats
+      summary: Service statistics
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Stats" }
+components:
+  schemas:
+    Record:
+      type: object
+      required: [id, body, created_at]
+      properties:
+        id: { type: string }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
+    RecordPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Record" }
+        next_cursor:
+          type: string
+          nullable: true
+          description: Absent or null on the last page
+    Stats:
+      type: object
+      required: [record_count]
+      properties:
+        record_count: { type: integer }
+        oldest_created_at: { type: string, format: date-time }

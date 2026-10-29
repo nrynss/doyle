@@ -51,7 +51,7 @@ requires:   []
 fixture-ok: yes
 size:       S · frontier
 owns:       testdata/contracts/, testdata/memories/, testdata/README.md
-status:     claimed:opus-t0.3
+status:     in-review
 ```
 The scenario every later task tests against. The user signs off the story; the agent writes the files.
 
@@ -62,6 +62,12 @@ The scenario every later task tests against. The user signs off the story; the a
 - `testdata/README.md` says what each file is for, and which memory should be flagged by the v1 → v2 change and which should not.
 
 **Done when:** both contracts parse with `vimanam` (T0.6 records it); the expected flag set is written down in `testdata/README.md` before any flagging code exists; the user has signed off the story.
+
+**Notes (in review).**
+- **Built.** Two contracts with three operations each (`listRecords`, `getRecord`, `getStats`); a Muse Code memory folder (`MEMORY.md` with two inline notes and an index line, plus `records-stats.md`); the same three memories as a Lambo `lambo_derive` call and a `lambo_recall` result; `testdata/README.md` with the five-line story, what each file is for, and the expected flag set `{M1}`.
+- **Decided.** The additive change is on `Stats`, a type of its own, so the unchanged operation (`getRecord`) shares nothing that changes. `Record` stays identical in both versions and is the item type of `GET /records` in both, which makes the shared-`$ref` trap explicit: the change belongs to `listRecords`' response, not to `Record`. The stale note stays inline in `MEMORY.md`, the layout the annotation was verified on; the topic file holds a memory that is never flagged. M3 (`record_count` is the total) stays true, and the demo can use it to show the lost records.
+- **Lambo shapes** follow the published MCP reference; ids and scores are made up. T0.5 confirms them against a live server. `lambo_inspect` is not modelled, because its structured result is documented only in part.
+- **Vimanam.** The only binary on hand is 1.7.0 (`~/.local/bin`, `~/.cargo/bin`); the build in the Vimanam checkout reports 1.4.2. Both parse the contracts. 1.7.0's diff: one breaking (`GET /records` 200 `/type` `array` → `object`), one review (200 `/items` removed), six non-breaking (`cursor`, `limit`, `items`, `next_cursor`, `items` required, and `GET /stats` `oldest_created_at`); `GET /records/{id}` has no change. 1.7.0 has no inferred pagination change and uses `vc1_` IDs; the 2.x run is T0.6's.
 
 ---
 

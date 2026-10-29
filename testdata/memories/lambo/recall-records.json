@@ -1,0 +1,49 @@
+{
+  "request": {
+    "name": "lambo_recall",
+    "arguments": {
+      "agent_id": "doyle",
+      "query": "records service GET /records /records/{id} /stats",
+      "top_k": 5
+    }
+  },
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "GET /records returns all records in one response; a backup can fetch it once [Logic] (score 1.21, id 3b7e9a1c)\n\nGET /records/{id} returns 404 when the record does not exist [Logic] (score 1.04, id 8f20c6d4)\n\nGET /stats record_count is the total number of records [Logic] (score 0.77, id c41a57e2)"
+      }
+    ],
+    "structuredContent": {
+      "context": "GET /records returns all records in one response; a backup can fetch it once [Logic] (score 1.21, id 3b7e9a1c)\n\nGET /records/{id} returns 404 when the record does not exist [Logic] (score 1.04, id 8f20c6d4)\n\nGET /stats record_count is the total number of records [Logic] (score 0.77, id c41a57e2)",
+      "hits": [
+        {
+          "node_id": "3b7e9a1c-5d42-4f08-9c61-2a8e47d0b915",
+          "content": "GET /records returns all records in one response; a backup can fetch it once",
+          "concept_type": "Logic",
+          "score": 1.2104,
+          "is_canonical": false,
+          "blast_radius": null
+        },
+        {
+          "node_id": "8f20c6d4-1e9b-4a73-b5f2-6c0d93e18a47",
+          "content": "GET /records/{id} returns 404 when the record does not exist",
+          "concept_type": "Logic",
+          "score": 1.0388,
+          "is_canonical": false,
+          "blast_radius": null
+        },
+        {
+          "node_id": "c41a57e2-9b30-4d6e-8a15-f7e2b0c96d38",
+          "content": "GET /stats record_count is the total number of records",
+          "concept_type": "Logic",
+          "score": 0.7731,
+          "is_canonical": false,
+          "blast_radius": null
+        }
+      ],
+      "warnings": []
+    },
+    "isError": false
+  }
+}

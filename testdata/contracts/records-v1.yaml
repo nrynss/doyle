@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: Records
+  version: 1.0.0
+paths:
+  /records:
+    get:
+      operationId: listRecords
+      summary: List records
+      responses:
+        "200":
+          description: Every record
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Record" }
+  /records/{id}:
+    get:
+      operationId: getRecord
+      summary: Get one record
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Record" }
+        "404":
+          description: No record with this id
+  /stats:
+    get:
+      operationId: getStats
+      summary: Service statistics
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Stats" }
+components:
+  schemas:
+    Record:
+      type: object
+      required: [id, body, created_at]
+      properties:
+        id: { type: string }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
+    Stats:
+      type: object
+      required: [record_count]
+      properties:
+        record_count: { type: integer }

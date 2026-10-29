@@ -1,0 +1,20 @@
+{
+  "name": "lambo_derive",
+  "arguments": {
+    "agent_id": "muse-wonder-1.0",
+    "concepts": [
+      {
+        "content": "GET /records returns all records in one response; a backup can fetch it once",
+        "concept_type": "logic"
+      },
+      {
+        "content": "GET /records/{id} returns 404 when the record does not exist",
+        "concept_type": "logic"
+      },
+      {
+        "content": "GET /stats record_count is the total number of records",
+        "concept_type": "logic"
+      }
+    ]
+  }
+}
