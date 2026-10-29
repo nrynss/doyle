@@ -12,7 +12,7 @@ requires:   [T1.3, T0.4]
 fixture-ok: yes
 size:       M · mid
 owns:       src/adapters/muse_code/mod.rs, src/adapters/muse_code/locate.rs, src/adapters/muse_code/parse.rs
-status:     in-review
+status:     done
 ```
 Find a repository's memory scopes: the private per-project folder under `~/.local/share/muse/memory/projects/` (by the derivation T0.4 settled, or its recorded fallback) and the shared `<repo>/.agents/memory/`. Parse `MEMORY.md` and topic files: frontmatter, inline notes, index lines pointing at files. Each note becomes a `Memory` with a stable `MemoryRef` (scope, file, and the note's position or name) that survives an unrelated edit to the same file.
 
