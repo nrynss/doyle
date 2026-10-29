@@ -141,6 +141,7 @@ pub fn run_with_input(cli: &cli::Cli, input: &str, state_dir: &str) -> ExitCode 
             claim: spec.claim.clone(),
             recorded_by: spec.recorded_by.clone(),
             confidence: spec.confidence,
+            source_text: String::new(),
         };
 
         if let Err(e) = store.record_citation(citation) {

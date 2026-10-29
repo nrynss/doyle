@@ -55,6 +55,10 @@ pub struct Citation {
     pub recorded_by: String,
     /// 0.0–1.0.
     pub confidence: f32,
+    /// the memory text the citation was recorded against; skip-state only,
+    /// never displayed.
+    #[serde(default)]
+    pub source_text: String,
 }
 
 /// The severity of a flag. Only breaking and review changes flag; additive,
@@ -244,6 +248,7 @@ mod tests {
             claim: "GET /patients returns every patient in one response".to_string(),
             recorded_by: "curator".to_string(),
             confidence: 0.9,
+            source_text: "GET /patients returns every patient in one response".to_string(),
         };
         assert_eq!(round_trip(&citation), citation);
     }
@@ -387,6 +392,7 @@ mod tests {
                     claim: text.to_string(),
                     recorded_by: "meta-models/muse-spark-open-1026".to_string(),
                     confidence: 0.9,
+                    source_text: text.to_string(),
                 };
                 (memory, citation)
             })

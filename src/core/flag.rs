@@ -265,6 +265,7 @@ mod tests {
             claim: claim.to_string(),
             recorded_by: "curator".to_string(),
             confidence: 0.9,
+            source_text: claim.to_string(),
         }
     }
 

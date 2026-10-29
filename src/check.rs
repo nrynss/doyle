@@ -197,6 +197,7 @@ mod tests {
             claim: "GET /patients returns every patient in one response".to_string(),
             recorded_by: "curator".to_string(),
             confidence: 0.9,
+            source_text: "GET /patients returns every patient in one response".to_string(),
         };
         store.record_citation(citation).unwrap();
     }

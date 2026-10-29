@@ -2,12 +2,22 @@
 //! cite each against the current contract, write citations.
 //!
 //! For each configured adapter, list memories (one search per contract
-//! element, so recall-backed adapters stay honest), skip those already cited
-//! at their current text, run the curator against the current contract for
-//! the rest, and write citations. A memory the curator ties to nothing is
-//! recorded as a citation with no elements, so it is not asked again until
-//! its text changes. `--dry-run` prints what would be cited and writes
-//! nothing.
+//! element, so recall-backed adapters stay honest), plus one unfiltered
+//! (empty-query) pass so token-disjoint memories are not silently skipped;
+//! skip those already cited at their current text, run the curator against
+//! the current contract for the rest, and write citations. A memory the
+//! curator ties to nothing is recorded as a citation with no elements, so it
+//! is not asked again until its text changes. `--dry-run` prints what would
+//! be cited and writes nothing.
+//!
+//! Inherited limitation: Lambo's `lambo_recall` truncates at `top_k` 50, so
+//! a session holding more than 50 concepts can miss candidates; see the
+//! adapter docs (`docs/lambo.md`).
+//!
+//! Fixture runs are harness-only: the binary hardcodes the demo contract
+//! path, Muse root, Lambo session/URL and replay dir, so `doyle curate` cannot
+//! be re-pointed at alternate fixtures from the CLI; the `--dry-run` write
+//! guarantee is pinned by the unit tests in this module.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -181,7 +191,9 @@ pub fn curate_refs(
     let mut out: Vec<CurateItem> = Vec::new();
 
     for adapter in adapters {
-        // Collect candidate memories: one search per contract element.
+        // Collect candidate memories: one search per contract element, plus one
+        // unfiltered pass so enumerable adapters surface token-disjoint
+        // memories (empty query returns everything per the adapter contract).
         let mut candidates: Vec<Memory> = Vec::new();
         let mut seen: HashSet<MemoryRef> = HashSet::new();
         for entity in index.entities() {
@@ -202,11 +214,25 @@ pub fn curate_refs(
                 }
             }
         }
+        // Unfiltered pass: enumerable adapters return everything; recall-backed
+        // adapters error on empty query and are skipped.
+        match adapter.list("") {
+            Ok(mems) => {
+                for m in mems {
+                    if seen.insert(m.reference.clone()) {
+                        candidates.push(m);
+                    }
+                }
+            }
+            Err(_) => {
+                // Recall-backed adapter has no match-all query; skip.
+            }
+        }
 
         for memory in candidates {
             // Skip memories already cited at their current text.
             let existing = store.citations_for_memory(&memory.reference);
-            if existing.iter().any(|c| c.claim == memory.text) {
+            if existing.iter().any(|c| c.source_text == memory.text) {
                 continue;
             }
 
@@ -224,9 +250,10 @@ pub fn curate_refs(
                     let citation = Citation {
                         memory: memory.reference.clone(),
                         elements: elements.clone(),
-                        claim: memory.text.clone(),
+                        claim: claim.clone(),
                         recorded_by: CURATOR_MODEL.to_string(),
                         confidence,
+                        source_text: memory.text.clone(),
                     };
                     if !dry_run {
                         store.record_citation(citation).map_err(|e| e.to_string())?;
@@ -242,9 +269,10 @@ pub fn curate_refs(
                     let citation = Citation {
                         memory: memory.reference.clone(),
                         elements: Vec::new(),
-                        claim: memory.text.clone(),
+                        claim: claim.clone(),
                         recorded_by: CURATOR_MODEL.to_string(),
                         confidence: 0.0,
+                        source_text: memory.text.clone(),
                     };
                     if !dry_run {
                         store.record_citation(citation).map_err(|e| e.to_string())?;
@@ -336,6 +364,7 @@ mod tests {
     use crate::models::ReplayClient;
     use std::fs;
     use std::sync::Arc;
+    use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn fixture_path(rel: &str) -> String {
@@ -354,6 +383,84 @@ mod tests {
         ) -> Result<crate::models::ModelResponse, crate::models::ModelError> {
             self.calls.fetch_add(1, Ordering::SeqCst);
             self.inner.complete(request)
+        }
+    }
+
+    struct FixedClient {
+        calls: Arc<AtomicUsize>,
+    }
+
+    impl ModelClient for FixedClient {
+        fn complete(
+            &self,
+            _request: &crate::models::ModelRequest,
+        ) -> Result<crate::models::ModelResponse, crate::models::ModelError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Ok(crate::models::ModelResponse {
+                value: serde_json::json!({
+                    "element_ids": [],
+                    "claim": "rests on nothing",
+                    "confidence": 0.0,
+                    "rests_on_nothing": true
+                }),
+                usage: crate::models::Usage::NONE,
+            })
+        }
+    }
+
+    struct MutableAdapter {
+        name: String,
+        text: Arc<Mutex<String>>,
+        id: String,
+    }
+
+    impl MemoryAdapter for MutableAdapter {
+        fn name(&self) -> &str {
+            &self.name
+        }
+        fn capabilities(&self) -> crate::adapters::Capabilities {
+            crate::adapters::Capabilities::NONE
+        }
+        fn list(&self, query: &str) -> Result<Vec<Memory>, crate::adapters::AdapterError> {
+            let text = self.text.lock().unwrap().clone();
+            let mem = Memory {
+                reference: MemoryRef {
+                    adapter: self.name.clone(),
+                    id: self.id.clone(),
+                },
+                text: text.clone(),
+                updated_at: None,
+                scope: "s".to_string(),
+            };
+            if query.trim().is_empty() || text.to_lowercase().contains(&query.to_lowercase()) {
+                Ok(vec![mem])
+            } else {
+                Ok(vec![])
+            }
+        }
+        fn read(&self, id: &str) -> Result<Memory, crate::adapters::AdapterError> {
+            if id != self.id {
+                return Err(crate::adapters::AdapterError::not_found(&self.name, id));
+            }
+            let text = self.text.lock().unwrap().clone();
+            Ok(Memory {
+                reference: MemoryRef {
+                    adapter: self.name.clone(),
+                    id: self.id.clone(),
+                },
+                text,
+                updated_at: None,
+                scope: "s".to_string(),
+            })
+        }
+        fn write(
+            &self,
+            _text: &str,
+            _scope: &str,
+        ) -> Result<MemoryRef, crate::adapters::AdapterError> {
+            Err(crate::adapters::AdapterError::unsupported(
+                &self.name, "write",
+            ))
         }
     }
 
@@ -443,6 +550,60 @@ mod tests {
         let items = curate(&adapters, &counting, &index, &mut store, false).unwrap();
         // Expect 4 memories cited
         assert_eq!(items.len(), 4, "got {} items", items.len());
+        // First run must have called the model.
+        assert!(
+            counter.load(Ordering::SeqCst) > 0,
+            "first run made no model calls"
+        );
+        // Per-memory element sets: exact for M1/M2, subset of
+        // expected ∪ also_accepted for M3/M4.
+        let list_op = "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6";
+        let list_200 = "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba";
+        let get_op = "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5";
+        let get_404 = "ve2_6add08d53def059f4e973257dc9e174a5398208bce2fa4d719e0418ca523349e";
+        let stats_op = "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c";
+        let patient_count = "ve2_99aaf77708e08db6ee0c7bd151e3044ef33e089e1bbe915fe889e7330b79058f";
+        let stats_200 = "ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c";
+        let stats_type = "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809";
+        let decom_op = "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846";
+        let m3_union: HashSet<String> = [stats_op, patient_count, stats_200, stats_type]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let m4_union: HashSet<String> = [
+            decom_op,
+            "ve2_961aa3ef3e4dcfb88a106954f24e7b98bbeac77cbbd840ad30138558aa607c9c",
+            "ve2_7b2fe814702fee516a298fa7d2dde87c41638d860c96e14885faf599fc26ec24",
+            "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355",
+            "ve2_eaa9caa44e2da53743bb372db1b7511946f9903fd9255609357a85e6ab932bfd",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        for item in &items {
+            let set: HashSet<String> = item.elements.iter().map(|e| e.0.clone()).collect();
+            match item.memory.id.as_str() {
+                "MEMORY.md#1" => {
+                    let expected: HashSet<String> =
+                        [list_op, list_200].iter().map(|s| s.to_string()).collect();
+                    assert_eq!(set, expected, "M1 element set mismatch");
+                }
+                "MEMORY.md#2" => {
+                    let expected: HashSet<String> =
+                        [get_op, get_404].iter().map(|s| s.to_string()).collect();
+                    assert_eq!(set, expected, "M2 element set mismatch");
+                }
+                "patients-stats.md#1" => {
+                    assert!(set.is_subset(&m3_union), "M3 not subset: {set:?}");
+                    assert!(!set.is_empty(), "M3 empty");
+                }
+                "MEMORY.md#3" => {
+                    assert!(set.is_subset(&m4_union), "M4 not subset: {set:?}");
+                    assert!(!set.is_empty(), "M4 empty");
+                }
+                other => panic!("unexpected memory id {other}"),
+            }
+        }
         // second run
         let calls_before = counter.load(Ordering::SeqCst);
         let items2 = curate(&adapters, &counting, &index, &mut store, false).unwrap();
@@ -566,6 +727,207 @@ mod tests {
         let items = curate(&adapters, &replay, &index, &mut store, false).unwrap();
         assert_eq!(items.len(), 4, "got {} items", items.len());
 
+        let _ = fs::remove_dir_all(&store_dir);
+        let _ = fs::remove_dir_all(&rdir);
+    }
+
+    fn temp_store_dir(label: &str) -> std::path::PathBuf {
+        let p = std::env::temp_dir().join(format!(
+            "doyle-cur-{}-{}-{}",
+            label,
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = fs::remove_dir_all(&p);
+        fs::create_dir_all(&p).unwrap();
+        p
+    }
+
+    #[test]
+    fn token_disjoint_note_recorded_as_rests_on_nothing() {
+        use crate::adapters::FakeAdapter;
+        let adapter = FakeAdapter::new("fake");
+        adapter
+            .write("zzqq unique phrase unrelated to any contract", "scope")
+            .unwrap();
+        let adapters: Vec<Box<dyn MemoryAdapter>> = vec![Box::new(adapter)];
+        let index =
+            ContractIndex::load(fixture_path("testdata/contracts/patients-v1.yaml")).unwrap();
+        let store_dir = temp_store_dir("disjoint");
+        let mut store = Store::open(&store_dir).unwrap();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let fixed = FixedClient {
+            calls: calls.clone(),
+        };
+        let items = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+        assert_eq!(items.len(), 1, "disjoint note not curated");
+        assert!(items[0].rests_on_nothing);
+        assert_eq!(store.citations().len(), 1);
+        assert!(store.citations()[0].elements.is_empty());
+        let _ = fs::remove_dir_all(&store_dir);
+    }
+
+    #[test]
+    fn restart_skip_and_text_change_retrigger() {
+        let text = Arc::new(Mutex::new(String::from("zzqq unique unrelated note")));
+        let adapter = MutableAdapter {
+            name: "fake".to_string(),
+            text: text.clone(),
+            id: "mem-1".to_string(),
+        };
+        let adapters: Vec<Box<dyn MemoryAdapter>> = vec![Box::new(adapter)];
+        let index =
+            ContractIndex::load(fixture_path("testdata/contracts/patients-v1.yaml")).unwrap();
+        let store_dir = temp_store_dir("restart");
+        let calls = Arc::new(AtomicUsize::new(0));
+        let fixed = FixedClient {
+            calls: calls.clone(),
+        };
+
+        {
+            let mut store = Store::open(&store_dir).unwrap();
+            let items = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+            assert_eq!(items.len(), 1);
+        }
+        // restart, same text -> skip, no calls
+        {
+            let mut store = Store::open(&store_dir).unwrap();
+            let before = calls.load(Ordering::SeqCst);
+            let items = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+            assert!(items.is_empty(), "restart should skip");
+            assert_eq!(calls.load(Ordering::SeqCst), before, "restart made calls");
+        }
+        // text change -> re-trigger
+        *text.lock().unwrap() = String::from("changed unrelated note text");
+        {
+            let mut store = Store::open(&store_dir).unwrap();
+            let before = calls.load(Ordering::SeqCst);
+            let items = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+            assert_eq!(items.len(), 1, "text change should re-curate");
+            assert!(
+                calls.load(Ordering::SeqCst) > before,
+                "text change made no call"
+            );
+        }
+        let _ = fs::remove_dir_all(&store_dir);
+    }
+
+    #[test]
+    fn rests_on_nothing_skip_writes_and_contract_change() {
+        let text = Arc::new(Mutex::new(String::from("zzqq unique unrelated note")));
+        let adapter = MutableAdapter {
+            name: "fake".to_string(),
+            text: text.clone(),
+            id: "mem-1".to_string(),
+        };
+        let adapters: Vec<Box<dyn MemoryAdapter>> = vec![Box::new(adapter)];
+        let index =
+            ContractIndex::load(fixture_path("testdata/contracts/patients-v1.yaml")).unwrap();
+        let store_dir = temp_store_dir("ron");
+        let mut store = Store::open(&store_dir).unwrap();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let fixed = FixedClient {
+            calls: calls.clone(),
+        };
+
+        // (a) empty-elements citation recorded
+        let items = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+        assert_eq!(items.len(), 1);
+        assert!(items[0].rests_on_nothing);
+        assert_eq!(store.citations().len(), 1);
+        assert!(store.citations()[0].elements.is_empty());
+
+        // (b) second run skips with zero calls and zero new writes (store files)
+        let calls_before = calls.load(Ordering::SeqCst);
+        let cit_before = store.citations().len();
+        let file_before = fs::read_to_string(store_dir.join("citations.jsonl"))
+            .unwrap()
+            .lines()
+            .count();
+        let items2 = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+        assert!(items2.is_empty());
+        assert_eq!(calls.load(Ordering::SeqCst), calls_before);
+        assert_eq!(store.citations().len(), cit_before);
+        let file_after = fs::read_to_string(store_dir.join("citations.jsonl"))
+            .unwrap()
+            .lines()
+            .count();
+        assert_eq!(file_after, file_before);
+
+        // (c) text change re-triggers curation
+        *text.lock().unwrap() = String::from("changed unrelated note text");
+        let calls_before2 = calls.load(Ordering::SeqCst);
+        let items3 = curate(&adapters, &fixed, &index, &mut store, false).unwrap();
+        assert_eq!(items3.len(), 1);
+        assert!(calls.load(Ordering::SeqCst) > calls_before2);
+
+        // (d) unrelated contract change does NOT re-trigger (no version key in skip)
+        let index2 =
+            ContractIndex::load(fixture_path("testdata/contracts/patients-v2.yaml")).unwrap();
+        let calls_before3 = calls.load(Ordering::SeqCst);
+        let cit_before3 = store.citations().len();
+        let file_before3 = fs::read_to_string(store_dir.join("citations.jsonl"))
+            .unwrap()
+            .lines()
+            .count();
+        let items4 = curate(&adapters, &fixed, &index2, &mut store, false).unwrap();
+        assert!(items4.is_empty(), "contract change should not re-trigger");
+        assert_eq!(calls.load(Ordering::SeqCst), calls_before3);
+        assert_eq!(store.citations().len(), cit_before3);
+        let file_after3 = fs::read_to_string(store_dir.join("citations.jsonl"))
+            .unwrap()
+            .lines()
+            .count();
+        assert_eq!(file_after3, file_before3);
+
+        let _ = fs::remove_dir_all(&store_dir);
+    }
+
+    #[test]
+    fn dry_run_writes_nothing() {
+        use crate::adapters::muse_code::MuseCodeAdapter;
+        let tmp = std::env::temp_dir().join(format!("mc-dry-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir_all(&tmp).unwrap();
+        fs::copy(
+            format!(
+                "{}/testdata/memories/muse-code/MEMORY.md",
+                env!("CARGO_MANIFEST_DIR")
+            ),
+            tmp.join("MEMORY.md"),
+        )
+        .unwrap();
+        fs::copy(
+            format!(
+                "{}/testdata/memories/muse-code/patients-stats.md",
+                env!("CARGO_MANIFEST_DIR")
+            ),
+            tmp.join("patients-stats.md"),
+        )
+        .unwrap();
+        let mc = MuseCodeAdapter::new(&tmp);
+        let adapters: Vec<Box<dyn MemoryAdapter>> = vec![Box::new(mc)];
+        let index =
+            ContractIndex::load(fixture_path("testdata/contracts/patients-v1.yaml")).unwrap();
+        let store_dir = temp_store_dir("dry");
+        let mut store = Store::open(&store_dir).unwrap();
+
+        let (rdir, counter) = replay_dir_for_cases(&["M1", "M2", "M3", "M4"]);
+        let replay = ReplayClient::new(&rdir);
+        let counting = CountingClient {
+            inner: replay,
+            calls: counter.clone(),
+        };
+
+        let items = curate(&adapters, &counting, &index, &mut store, true).unwrap();
+        assert_eq!(items.len(), 4);
+        assert!(!store_dir.join("citations.jsonl").exists());
+        assert!(store.citations().is_empty());
+
+        let _ = fs::remove_dir_all(&tmp);
         let _ = fs::remove_dir_all(&store_dir);
         let _ = fs::remove_dir_all(&rdir);
     }
