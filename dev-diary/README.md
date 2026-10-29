@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** the plan is written. T0.1 is done. Ground (P0) is next.
+**Current status:** P0 in progress: T0.1 and T0.2 are done.
 
 ---
 
@@ -140,11 +140,11 @@ The demo is built around one moment. Muse Wonder remembers that the records endp
 
 | Phase | Tasks complete | Status |
 |---|---|---|
-| P0 | 1 / 7 | T0.1 done. T0.4 is partly answered by the recall test (handoff log). |
+| P0 | 2 / 7 | T0.1 and T0.2 done. T0.4 is partly answered by the recall test (handoff log). T0.3, T0.4, T0.5 and T0.7 are ready. |
 | P1 | 0 / 5 | Waits for T0.3–T0.6. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
-| P4 | 0 / 4 | Waits for P1 and T0.2. |
+| P4 | 0 / 4 | Waits for P1. |
 | P5 | 0 / 3 | Waits for P2–P4. |
 | P6 | 0 / 2 | Waits for T2.2 (guard) and P5 (review page). |
 | P7 | 0 / 5 | T7.1 can start once T0.3 lands. |
@@ -156,6 +156,7 @@ The demo is built around one moment. Muse Wonder remembers that the records endp
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T0.2 closed: keys and models confirmed.** Meta Model API: `MODEL_API_KEY` or keyring `service meta-model-api`; `muse-spark-1.3` answered. Baseten: `BASETEN_API_KEY` or keyring `service baseten`; the curator model is `meta-models/muse-spark-open-1026`, because the undated `meta-models/muse-spark-open` returns 403 for the same key with a message blaming the key. Lambo answers at `http://127.0.0.1:7700/mcp`. `.env.example` lists the names, with no values.
 - **Plan rebuilt in the house structure.** The single plan file became this diary, with the architecture in `docs/architecture.md`. Process, by the user's decision: one agent per task, validated and landed by the orchestrator; no review loops.
 - **Finding: Muse Wonder's memory is its memory file.** Recall test on Muse Code 1.4.14 with `muse-wonder-1.0`, in two scratch repositories:
   - A fact Wonder was told not to save came back UNKNOWN in fresh sessions, in the same repository and in another. Only session logs held it.

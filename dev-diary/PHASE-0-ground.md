@@ -26,7 +26,7 @@ requires:   []
 fixture-ok: no
 size:       XS · user
 owns:       .env.example
-status:     not-started
+status:     done
 ```
 The user confirms access and where each key lives; the orchestrator writes `.env.example` with variable names only.
 
@@ -36,6 +36,12 @@ The user confirms access and where each key lives; the orchestrator writes `.env
 - **Lambo:** a running server reachable at `http://127.0.0.1:7700/mcp`, and the session Doyle writes to.
 
 **Done when:** `.env.example` lists every variable with a one-line comment and no value; the handoff log records which models answered, with no key value anywhere.
+
+**Closed.**
+- **Meta Model API:** `MODEL_API_KEY`, or the keyring (`service meta-model-api`). The key OMP was already signed in with was copied into the keyring; `muse-spark-1.3` answered on `https://api.meta.ai/v1/chat/completions`.
+- **Baseten:** `BASETEN_API_KEY`, or the keyring (`service baseten`). The curator model is `meta-models/muse-spark-open-1026` on `https://inference.baseten.co/v1`. The undated `meta-models/muse-spark-open` returns 403 "please check the api-key you provided" for the same key, though the key lists both models.
+- **Muse Code:** 1.4.14, pay-as-you-go, Wonder in Standard mode.
+- **Lambo:** reachable at `http://127.0.0.1:7700/mcp` (406 to a plain request, as MCP expects). T0.5 picks the scratch session.
 
 ---
 
