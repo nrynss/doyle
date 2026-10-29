@@ -36,7 +36,7 @@ requires:   [T1.4, T0.2]
 fixture-ok: yes
 size:       S · mid
 owns:       src/models/baseten.rs
-status:     in-review
+status:     done
 ```
 A `ModelClient` for Muse Spark Open on Baseten (the curator, for the open-weight bonus), with the same guarantees as T4.1. The endpoint and model come from T0.2.
 
