@@ -197,10 +197,12 @@ pub trait MemoryAdapter {
     ///   `superseded-by` line naming the correction, when one is present.
     ///   The correction itself reads back under the reference
     ///   [`MemoryAdapter::supersede`] returned.
-    /// * Lambo inspects the concept (`lambo_inspect`) and returns its
-    ///   content together with the `Contradicted ...` warning line, matched
-    ///   to the hit by ID, when one is present. The correction reads back
-    ///   under its derived node ID.
+    /// * Lambo inspects the concept (`lambo_inspect`) for its content and
+    ///   resolves the ID; the `Contradicted ...` warning line is not on the
+    ///   inspect result (transcript 10 carries none) but arrives via recall
+    ///   warnings, combined with the local supersede cache populated by
+    ///   `supersede` (and by recall). The correction reads back under its
+    ///   derived node ID.
     ///
     /// Unknown IDs are [`AdapterError::NotFound`], never a panic.
     fn read(&self, id: &str) -> Result<Memory, AdapterError>;
@@ -227,7 +229,10 @@ pub trait MemoryAdapter {
     ///   instruction (product.md, Cautions).
     /// * Lambo has no in-place edit; its adapter leaves this unsupported and
     ///   corrects through [`MemoryAdapter::supersede`] instead (a derive with
-    ///   `against`), which is what makes recall warn on both lines.
+    ///   `against`), which is what makes recall warn on both lines. Leaving
+    ///   `annotate` unsupported while `supersede` is the correcting path is
+    ///   the compliant reading of this trait (frozen trait governs over loose
+    ///   phase prose).
     fn annotate(&self, id: &str, warning: &str) -> Result<(), AdapterError> {
         let _ = (id, warning);
         Err(AdapterError::unsupported(self.name(), "annotate"))

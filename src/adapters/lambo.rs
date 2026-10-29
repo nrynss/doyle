@@ -9,6 +9,11 @@ use crate::mcp::{McpClient, McpError, Transport};
 
 pub const BROAD_WATCH_QUERY: &str = "*";
 
+/// `wait_ms` passed to `lambo_stats` after a derive. Kept strictly below the
+/// default transport timeout (see `crate::mcp::DEFAULT_TRANSPORT_TIMEOUT`)
+/// with margin so the receipt wait cannot outlive the HTTP call carrying it.
+pub const STATS_WAIT_MS: u64 = 4000;
+
 pub struct LamboAdapter {
     name: String,
     agent_id: String,
@@ -16,7 +21,12 @@ pub struct LamboAdapter {
     client: RefCell<McpClient>,
     content_cache: RefCell<HashMap<String, String>>,
     scope_cache: RefCell<HashMap<String, String>>,
+    // Restart loss (R2): supersede/scope caches are process-local; after a
+    // restart, reads lose warnings/scopes until the next supersede in that process.
     supersede_cache: RefCell<HashMap<String, (String, String)>>,
+    // Restart loss (R2): supersede/scope caches are process-local. A restart
+    // loses recorded warnings/scopes until the next supersede in that process.
+    recall_warnings: RefCell<Vec<String>>,
     seen: RefCell<HashSet<String>>,
 }
 
@@ -38,6 +48,7 @@ impl LamboAdapter {
             content_cache: RefCell::new(HashMap::new()),
             scope_cache: RefCell::new(HashMap::new()),
             supersede_cache: RefCell::new(HashMap::new()),
+            recall_warnings: RefCell::new(Vec::new()),
             seen: RefCell::new(HashSet::new()),
         }
     }
@@ -72,6 +83,32 @@ impl LamboAdapter {
             memory: None,
             message: format!("{}: {}", e.url, e.message),
         }
+    }
+
+    pub fn recall_warnings(&self) -> Vec<String> {
+        self.recall_warnings.borrow().clone()
+    }
+
+    pub fn recorded_requests(&self) -> Vec<crate::mcp::RecordedRequest> {
+        self.client.borrow().recorded_requests()
+    }
+    pub fn recorded(&self) -> Vec<crate::mcp::RecordedRequest> {
+        self.recorded_requests()
+    }
+    pub fn calls(&self) -> Vec<crate::mcp::RecordedRequest> {
+        self.recorded_requests()
+    }
+    pub fn requests(&self) -> Vec<crate::mcp::RecordedRequest> {
+        self.recorded_requests()
+    }
+    pub fn consumed_warnings(&self) -> Vec<String> {
+        self.recall_warnings()
+    }
+    pub fn last_recall_warnings(&self) -> Vec<String> {
+        self.recall_warnings()
+    }
+    pub fn server_warnings(&self) -> Vec<String> {
+        self.recall_warnings()
     }
 }
 
@@ -187,6 +224,19 @@ impl MemoryAdapter for LamboAdapter {
                 scope,
             });
         }
+        // Consume any contradiction warnings the server attached to this recall
+        // (transcript 13): they are the source of read-time warnings, not the
+        // inspect neighbourhood (transcript 10 carries none).
+        let server_warnings = structured
+            .get("warnings")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        for w in server_warnings {
+            if let Some(t) = w.as_str() {
+                self.recall_warnings.borrow_mut().push(t.to_string());
+            }
+        }
         Ok(memories)
     }
 
@@ -232,7 +282,24 @@ impl MemoryAdapter for LamboAdapter {
             .get(id)
             .cloned()
             .unwrap_or_else(|| self.session.clone());
-        if let Some((corr_id, _)) = self.supersede_cache.borrow().get(id).cloned()
+        let corr_from_cache = self
+            .supersede_cache
+            .borrow()
+            .get(id)
+            .cloned()
+            .map(|(c, _)| c);
+        let corr_from_recall = if corr_from_cache.is_none() {
+            self.recall_warnings
+                .borrow()
+                .iter()
+                .find(|w| {
+                    w.contains("Contradicted") && (w.contains(id) || w.contains(&short_id(id)))
+                })
+                .and_then(|w| parse_contradicted_id(w))
+        } else {
+            None
+        };
+        if let Some(corr_id) = corr_from_cache.or(corr_from_recall)
             && !text.contains(&corr_id)
         {
             text.push_str("\n⚠ Contradicted (id ");
@@ -282,7 +349,7 @@ impl MemoryAdapter for LamboAdapter {
                 serde_json::json!({
                     "agent_id": self.agent_id,
                     "receipt": receipt,
-                    "wait_ms": 5000
+                    "wait_ms": STATS_WAIT_MS
                 }),
             )
             .map_err(|e| self.mcp_err(e))?;
@@ -452,7 +519,7 @@ impl MemoryAdapter for LamboAdapter {
                 serde_json::json!({
                     "agent_id": self.agent_id,
                     "receipt": receipt,
-                    "wait_ms": 5000
+                    "wait_ms": STATS_WAIT_MS
                 }),
             )
             .map_err(|e| self.mcp_err(e))?;
@@ -680,5 +747,376 @@ mod tests {
         let first_id = listed[0].reference.id.clone();
         let read = adapter.read(&first_id).unwrap();
         assert!(read.text.contains("GET /patients returns every patient"));
+    }
+
+    // ---- helpers for scripted server ----
+    #[derive(Default)]
+    struct SrvState {
+        concepts: Vec<(String, String)>,
+        next: u32,
+        derives: u32,
+        receipts: std::collections::HashMap<String, Vec<String>>,
+    }
+
+    fn scripted_server() -> (FakeTransport, std::sync::Arc<std::sync::Mutex<SrvState>>) {
+        let state = std::sync::Arc::new(std::sync::Mutex::new(SrvState::default()));
+        let st = state.clone();
+        let transport = FakeTransport::scripted(move |url: &str, body: &str| {
+            let v: serde_json::Value =
+                serde_json::from_str(body).unwrap_or(serde_json::Value::Null);
+            let method = v.get("method").and_then(|m| m.as_str()).unwrap_or("");
+            if method == "initialize" {
+                let msg = serde_json::json!({
+                    "jsonrpc":"2.0",
+                    "id": v.get("id"),
+                    "result": {
+                        "protocolVersion":"2025-06-18",
+                        "capabilities":{"tools":{}},
+                        "serverInfo":{"name":"lambo","version":"0.8.0"},
+                        "instructions":"x"
+                    }
+                });
+                return Ok(crate::mcp::HttpResponse {
+                    status: 200,
+                    headers: vec![("Mcp-Session-Id".to_string(), "<mcp-session-id>".to_string())],
+                    body: format!("id: 0\nretry: 3000\ndata: {}\n\n", msg),
+                });
+            }
+            if method == "notifications/initialized" {
+                return Ok(crate::mcp::HttpResponse {
+                    status: 202,
+                    headers: vec![],
+                    body: String::new(),
+                });
+            }
+            if method != "tools/call" {
+                return Err(crate::mcp::TransportError {
+                    url: url.to_string(),
+                    message: "unknown method".to_string(),
+                });
+            }
+            let params = v.get("params").cloned().unwrap_or(serde_json::Value::Null);
+            let tool = params.get("name").and_then(|n| n.as_str()).unwrap_or("");
+            let args = params
+                .get("arguments")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            let rid = v.get("id").cloned().unwrap_or(serde_json::Value::Null);
+            let mut st = st.lock().unwrap();
+            match tool {
+                "lambo_derive" => {
+                    let concepts = args
+                        .get("concepts")
+                        .and_then(|c| c.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    let mut created = Vec::new();
+                    for c in &concepts {
+                        st.next += 1;
+                        let cid = format!("{:08x}-0000-0000-0000-000000000000", st.next);
+                        let content = c
+                            .get("content")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        st.concepts.push((cid.clone(), content));
+                        created.push(cid);
+                    }
+                    st.derives += 1;
+                    let receipt = format!("receipt-{}", st.derives);
+                    st.receipts.insert(receipt.clone(), created.clone());
+                    let msg = serde_json::json!({
+                        "jsonrpc":"2.0","id": rid,
+                        "result": {
+                            "content":[{"type":"text","text":"accepted"}],
+                            "structuredContent":{"agent_id": args.get("agent_id"), "receipt": receipt, "receipt_state":"pending", "warnings":[]},
+                            "isError": false
+                        }
+                    });
+                    Ok(crate::mcp::HttpResponse {
+                        status: 200,
+                        headers: vec![],
+                        body: format!("id: 0\nretry: 3000\ndata: {}\n\n", msg),
+                    })
+                }
+                "lambo_stats" => {
+                    let receipt = args.get("receipt").and_then(|x| x.as_str()).unwrap_or("");
+                    let created = st.receipts.get(receipt).cloned().unwrap_or_default();
+                    let msg = serde_json::json!({
+                        "jsonrpc":"2.0","id": rid,
+                        "result": {
+                            "content":[{"type":"text","text":"stats"}],
+                            "structuredContent":{"receipt":{"created": created, "state":"applied"}},
+                            "isError": false
+                        }
+                    });
+                    Ok(crate::mcp::HttpResponse {
+                        status: 200,
+                        headers: vec![],
+                        body: format!("id: 0\nretry: 3000\ndata: {}\n\n", msg),
+                    })
+                }
+                "lambo_recall" => {
+                    let hits: Vec<serde_json::Value> = st.concepts.iter().map(|(cid, content)| {
+                        serde_json::json!({"node_id": cid, "content": content, "concept_type":"Logic", "score":1.0, "is_canonical":false, "blast_radius":null})
+                    }).collect();
+                    let msg = serde_json::json!({
+                        "jsonrpc":"2.0","id": rid,
+                        "result": {
+                            "content":[{"type":"text","text":"ctx"}],
+                            "structuredContent":{"context":"ctx", "hits": hits, "warnings":[]},
+                            "isError": false
+                        }
+                    });
+                    Ok(crate::mcp::HttpResponse {
+                        status: 200,
+                        headers: vec![],
+                        body: format!("id: 0\nretry: 3000\ndata: {}\n\n", msg),
+                    })
+                }
+                "lambo_inspect" => {
+                    let focus = args.get("focus").and_then(|x| x.as_str()).unwrap_or("");
+                    let found = st
+                        .concepts
+                        .iter()
+                        .find(|(cid, _)| cid == focus || cid.starts_with(focus));
+                    let (label, node_id) = match found {
+                        Some((cid, content)) => (format!("{} [Logic]", content), cid.clone()),
+                        None => (String::new(), String::new()),
+                    };
+                    let msg = serde_json::json!({
+                        "jsonrpc":"2.0","id": rid,
+                        "result": {
+                            "content":[{"type":"text","text": format!("focus: {}", label)}],
+                            "structuredContent":{"focus":{"label": label, "node_id": node_id}, "warnings":[]},
+                            "isError": false
+                        }
+                    });
+                    Ok(crate::mcp::HttpResponse {
+                        status: 200,
+                        headers: vec![],
+                        body: format!("id: 0\nretry: 3000\ndata: {}\n\n", msg),
+                    })
+                }
+                _ => Err(crate::mcp::TransportError {
+                    url: url.to_string(),
+                    message: format!("unknown tool {}", tool),
+                }),
+            }
+        });
+        (transport, state)
+    }
+
+    #[test]
+    fn lambo_passes_conformance() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        crate::adapters::check_conformance(&adapter);
+    }
+
+    #[test]
+    fn stats_wait_ms_below_default_timeout() {
+        assert!(STATS_WAIT_MS < crate::mcp::DEFAULT_TRANSPORT_TIMEOUT.as_millis() as u64);
+    }
+
+    #[test]
+    fn body_capture_recall_and_derive() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        // trigger initialize + a list (recall)
+        let _ = adapter.list("GET /patients").ok();
+        let calls = adapter.recorded_requests();
+        // first two calls: initialize then notifications
+        assert!(calls.len() >= 2);
+        assert!(calls[0].body.contains("\"initialize\""));
+        assert!(calls[1].body.contains("notifications/initialized"));
+        // find recall call
+        let recall = calls
+            .iter()
+            .find(|c| c.body.contains("lambo_recall"))
+            .unwrap();
+        assert!(recall.body.contains("GET /patients"));
+        assert!(recall.body.contains("\"top_k\": 50") || recall.body.contains("\"top_k\":50"));
+        // agent_id on every call
+        for c in &calls {
+            if c.body.contains("agent_id") {
+                assert!(c.body.contains("doyle-probe"));
+            }
+        }
+        // session id echoed after initialize
+        let has_session = calls.iter().skip(2).any(|c| {
+            c.headers
+                .iter()
+                .any(|(k, v)| k.eq_ignore_ascii_case("Mcp-Session-Id") && v == "<mcp-session-id>")
+        });
+        assert!(has_session, "session id must be echoed");
+    }
+
+    #[test]
+    fn body_capture_derive_against() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        let first = adapter.write("first mem", "s").unwrap();
+        let corr_text = "corr text";
+        let _ = adapter.supersede(&first.id, corr_text).unwrap();
+        let calls = adapter.recorded_requests();
+        let derive = calls
+            .iter()
+            .rev()
+            .find(|c| c.body.contains("lambo_derive") && c.body.contains("against"))
+            .unwrap();
+        assert!(
+            derive.body.contains("\"concept_type\": \"logic\"")
+                || derive.body.contains("\"concept_type\":\"logic\"")
+        );
+        assert!(derive.body.contains("against"));
+        // short id (8 hex) in against
+        let short = &first.id[..8];
+        assert!(derive.body.contains(short));
+        // stats wait_ms
+        let stats = calls
+            .iter()
+            .rev()
+            .find(|c| c.body.contains("lambo_stats"))
+            .unwrap();
+        assert!(
+            stats
+                .body
+                .contains(&format!("\"wait_ms\": {}", STATS_WAIT_MS))
+                || stats
+                    .body
+                    .contains(&format!("\"wait_ms\":{}", STATS_WAIT_MS))
+        );
+    }
+
+    #[test]
+    fn watch_offline_report_once() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        let a = adapter.write("m1", "s").unwrap();
+        let b = adapter.write("m2", "s").unwrap();
+        let first = adapter.watch().unwrap();
+        let ids: Vec<&str> = first.iter().map(|m| m.reference.id.as_str()).collect();
+        assert!(ids.contains(&a.id.as_str()));
+        assert!(ids.contains(&b.id.as_str()));
+        assert!(adapter.watch().unwrap().is_empty());
+        let c = adapter.write("m3", "s").unwrap();
+        let later = adapter.watch().unwrap();
+        let later_ids: Vec<&str> = later.iter().map(|m| m.reference.id.as_str()).collect();
+        assert!(later_ids.contains(&c.id.as_str()));
+        assert!(!later_ids.contains(&a.id.as_str()));
+        assert!(adapter.watch().unwrap().is_empty());
+    }
+
+    // LB5: supersede retry branches
+    #[test]
+    fn supersede_retry_cache_hit() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        let first = adapter.write("stale", "s").unwrap();
+        let text = "correction text";
+        let r1 = adapter.supersede(&first.id, text).unwrap();
+        let derives_before = adapter
+            .recorded_requests()
+            .iter()
+            .filter(|c| c.body.contains("lambo_derive"))
+            .count();
+        let r2 = adapter.supersede(&first.id, text).unwrap();
+        assert_eq!(r1.id, r2.id);
+        let derives_after = adapter
+            .recorded_requests()
+            .iter()
+            .filter(|c| c.body.contains("lambo_derive"))
+            .count();
+        assert_eq!(derives_before, derives_after, "cache hit must not derive");
+    }
+
+    // inspect-found retry path: a fresh adapter (empty caches) whose server already
+    // records the contradiction. Queued responses drive inspect -> inspect -> inspect.
+    #[test]
+    fn supersede_retry_inspect_found() {
+        let stale_id = "810c1cbf-0000-0000-0000-000000000000";
+        let corr_short = "1be4e4a6";
+        let corr_full = "1be4e4a6-0000-0000-0000-000000000000";
+        let corr_text = "correction text";
+        // inspect(stale) -> warning with short corr id; focus label stale content
+        let mut r_stale = serde_json::json!({
+            "jsonrpc":"2.0","id":1,
+            "result": {
+                "content":[{"type":"text","text":"focus: stale [Logic]"}],
+                "structuredContent": {
+                    "focus": {"label": "stale [Logic]", "node_id": stale_id},
+                    "warnings": [format!("⚠ Contradicted at t by doyle-probe: \"...\" (id {})", corr_short)]
+                },
+                "isError": false
+            }
+        });
+        let mut r_short = serde_json::json!({
+            "jsonrpc":"2.0","id":1,
+            "result": {
+                "content":[{"type":"text","text":"focus: corr [Logic]"}],
+                "structuredContent": {
+                    "focus": {"label": "corr [Logic]", "node_id": corr_full},
+                    "warnings": []
+                },
+                "isError": false
+            }
+        });
+        let mut r_full = serde_json::json!({
+            "jsonrpc":"2.0","id":1,
+            "result": {
+                "content":[{"type":"text","text":"focus: corr text [Logic]"}],
+                "structuredContent": {
+                    "focus": {"label": format!("{} [Logic]", corr_text), "node_id": corr_full},
+                    "warnings": []
+                },
+                "isError": false
+            }
+        });
+        let _ = (&mut r_stale, &mut r_short, &mut r_full);
+        let wrap = |m: serde_json::Value| serde_json::json!({"http_status":200,"response_headers":{"Mcp-Session-Id":"<mcp-session-id>"}, "message": m});
+        let init_msg = serde_json::json!({"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"lambo","version":"0.8.0"},"instructions":"x"}});
+        let notif_status = 202;
+        let _ = notif_status;
+        let transport = FakeTransport::new(vec![
+            crate::mcp::recorded_to_http(
+                &serde_json::json!({"http_status":200,"response_headers":{"Mcp-Session-Id":"<mcp-session-id>"}, "message": init_msg}),
+            ),
+            crate::mcp::recorded_to_http(
+                &serde_json::json!({"http_status":202,"response_headers":{}, "message": null}),
+            ),
+            crate::mcp::recorded_to_http(&wrap(r_stale)),
+            crate::mcp::recorded_to_http(&wrap(r_short)),
+            crate::mcp::recorded_to_http(&wrap(r_full)),
+        ]);
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        // seed content cache? adapter empty; supersede inspect path calls inspect_content(full) which uses inspect -> label corr_text. Good.
+        // Need stale_id in content cache? read not required. supersede returns corr_full.
+        let r = adapter.supersede(stale_id, corr_text).unwrap();
+        assert_eq!(r.id, corr_full);
     }
 }

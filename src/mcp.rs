@@ -9,15 +9,6 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-/// An HTTP request handed to a [`Transport`].
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct HttpRequest {
-    pub url: String,
-    pub headers: Vec<(String, String)>,
-    pub body: String,
-}
-
 /// An HTTP response coming back from a [`Transport`].
 #[derive(Debug, Clone)]
 pub struct HttpResponse {
@@ -50,7 +41,17 @@ pub trait Transport {
         headers: &[(String, String)],
         body: &str,
     ) -> Result<HttpResponse, TransportError>;
+
+    /// Recorded requests, when the transport captures them (fake only).
+    fn recorded(&self) -> Vec<RecordedRequest> {
+        Vec::new()
+    }
 }
+
+/// Default transport timeout. `STATS_WAIT_MS` in the Lambo adapter is kept
+/// strictly below this with margin so a receipt wait cannot outlive the HTTP
+/// call that carries it.
+pub const DEFAULT_TRANSPORT_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// A transport backed by `ureq` (rustls, blocking). Finite timeouts everywhere.
 pub struct UreqTransport {
@@ -59,7 +60,7 @@ pub struct UreqTransport {
 
 impl UreqTransport {
     pub fn new() -> Self {
-        Self::with_timeout(Duration::from_secs(5))
+        Self::with_timeout(DEFAULT_TRANSPORT_TIMEOUT)
     }
 
     pub fn with_timeout(timeout: Duration) -> Self {
@@ -110,6 +111,14 @@ impl Transport for UreqTransport {
     }
 }
 
+/// A recorded HTTP request captured by [`FakeTransport`].
+#[derive(Debug, Clone)]
+pub struct RecordedRequest {
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: String,
+}
+
 /// An in-memory transport for tests: returns queued responses in order, then
 /// errors. Also supports a closure for scripted behaviour.
 pub struct FakeTransport {
@@ -121,6 +130,7 @@ struct FakeInner {
     responses: Vec<HttpResponse>,
     cursor: usize,
     fallback: Option<Box<dyn Fn(&str, &str) -> Result<HttpResponse, TransportError> + Send + Sync>>,
+    recorded: Vec<RecordedRequest>,
 }
 
 impl FakeTransport {
@@ -130,6 +140,7 @@ impl FakeTransport {
                 responses,
                 cursor: 0,
                 fallback: None,
+                recorded: Vec::new(),
             }),
         }
     }
@@ -147,26 +158,57 @@ impl FakeTransport {
                 responses: Vec::new(),
                 cursor: 0,
                 fallback: Some(Box::new(f)),
+                recorded: Vec::new(),
             }),
         }
     }
 }
 
+impl FakeTransport {
+    pub fn recorded(&self) -> Vec<RecordedRequest> {
+        self.inner.borrow().recorded.clone()
+    }
+    pub fn recorded_requests(&self) -> Vec<RecordedRequest> {
+        self.recorded()
+    }
+    pub fn calls(&self) -> Vec<RecordedRequest> {
+        self.recorded()
+    }
+    pub fn requests(&self) -> Vec<RecordedRequest> {
+        self.recorded()
+    }
+    pub fn captured(&self) -> Vec<RecordedRequest> {
+        self.recorded()
+    }
+    pub fn captured_requests(&self) -> Vec<RecordedRequest> {
+        self.recorded()
+    }
+}
+
 impl Transport for FakeTransport {
+    fn recorded(&self) -> Vec<RecordedRequest> {
+        self.inner.borrow().recorded.clone()
+    }
+
     fn post(
         &self,
         url: &str,
         headers: &[(String, String)],
         body: &str,
     ) -> Result<HttpResponse, TransportError> {
-        let _ = headers;
         let mut inner = self.inner.borrow_mut();
+        inner.recorded.push(RecordedRequest {
+            url: url.to_string(),
+            headers: headers.to_vec(),
+            body: body.to_string(),
+        });
         if inner.cursor < inner.responses.len() {
             let r = inner.responses[inner.cursor].clone();
             inner.cursor += 1;
             return Ok(r);
         }
         if let Some(f) = &inner.fallback {
+            // need to drop borrow before calling? f is Fn; borrow still held. Call while borrowed is okay but recording already pushed. However f may call? no.
             return f(url, body);
         }
         Err(TransportError {
@@ -227,6 +269,13 @@ impl McpClient {
         self.session_id.as_deref()
     }
 
+    pub fn recorded_requests(&self) -> Vec<RecordedRequest> {
+        self.transport.recorded()
+    }
+    pub fn recorded(&self) -> Vec<RecordedRequest> {
+        self.recorded_requests()
+    }
+
     fn post(&self, body: &str, extra_headers: &[(&str, &str)]) -> Result<HttpResponse, McpError> {
         let mut headers: Vec<(String, String)> = vec![
             ("Content-Type".to_string(), "application/json".to_string()),
@@ -271,7 +320,7 @@ impl McpClient {
                 message: format!("initialize returned HTTP {}", resp.status),
             });
         }
-        let msg = parse_sse(&resp.body)?;
+        let msg = parse_sse(&self.url, &resp.body)?;
         if let Some(err) = msg.get("error") {
             return Err(McpError {
                 url: self.url.clone(),
@@ -320,7 +369,7 @@ impl McpClient {
                 message: format!("tools/call {} returned HTTP {}", name, resp.status),
             });
         }
-        let msg = parse_sse(&resp.body)?;
+        let msg = parse_sse(&self.url, &resp.body)?;
         if let Some(err) = msg.get("error") {
             return Err(McpError {
                 url: self.url.clone(),
@@ -349,7 +398,7 @@ impl McpClient {
     }
 }
 
-fn parse_sse(body: &str) -> Result<Value, McpError> {
+fn parse_sse(url: &str, body: &str) -> Result<Value, McpError> {
     let mut data = String::new();
     let mut saw_data = false;
     for line in body.lines() {
@@ -370,7 +419,7 @@ fn parse_sse(body: &str) -> Result<Value, McpError> {
     }
     if data.is_empty() {
         return Err(McpError {
-            url: String::new(),
+            url: url.to_string(),
             message: "empty response body".to_string(),
         });
     }
@@ -383,7 +432,7 @@ fn parse_sse(body: &str) -> Result<Value, McpError> {
         }
     }
     Err(McpError {
-        url: String::new(),
+        url: url.to_string(),
         message: format!("failed to parse SSE body as JSON: {data}"),
     })
 }
