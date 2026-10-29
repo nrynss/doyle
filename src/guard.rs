@@ -737,6 +737,8 @@ mod tests {
                 .map(|e| ElementId((*e).to_string()))
                 .collect(),
             claim: claim.to_string(),
+            // Skip-state for curate; the guard never reads it.
+            source_text: String::new(),
             recorded_by: "curator".to_string(),
             confidence: 0.9,
         }
