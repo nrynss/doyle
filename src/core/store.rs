@@ -753,4 +753,193 @@ mod tests {
         assert_eq!(s.proposals_for_flag(&fid).len(), 1);
         let _ = fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn ids_continue_across_reopen() {
+        let dir = temp_dir("idcont");
+        let store_dir = dir.join(".doyle");
+        // round 1
+        {
+            let mut store = Store::open(&store_dir).unwrap();
+            let fid = store
+                .record_flag(Flag {
+                    id: String::new(),
+                    memory: MemoryRef {
+                        adapter: "a".to_string(),
+                        id: "m".to_string(),
+                    },
+                    changes: vec![],
+                    severity: Severity::Breaking,
+                    old_version: "v1".to_string(),
+                    new_version: "v2".to_string(),
+                    evidence: None,
+                })
+                .unwrap();
+            assert_eq!(fid, "flag-1");
+            let pid = store
+                .record_proposal(Proposal {
+                    id: String::new(),
+                    flag_id: fid.clone(),
+                    action: ProposalAction::Keep,
+                    rationale: "r".to_string(),
+                    proposed_by: "m".to_string(),
+                })
+                .unwrap();
+            assert_eq!(pid, "proposal-1");
+            let did = store
+                .record_decision(Decision {
+                    id: String::new(),
+                    proposal_id: pid.clone(),
+                    verdict: DecisionVerdict::Approve,
+                    decided_by: "u".to_string(),
+                    decided_at: "t".to_string(),
+                })
+                .unwrap();
+            assert_eq!(did, "decision-1");
+        }
+        // round 2: reopen, ids must be fresh
+        {
+            let mut store = Store::open(&store_dir).unwrap();
+            let fid = store
+                .record_flag(Flag {
+                    id: String::new(),
+                    memory: MemoryRef {
+                        adapter: "a".to_string(),
+                        id: "m".to_string(),
+                    },
+                    changes: vec![],
+                    severity: Severity::Breaking,
+                    old_version: "v1".to_string(),
+                    new_version: "v2".to_string(),
+                    evidence: None,
+                })
+                .unwrap();
+            assert_eq!(fid, "flag-2");
+            let pid = store
+                .record_proposal(Proposal {
+                    id: String::new(),
+                    flag_id: fid.clone(),
+                    action: ProposalAction::Keep,
+                    rationale: "r".to_string(),
+                    proposed_by: "m".to_string(),
+                })
+                .unwrap();
+            assert_eq!(pid, "proposal-2");
+            let did = store
+                .record_decision(Decision {
+                    id: String::new(),
+                    proposal_id: pid.clone(),
+                    verdict: DecisionVerdict::Approve,
+                    decided_by: "u".to_string(),
+                    decided_at: "t".to_string(),
+                })
+                .unwrap();
+            assert_eq!(did, "decision-2");
+        }
+        // round 3: reload, all persist
+        {
+            let store = Store::open(&store_dir).unwrap();
+            assert_eq!(store.flags().len(), 2);
+            assert_eq!(store.proposals().len(), 2);
+            assert_eq!(store.decisions().len(), 2);
+            let flag_ids: Vec<&str> = store.flags().iter().map(|f| f.id.as_str()).collect();
+            assert!(flag_ids.contains(&"flag-1"));
+            assert!(flag_ids.contains(&"flag-2"));
+            assert_ne!(flag_ids[0], flag_ids[1]);
+            let proposal_ids: Vec<&str> = store.proposals().iter().map(|p| p.id.as_str()).collect();
+            assert!(proposal_ids.contains(&"proposal-1"));
+            assert!(proposal_ids.contains(&"proposal-2"));
+            let decision_ids: Vec<&str> = store.decisions().iter().map(|d| d.id.as_str()).collect();
+            assert!(decision_ids.contains(&"decision-1"));
+            assert!(decision_ids.contains(&"decision-2"));
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn open_flag_with_proposal_but_no_decision() {
+        let dir = temp_dir("openprop");
+        let store_dir = dir.join(".doyle");
+        let mut store = Store::open(&store_dir).unwrap();
+        let fid = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: MemoryRef {
+                    adapter: "a".to_string(),
+                    id: "m".to_string(),
+                },
+                changes: vec![],
+                severity: Severity::Review,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: None,
+            })
+            .unwrap();
+        let _pid = store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: fid.clone(),
+                action: ProposalAction::Keep,
+                rationale: "r".to_string(),
+                proposed_by: "m".to_string(),
+            })
+            .unwrap();
+        let open = store.open_flags();
+        assert_eq!(open.len(), 1);
+        assert_eq!(open[0].id, fid);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn open_flag_with_decided_and_pending_proposals() {
+        let dir = temp_dir("openmulti");
+        let store_dir = dir.join(".doyle");
+        let mut store = Store::open(&store_dir).unwrap();
+        let fid = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: MemoryRef {
+                    adapter: "a".to_string(),
+                    id: "m".to_string(),
+                },
+                changes: vec![],
+                severity: Severity::Breaking,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: None,
+            })
+            .unwrap();
+        let pid1 = store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: fid.clone(),
+                action: ProposalAction::Keep,
+                rationale: "r1".to_string(),
+                proposed_by: "m".to_string(),
+            })
+            .unwrap();
+        store
+            .record_decision(Decision {
+                id: String::new(),
+                proposal_id: pid1.clone(),
+                verdict: DecisionVerdict::Approve,
+                decided_by: "u".to_string(),
+                decided_at: "t".to_string(),
+            })
+            .unwrap();
+        let _pid2 = store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: fid.clone(),
+                action: ProposalAction::Keep,
+                rationale: "r2".to_string(),
+                proposed_by: "m".to_string(),
+            })
+            .unwrap();
+        let open = store.open_flags();
+        // documented rule: closed because a decision exists behind one of its proposals
+        assert!(open.iter().all(|f| f.id != fid));
+        assert_eq!(open.len(), 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
 }
