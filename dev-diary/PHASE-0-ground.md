@@ -77,7 +77,7 @@ requires:   []
 fixture-ok: no
 size:       S · mid
 owns:       testdata/muse/, docs/muse-code.md
-status:     in-review
+status:     done
 ```
 Three questions the adapter and the guard depend on, answered on the installed Muse Code with evidence. Part of this is already known (README handoff log, "Muse Wonder's memory is its memory file"); restate it in `docs/muse-code.md` and close the rest.
 
@@ -152,6 +152,6 @@ product.md's open question: a real public API upgrade with visible stakes (payme
 - [x] The repository builds and the gate passes in CI (T0.1).
 - [ ] Every key Doyle needs is named in `.env.example`, and access is confirmed (T0.2).
 - [ ] The demo contracts and seed memories exist, with the expected flag set written down (T0.3).
-- [ ] The memory folder hash, hook registration and hook payloads are settled with evidence (T0.4).
+- [x] The memory folder hash, hook registration and hook payloads are settled with evidence (T0.4).
 - [ ] Lambo's calls are recorded, and the warning on a contradicted memory is confirmed (T0.5).
 - [ ] Vimanam's view of the demo change is recorded (T0.6).

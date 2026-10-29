@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0 in progress: T0.1 and T0.2 are done.
+**Current status:** P0 in progress: T0.1, T0.2 and T0.4 are done; T0.3 waits on the user's sign-off; T0.5 is blocked on a Lambo session.
 
 ---
 
@@ -140,7 +140,7 @@ The demo is built around one moment. Muse Wonder remembers that the records endp
 
 | Phase | Tasks complete | Status |
 |---|---|---|
-| P0 | 2 / 7 | T0.1 and T0.2 done. T0.3 landed, in review until the user signs off the story. T0.4 is with an agent. T0.5 is blocked on a Lambo session for Doyle (user decision). T0.6 is ready once T0.3 closes; T0.7 is ready. |
+| P0 | 3 / 7 | T0.1, T0.2 and T0.4 done. T0.3 landed, in review until the user signs off the story. T0.5 is blocked on a Lambo session for Doyle (user decision). T0.6 is ready once T0.3 closes; T0.7 is ready. |
 | P1 | 0 / 5 | Waits for T0.3–T0.6. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
@@ -156,6 +156,7 @@ The demo is built around one moment. Muse Wonder remembers that the records endp
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T0.4 closed: Muse Code memory hash and hooks.** The memory folder is `<slug>-<FNV-1a 64 of the physical starting directory, 16 hex>`: keyed on where `muse` starts (not the git root), symlinks resolved, a linked worktree has its own memory; the slug is cut at 96 characters, so the adapter matches on the hash suffix. Hooks need no plugin: a `hooks` block in `~/.config/muse/settings.json` and `<starting directory>/.muse/hooks.json` (trusted workspace) both fire, in Claude Code's shape. Tool names are Muse's own (`bash`, `read_file`, `write_file`, `edit_file`, `add_memory`). Deny with `hookSpecificOutput.permissionDecision: deny`, or exit 2 with the reason on stderr; the agent sees `tool blocked by hook: <reason>`. SessionStart `additionalContext` reaches the agent. The hook also fires for Muse's internal `submit_reminder_decision`, which the guard must pass through. Hooks run with a cleared environment. Muse snapshots memory at session start, so an annotation must land before the session it is meant to change. Payloads in `testdata/muse/hooks/`, everything in `docs/muse-code.md`. 8 of 12 budgeted Wonder sessions; the user's `settings.json` restored byte-identical. Validated by the orchestrator: the hash recomputed independently against the recall test's folder, no private data in the files, `settings.json` holds no hooks, the gate passed on `main` after the merge.
 - **T0.5 blocked: no scratch session on the running Lambo.** The read half landed: `initialize`, `notifications/initialized`, `tools/list` and a probe of an unpinned session are recorded in `testdata/lambo/`, and `docs/lambo.md` gives every call's shape (write, correct, recall and inspect from Lambo's reference, not yet checked against the server). Nothing was written to any session. The running server (Lambo 0.8.0, the `lambo-dogfood` user service on :7700) pins only `lambo-dev`; `/mcp/s/<other>` returns 404. Getting a scratch session needs the user's choice (options in `docs/lambo.md`). Surprises: every response is SSE, `tools/list` has eight tools (`lambo_stale` is not in the reference's list), and the contradiction warning comes from the background daemon and needs the contradiction to be at least 60 seconds old, so the probe must wait before expecting it. Validated by the orchestrator: the diff holds only T0.5's paths, no key in the transcripts, the gate passed on `main` after the merge.
 - **T0.3 landed, waiting on the user's sign-off of the story.** `testdata/contracts/records-v1.yaml` and `records-v2.yaml`: `listRecords` goes from a bare array to a `RecordPage` (`items`, `next_cursor`; `cursor` and `limit`, default 100); `getRecord` is unchanged; `Stats` gains an optional `oldest_created_at`. Three memories in Muse Code format (`testdata/memories/muse-code/`) and as Lambo derive and recall JSON (`testdata/memories/lambo/`, shapes from Lambo's published MCP reference; T0.5 confirms them). Expected flag set in `testdata/README.md`: M1 only, with two traps written down (no flag through the shared `Record` type, and no flag from the additive changes on `listRecords` alone). Validated by the orchestrator: the diff holds only T0.3's paths, the gate passed in the worktree and on `main` after the merge.
   - **Finding for T0.6:** no Vimanam 2.x binary is on this machine. `vimanam` is 1.7.0 in `~/.local/bin` and `~/.cargo/bin`, and the checkout's built binary reports 1.4.2. 1.7.0 parses both contracts and reports `GET /records` 200 `array` → `object` as breaking plus one review item, with no pagination kind and `vc1_` IDs. T0.6 must run Vimanam 2.0.0 (crates.io), installed into a scratch root, to confirm the inferred pagination change and the `ve2_`/`vc2_` IDs.
