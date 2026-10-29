@@ -27,6 +27,8 @@ pub enum Command {
         new: String,
         /// Output format: markdown or json.
         format: String,
+        /// Skip the re-check (no model calls).
+        no_recheck: bool,
     },
     /// Run the review page and the judges' page.
     Serve,
@@ -86,14 +88,14 @@ pub fn parse_from(args: &[String]) -> ParseResult {
         return ParseResult::Help(Some(command_name));
     }
 
-    // check-specific: -f/--format <markdown|json>
-    let (format, parse_rest) = if command_name == "check" {
+    // check-specific: -f/--format <markdown|json>, --no-recheck
+    let (format, no_recheck, parse_rest) = if command_name == "check" {
         match extract_check_format(rest) {
             Ok(v) => v,
             Err(e) => return ParseResult::Error(format!("doyle: {e}")),
         }
     } else {
-        (String::from("markdown"), rest.to_vec())
+        (String::from("markdown"), false, rest.to_vec())
     };
 
     let (common, positionals) = match parse_common_and_positionals(&parse_rest) {
@@ -128,6 +130,7 @@ pub fn parse_from(args: &[String]) -> ParseResult {
                 old: positionals[0].clone(),
                 new: positionals[1].clone(),
                 format,
+                no_recheck,
             }
         }
         "serve" => {
@@ -152,8 +155,9 @@ pub fn parse_from(args: &[String]) -> ParseResult {
     ParseResult::Run(Cli { command, common })
 }
 
-fn extract_check_format(args: &[String]) -> Result<(String, Vec<String>), String> {
+fn extract_check_format(args: &[String]) -> Result<(String, bool, Vec<String>), String> {
     let mut format = String::from("markdown");
+    let mut no_recheck = false;
     let mut out = Vec::new();
     let mut i = 0;
     while i < args.len() {
@@ -178,12 +182,14 @@ fn extract_check_format(args: &[String]) -> Result<(String, Vec<String>), String
                 return Err(format!("unknown format: {value}"));
             }
             format = value.to_string();
+        } else if a == "--no-recheck" {
+            no_recheck = true;
         } else {
             out.push(a.clone());
         }
         i += 1;
     }
-    Ok((format, out))
+    Ok((format, no_recheck, out))
 }
 
 fn parse_common_and_positionals(args: &[String]) -> Result<(CommonOpts, Vec<String>), String> {
@@ -292,6 +298,7 @@ Usage:
 
 Options:
   -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
+      --no-recheck         Skip the re-check (no model calls)
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
   -v, --verbose           Verbose output

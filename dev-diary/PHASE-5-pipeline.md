@@ -32,11 +32,18 @@ requires:   [T2.3, T4.4]
 fixture-ok: yes
 size:       S · mid
 owns:       src/check.rs
-status:     claimed:beam-free-t5.2
+status:     in-review
 ```
 Extend T2.3: after flagging, run the re-check on each new flag, write proposals, and include them in both report formats. `--no-recheck` keeps T2.3's behaviour for CI without a key.
 
 **Done when:** on the demo, with replayed replies, the stale memory's flag carries a correct proposal; `--no-recheck` gives T2.3's output unchanged.
+
+**Notes (T5.2)**
+- Built: `src/check.rs` extended. `execute`/`run` now take `--no-recheck` from `Command::Check`. When off, after flagging each new flag is re-checked: citation lookup, `RecheckInput` build (reusing a committed measurement case when its change-id set matches, so the replay client serves the recorded reply; generic fallback otherwise), `build_request`, `ModelClient::complete`, strict `parse_response`, guideline-7 enforced by the parser, proposal written via `Store::record_proposal`. Proposals rendered in both markdown and json (per-flag `proposal` + `proposals` array when non-empty).
+- Approved cli.rs change: added `no_recheck: bool` to `Command::Check`, parsed `--no-recheck`, updated `CHECK_HELP`. No other cli.rs changes.
+- `--no-recheck` keeps T2.3 behaviour exactly: no model calls, no proposals in output, identical markdown/exit codes.
+- Default model client is a `ReplayClient` over `testdata/replies/recheck` (override via `DOYLE_RECHECK_REPLAY_DIR`); no key lookups. `execute_with_model` allows injection for tests.
+- Gate passes: 195 tests.
 
 ---
 
