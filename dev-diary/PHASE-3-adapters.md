@@ -49,7 +49,7 @@ requires:   [T1.3, T0.5]
 fixture-ok: yes
 size:       M · mid
 owns:       src/adapters/lambo.rs, src/mcp.rs, Cargo.toml (the ureq line), Cargo.lock
-status:     in-review
+status:     done
 ```
 A minimal MCP client over streamable HTTP in `src/mcp.rs` (initialize, call a tool, read the result), used by the adapter. The adapter lists and reads memories in a configured Lambo session, writes new ones, and corrects one by deriving the correction with `against` naming the stale memory (supersede). Annotate maps to the same contradiction, so recall warns. The agent id Doyle writes under is stable and configured, never per call.
 
@@ -57,12 +57,13 @@ Offline tests replay `testdata/lambo/` through a fake transport.
 
 **Done when:** the conformance test passes against the recorded transcripts; an unreachable server fails with the URL and a clear message, not a hang.
 
-**T3.3b (live):** against a running Lambo, in a scratch session: write a memory, correct it through the adapter, recall it, and see the warning. Owns `tests/live_lambo.rs`.
+**T3.3b (live):** against a running Lambo, in a scratch session: write a memory, correct it through the adapter, recall it, and see the warning. Additionally: exercise the supersede retry path (correct the same stale memory twice — the second must be a no-op returning the existing ref, with no duplicate derive), and probe the broad-watch `*` query (record what the server returns for `*` and whether it can serve as a match-all). Owns `tests/live_lambo.rs`.
 
 **Notes (T3.3)**
 - Built: `src/mcp.rs` minimal MCP client over streamable HTTP (ureq 3.5 with rustls, finite timeouts via `timeout_global`). `Transport` trait seam (`post`) plus `UreqTransport` and `FakeTransport` (queued/closure-scripted); `recorded_to_http` converts a recorded transcript JSON into an SSE `HttpResponse`. `McpClient` does initialize + notifications/initialized, session-id capture, and `tools/call` with SSE parsing and JSON-RPC error handling. `src/adapters/lambo.rs` `LamboAdapter` (name `"lambo"`, capabilities annotate false / supersede true / watch true): `list` recalls verbatim with `top_k` 50 (empty query → `Backend`); `read` inspects by id and appends the cached contradiction warning; `write` derives a concept and waits on the receipt via `lambo_stats` + `wait_ms`; `supersede` inspects first for an existing contradiction (retry no-op) and otherwise derives with `against` naming the stale concept's short id, then waits on the receipt; `annotate` returns `Unsupported`; `watch` uses the broad query `"*"` (named strategy `BROAD_WATCH_QUERY`) with locally-cached fallback and an in-memory seen set.
 - Broad-watch query strategy named: `lambo_recall` with query `"*"` and `top_k` 50, node ids tracked in an in-memory `HashSet` so each concept reports once; recall failures are tolerated and locally cached writes are merged in, so a write Doyle made is never silently missed; caller baselines by discarding the first result. (Real adapters should persist this set; this one keeps it process-local, matching the fake's test-only behaviour.)
 - ureq: requested "3.3"; cargo resolved to 3.5.0, which built cleanly on toolchain 1.99.1. No other dependency added.
+- Adjudications (orchestrator rulings, landed with the code): annotate→Unsupported is the compliant reading — the frozen T1.3 trait governs over the loose "annotate maps to the same contradiction" phase prose; correction goes through supersede (derive with `against`). Restart loss is a known limitation: the supersede/scope/seen caches are process-local, so after a restart reads lose recorded warnings/scopes until the next in-process supersede. The broad-watch `*` match-all behavior is unrecorded (no transcript shows a server response to `*`); live verification is deferred to T3.3b as extended above. Read-warning pairing is batch-scoped (stale-side `Contradicts`-naming-id + same-batch `Contradicted`, unique-or-silent), never the first flat match — misattribution is a silent error, so ambiguity resolves to silence.
 - Tests: `recorded_read_path` and `recorded_full_scenario` replay `testdata/lambo/` through `FakeTransport`; `unreachable_server_fails_with_url` hits a closed local port with a 200 ms timeout and asserts the URL appears in the error. Gate passes.
 - Surprised me: recorded contradiction warnings use the 8-hex short id, not the full node id, so inspect-first retry resolves short → full via a second inspect before reading content. Also `lambo_inspect` carries no warnings; the contradiction text comes from recall, so read appends from the supersede cache instead.
 
