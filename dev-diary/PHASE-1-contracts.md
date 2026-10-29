@@ -103,7 +103,7 @@ requires:   [T1.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/main.rs, src/lib.rs, src/cli.rs, the module declarations in src/core/mod.rs, src/adapters/mod.rs and src/models/mod.rs, and an empty stub of every module file named in P2–P6
-status:     not-started
+status:     claimed:beam-free-t1.5
 ```
 Split the crate into a library (`src/lib.rs`, declaring every module) and a thin binary (`src/main.rs`), so integration and live tests under `tests/` can reach the code. `doyle curate | cite | check | serve | guard` parsed in `src/cli.rs` and dispatched from `src/main.rs`, each to a stub function in its own module that returns "not implemented yet" with exit code 2. Shared options: the state directory, the adapters to use, a verbosity flag. Help text matches architecture.md's command table.
 
