@@ -32,7 +32,7 @@ requires:   [T2.3, T4.4]
 fixture-ok: yes
 size:       S · mid
 owns:       src/check.rs
-status:     in-review
+status:     done
 ```
 Extend T2.3: after flagging, run the re-check on each new flag, write proposals, and include them in both report formats. `--no-recheck` keeps T2.3's behaviour for CI without a key.
 
@@ -65,6 +65,6 @@ Apply a person's decision to a proposal: approve (write the correction), edit th
 ## Exit Criteria
 
 - [x] `doyle curate` cites memories from both systems, idempotently (T5.1).
-- [ ] `doyle check` produces flags with proposals (T5.2).
+- [x] `doyle check` produces flags with proposals (T5.2).
 - [ ] A decision lands in every system that holds the memory, and partial failure is visible (T5.3).
 - [ ] The demo runs offline end to end: curate, check, decide, with fixtures and replays only.
