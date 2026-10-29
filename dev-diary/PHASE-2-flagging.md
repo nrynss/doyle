@@ -12,7 +12,7 @@ requires:   [T1.1, T0.6]
 fixture-ok: yes
 size:       M · mid
 owns:       src/contract.rs, Cargo.toml (the vimanam line), Cargo.lock
-status:     not-started
+status:     claimed:muse-spark-t2.1
 ```
 Load a contract file through Vimanam's library (default features off) and build an index Doyle can query: entity by `ElementId`; parent chain; entities that reference a named type; native location (method and path, operation ID, type and field name) for display and for the guard. Diff two versions into Vimanam's change facts, kept as Vimanam gives them.
 

@@ -40,7 +40,7 @@ requires:   [T1.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/core/store.rs
-status:     not-started
+status:     claimed:beam-free-t1.2
 ```
 Doyle's own state in one directory (`.doyle/` by default, overridable): JSON Lines, append-only, one file per record kind (citations, flags, proposals, decisions), loaded into memory on open. Queries the later tasks need: citations by element, citations by memory, open flags (no decision yet), the decision for a proposal. A corrupt last line (a crash mid-write) is skipped with a warning, never a failure.
 
