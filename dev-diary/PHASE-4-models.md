@@ -94,5 +94,5 @@ Measure on the demo's flag and on cases built to need each answer, including a f
 
 - [ ] The Meta Model API client works offline and live (T4.1, T4.1b).
 - [ ] The Baseten client works offline and live (T4.2, T4.2b).
-- [ ] The curator's citations are measured on both models, and the user has chosen its model (T4.3).
+- [x] The curator's citations are measured on both models, and the user has chosen its model (T4.3). Chosen: Muse Spark Open on Baseten (open-weight bonus over Spark's precision edge).
 - [ ] The re-check produces correct, retire and keep where each is right, measured (T4.4).
