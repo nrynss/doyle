@@ -51,7 +51,7 @@ requires:   []
 fixture-ok: yes
 size:       S · frontier
 owns:       testdata/contracts/, testdata/memories/, testdata/README.md
-status:     not-started
+status:     claimed:opus-t0.3
 ```
 The scenario every later task tests against. The user signs off the story; the agent writes the files.
 
@@ -71,7 +71,7 @@ requires:   []
 fixture-ok: no
 size:       S · mid
 owns:       testdata/muse/, docs/muse-code.md
-status:     not-started
+status:     claimed:sonnet-t0.4
 ```
 Three questions the adapter and the guard depend on, answered on the installed Muse Code with evidence. Part of this is already known (README handoff log, "Muse Wonder's memory is its memory file"); restate it in `docs/muse-code.md` and close the rest.
 
@@ -91,7 +91,7 @@ requires:   []
 fixture-ok: no
 size:       S · light
 owns:       testdata/lambo/, docs/lambo.md
-status:     not-started
+status:     claimed:haiku-t0.5
 ```
 Turn "Lambo is reached as a client" into recorded calls Doyle can be built against without a running server.
 
