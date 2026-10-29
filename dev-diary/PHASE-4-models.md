@@ -36,11 +36,16 @@ requires:   [T1.4, T0.2]
 fixture-ok: yes
 size:       S · mid
 owns:       src/models/baseten.rs
-status:     claimed:beam-free-t4.2
+status:     in-review
 ```
 A `ModelClient` for Muse Spark Open on Baseten (the curator, for the open-weight bonus), with the same guarantees as T4.1. The endpoint and model come from T0.2.
 
 **Done when:** as T4.1, on recorded Baseten replies.
+
+**Notes (T4.2)**
+- Built: `src/models/baseten.rs` with `BasetenModelClient` implementing `ModelClient`, plus a duplicated small `HttpTransport` seam (`HttpResponse`, `HttpTransportError`, trait) mirroring T4.1 (no shared seam exists in `models/mod.rs`, and only this file may be touched). Reads `BASETEN_API_KEY` from the environment at call time, POSTs an OpenAI-style chat-completions body with a `json_schema` response format, passes `reasoning_effort` and `max_tokens` through, retries 429/5xx and transport errors with a cap, and parses `choices[0].message.content` into JSON plus usage (prompt/completion tokens and cost from several field-name variants). Errors include the model id and the first lines of the reply; no key or header is ever stored or displayed. Fixed constants `DEFAULT_BASE_URL = "https://inference.baseten.co/v1"`, `DEFAULT_MODEL = "meta-models/muse-spark-open-1026"` (plus aliases), `DEFAULT_ENV_VAR = "BASETEN_API_KEY"` cite T0.2.
+- Decided: duplicate the transport seam rather than reuse a shared one, because `models/mod.rs` has none and file ownership forbids editing it; the ureq-backed transport lands with T3.3's dependency line. Reasoning effort is configured on the client since `ModelRequest` carries no such field. Strict is kept `false` to mirror the Meta client; Muse Spark Open accepts `json_schema` but does not enforce it.
+- Tests: 23 offline tests with a fake/capturing transport (recorded-reply parse, malformed body, 429 retry-and-give-up, 5xx retry, 400 immediate, missing key, reasoning-effort pass-through, malformed content string, pinned body/headers, bounded error, transport-error retry, usage spellings, constants, Debug no-leak). `./tools/check.sh` pending.
 
 **T4.2b (live):** one structured call on the curator model; record it. Owns `tests/live_baseten.rs`. Budget: five calls.
 
