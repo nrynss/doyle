@@ -45,7 +45,7 @@ A task is **ready** when its status is `not-started`, every task in `requires` i
 
 ### 3. Dispatch
 
-Always in the background, always in its own worktree (`isolation: worktree`). Use the brief template below. A worker starts cold, so the brief carries everything it needs: what to read, what to build, what it may touch, how to prove it, and what to report.
+Always in the background, always in its own worktree (`isolation: worktree`). A new worktree is cut from `origin/main`, not the local `main`. If local `main` is ahead, either push first (with the user's approval) or tell the worker in the brief to move its new branch to the brief's commit before starting, and to stop if it can't. Use the brief template below. A worker starts cold, so the brief carries everything it needs: what to read, what to build, what it may touch, how to prove it, and what to report.
 
 ### 4. Validate: never trust the report
 
