@@ -72,13 +72,15 @@ requires:   [T1.2, T2.1, T1.5]
 fixture-ok: yes
 size:       XS · light
 owns:       src/cite.rs
-status:     claimed:beam-free-t2.4
+status:     in-review
 ```
 Record a citation by hand: a memory reference, the contract, and an element given by its native location (`GET /patients`) or its `ElementId`. Refuse an element the contract doesn't have, naming the closest matches.
 
 **Done when:** citing the demo's memories by hand and then running `doyle check` gives the expected flags; an unknown element is refused with suggestions.
 
 ---
+
+Notes (T2.4, in-review): `src/cite.rs` implements `run`: reads citation specs from stdin (JSON object/array or JSONL, plus key=value lines and env fallbacks), resolves each element against the contract through Vimanam (ElementId or native location such as `GET /patients`, with an optional status/name qualifier like `GET /patients 200`), refuses unknown elements with the closest matches (std-only Levenshtein), and appends each `Citation` to `.doyle/citations.jsonl` so the store reloads it. Resolution prefers an operation for an unqualified native location; direct ElementIds pass through. Public helpers `resolve_element`/`resolve_element_path`/`suggest_elements` are exposed for unit tests. End-to-end check against the demo: citing the four memories by hand and running `flag_citations` over the store produces exactly `{M1}`. An unknown element (`GET /patiens`) is refused with `GET /patients` among the suggestions. Keys are not needed; no model calls. Gate passes in the worktree.
 
 ## Exit Criteria
 
