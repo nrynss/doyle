@@ -60,7 +60,7 @@ requires:   [T1.1, T0.4, T0.5]
 fixture-ok: yes
 size:       S · frontier
 owns:       src/adapters/mod.rs, src/adapters/fake.rs
-status:     not-started
+status:     claimed:muse-spark-t1.3
 ```
 The `MemoryAdapter` trait (architecture.md, The plug-in seams). Required: `name`, `list`, `read`, `write`. Optional, declared through a capabilities value: `annotate`, `supersede`, `watch`; calling one an adapter lacks returns a typed "unsupported", never a panic. Errors say which adapter and which memory.
 
