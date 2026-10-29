@@ -82,7 +82,7 @@ requires:   [T1.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/models/mod.rs, src/models/replay.rs
-status:     not-started
+status:     claimed:beam-free-t1.4
 ```
 The `ModelClient` trait: a request (model id, system prompt, user content, a JSON schema for the reply, a budget) in, parsed JSON plus usage (tokens, cost if known) out. A replay client keyed by a hash of the request serves recorded replies from a directory and fails loudly on a miss. A recording mode wraps any client and writes what it gets.
 
