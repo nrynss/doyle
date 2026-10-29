@@ -150,7 +150,7 @@ requires:   []
 fixture-ok: no
 size:       M · frontier
 owns:       testdata/contracts/second/, docs/second-upgrade.md
-status:     not-started
+status:     claimed:opencode-t0.7
 ```
 product.md's open question: a real public API upgrade with visible stakes (payments, auth, personal data) where a memory written against the old version would cause harm. Find candidates, capture both versions from their public sources, run Vimanam on them, and write three to five memories an agent plausibly would have saved. The user picks one.
 
