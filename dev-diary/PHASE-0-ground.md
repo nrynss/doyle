@@ -77,7 +77,7 @@ requires:   []
 fixture-ok: no
 size:       S · mid
 owns:       testdata/muse/, docs/muse-code.md
-status:     claimed:sonnet-t0.4
+status:     in-review
 ```
 Three questions the adapter and the guard depend on, answered on the installed Muse Code with evidence. Part of this is already known (README handoff log, "Muse Wonder's memory is its memory file"); restate it in `docs/muse-code.md` and close the rest.
 
@@ -88,6 +88,14 @@ Three questions the adapter and the guard depend on, answered on the installed M
 Use scratch repositories under the session scratchpad. Never change the user's real settings permanently: back up `settings.json` first and restore it, and say so in the report.
 
 **Done when:** `docs/muse-code.md` answers all three with the commands run and their output; the recorded payloads are in `testdata/muse/hooks/`; a deny and an injection were each seen to work, or the report says exactly what failed.
+
+**Notes (T0.4)**
+- Built: `docs/muse-code.md` and the payloads in `testdata/muse/hooks/`. Eight `muse exec` sessions.
+- Hash: the folder is `<slug>-<FNV-1a 64 of the physical starting directory, 16 hex>`. The key is the directory `muse` starts in, not the git root; a linked worktree has its own memory; a symlink resolves first. The slug is the path with non-alphanumerics as `-`, cut at 96 characters, so match on the hash suffix only. The newest-folder fallback is not needed.
+- Hooks: no plugin needed. A `hooks` block in `settings.json` and `<starting directory>/.muse/hooks.json` both fire, in the Claude Code shape. A project file one level above the starting directory does not load (silently).
+- Wire: tool names are Muse's own (`bash`, `edit_file`, `write_file`, `add_memory`). Deny works as JSON `permissionDecision: deny` or exit 2 with stderr; the agent sees `tool blocked by hook: <reason>`. SessionStart `additionalContext` (and plain stdout) reaches the agent.
+- Surprised me: the hook also fires for Muse's internal `submit_reminder_decision` tool, several times a session, and file edit paths in `tool_input` are relative to `cwd`.
+- Not run: an untrusted workspace, `PostToolUse`/`PermissionRequest`, `managed_hooks_path`, exit codes other than 0 and 2, the shared `.agents/memory/` scope.
 
 ---
 
