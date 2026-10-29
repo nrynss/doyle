@@ -14,13 +14,21 @@ requires:   [T0.3, T0.6]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/core/mod.rs, src/core/model.rs, Cargo.toml, Cargo.lock
-status:     claimed:muse-wonder-t1.1
+status:     in-review
 ```
 The types in architecture.md's core model table: `ElementId`, `MemoryRef`, `Memory`, `Citation`, `Flag`, `Proposal`, `Decision`, with serde round-trips. `ElementId` and the change IDs wrap Vimanam's strings without re-deriving them. `MemoryRef` names its adapter by a string the adapter declares, never an enum of known systems, so a new adapter needs no change here.
 
 Adds `serde` and `serde_json`; the commit message says why.
 
 **Done when:** every type round-trips through JSON in a test; the demo's three memories and their expected citations from `testdata/README.md` can be written as values of these types in a test; nothing in `src/core/` names Muse Code or Lambo.
+
+**Notes (T1.1)**
+- Built: `src/core/model.rs` with the seven contract types plus `ChangeId` (the task's "the change IDs wrap Vimanam's strings" needs a home). `ElementId`/`ChangeId` are transparent `String` wrappers holding `ve2_`/`vc2_` IDs verbatim. `MemoryRef { adapter, id }` keeps the adapter as a plain string. `Memory { reference, text, updated_at: Option<String>, scope }`. `Citation { memory, elements, claim, recorded_by, confidence: f32 }`. `Severity { Breaking, Review }`: non-breaking is unrepresentable, so additive changes cannot flag. `Flag { id, memory, changes, severity, old_version, new_version, evidence }`. `Proposal { id, flag_id, action, rationale, proposed_by }` with `ProposalAction { Correct { new_text }, Retire, Keep }`. `Decision { id, proposal_id, verdict, decided_by, decided_at }` with `DecisionVerdict { Approve, Retire, Keep, EditThenApprove { new_text } }`. `src/core/mod.rs` re-exports them. 12 unit tests: a JSON round-trip per type, exact-shape checks, the severity vocabulary (including that `"non_breaking"` is rejected), and the demo's four memories with their expected citations built from the real `ve2_` IDs, closing the loop with M1's flag (3 changes), proposal and decision.
+- Decided: the ids and links the architecture table implies but does not spell out. `Flag.id`, `Proposal.flag_id` and `Decision.proposal_id` (plus `Proposal.id`, `Decision.id`), store-assigned, so T1.2 can answer "open flags (no decision yet)". `Flag.severity` is the highest severity among its changes. `updated_at` is `Option` because Muse Code notes carry no timestamp. Timestamps are RFC 3339 strings, keeping a time crate out. The demo test uses `"muse-code"`/`"lambo"` string literals as adapter-name data, proving the demo's refs fit `MemoryRef`; no identifier, enum, module or import in `src/core/` names either system.
+- Outside `owns`, one line: `mod core;` in `src/main.rs` (plus a scoped `#[allow(dead_code)]`), without which the new modules never compile and their tests never run. T1.5 relocates it to `lib.rs` and drops both allows (the twin is on the re-export in `src/core/mod.rs`).
+- Heads-up for T1.2: it owns `src/core/store.rs` but not the declaration list in `src/core/mod.rs`, which T1.5 owns; the store needs a `mod store;` line from someone.
+- Discrepancy: the task says "the demo's three memories" but `testdata/README.md` has four (M1-M4) since the Quiet Migration rebuild; the test covers all four.
+- Surprised me: `serde_json::to_value` takes its argument by value, so clippy flags `to_value(&temporary)` as a needless borrow.
 
 ---
 
