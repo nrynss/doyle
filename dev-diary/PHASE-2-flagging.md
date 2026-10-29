@@ -28,7 +28,7 @@ requires:   [T1.2, T2.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/core/flag.rs
-status:     claimed:muse-spark-t2.2
+status:     in-review
 ```
 Given the citation index and a set of changes, produce flags (architecture.md, Flagging): the subject, its ancestors, and entities referencing its named type. `NonBreaking` flags nothing; `Breaking` flags; `Review` flags, marked for review. One flag per memory per check, listing every change behind it. A memory already flagged and not yet decided is not flagged twice.
 
@@ -37,6 +37,16 @@ Rules that need interpreting are this task's to decide and write down: where anc
 Vimanam 2.0 rates the optional field added to the `Stats` type as `review` at the type level (T0.6, `testdata/vimanam/README.md`, row 9) while the same field on `getStats`' response is non-breaking. M3 must not be flagged by it: decide here how a type-level `review` on an added optional field propagates, and write the rule down.
 
 **Done when:** on the demo, exactly the memories `testdata/README.md` names are flagged, with the right change IDs; the additive change flags nothing; tests cover each propagation path and the no-duplicate rule; the propagation rules are written under this task.
+
+Notes (T2.2, in-review): `src/core/flag.rs` holds `flag_citations(citations, changes, old, open_flags, old_version, new_version) -> Vec<Flag>`: one flag per memory in first-citation order, every matching change ID in Vimanam's order, severity the highest of its changes, evidence the citation's claim, `Flag.id` left empty for the store to assign. Non-breaking is filtered before it can flag (Doyle's `Severity` cannot represent it); unknown subjects still match direct citations; citations and changes are matched by `ve2_`/`vc2_` string equality. 11 tests; the demo gives exactly `{M1}` with `[constraint, breaking, pagination]` and severity breaking. Gate passes in the worktree.
+
+Propagation rules, decided here:
+- A change flags citers of its subject, of every ancestor of the subject, and — only for shared types — of every referencer of the subject's named type plus those referencers' ancestors. The subject's named type is itself when it is a type, else the nearest ancestor that is one; operation-scoped subjects (operations, arguments, results, inline response fields) have none.
+- Ancestor propagation stops at the using operation: a field change flags citers of its type and of the operations returning that type (the operation is the parent of the response that references the type), but never any other operation in the service. The referencer hop is single: referencers of referencers are not followed.
+- Operation-scoped changes never expand through `$ref`s: a change to `listPatients`' 200 does not flag citers of `getPatient` or `Patient` even though both responses reference it in v1 and `PatientPage` references it in v2. Propagation is upward-only; citing a descendant of the subject never flags.
+- A type-level `review` on an added field flags nothing. The `Stats.generated_at` review at the type level is the same additive change Vimanam rates non-breaking on `getStats`' 200, seen through the shared schema; an optional field breaks no existing reader, so it propagates nowhere — not to referencers, not even to direct citers of the type. This is what keeps M3 unflagged. Limitation: should Vimanam ever rate a required field addition as `review`, this suppresses it too; no such fact exists in the fixtures.
+
+Surprises: hand-copied `vc2_` IDs were wrong in two test constants (`M1_CONSTRAINT`, `M1_PAGINATION`, one character each) despite being read from the README; every ID in the file is now script-checked against `testdata/vimanam/*.json` (15 constants, all present). Vimanam's `Severity` and `ChangeKind` are `#[non_exhaustive]`, so matching on them needs a wildcard arm; unknown future severities flag nothing. Outside `owns`, the single `mod flag;` declaration line in `src/core/mod.rs` (alphabetical, before `model`) plus its scoped re-export allow, mirroring the T1.1/T2.1 precedents.
 
 ---
 
