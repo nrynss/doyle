@@ -56,13 +56,15 @@ requires:   [T2.2, T1.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/check.rs
-status:     claimed:beam-free-t2.3
+status:     in-review
 ```
 `doyle check OLD NEW`: load both contracts, diff, flag against the store, write the flags, print a report. `--format markdown|json`. Exit codes: 0 nothing flagged, 1 flags written, 2 error, so CI can fail a build on stale memory. Proposals are added in T5.2.
 
 **Done when:** on the demo it prints the expected flags in both formats and exits 1; on two identical contracts it exits 0; the JSON output has a test pinning its shape.
 
 ---
+
+Notes (T2.3, in-review): `src/check.rs` holds `run`, plus `execute(cli, format)` returning `(ExitCode, String)` for tests, `render_markdown` and `render_json`. Loads both contracts via `ContractIndex`, diffs, opens the store from `--state-dir` (default `.doyle`), runs `flag_citations` against stored citations and open flags, writes each new flag via `store.record_flag`, prints the report, exits 0/1/2. Markdown and JSON renderers exposed so the JSON shape is pinned by `json_shape_pinned`. Demo gives exactly M1 with its three change IDs and exits 1; identical contracts exit 0. Outside `owns`, one line: `pub use store::Store;` in `src/core/mod.rs`, because the store module is private and check (and every later command) needs it; no other way to reach `Store`. Also reported: `src/cli.rs` lacks `--format`/`-f` (and `CommonOpts`/`Command::Check` carry no format field), so the binary cannot select JSON at runtime; `run` defaults to Markdown and JSON is reachable only through `execute`/`render_json`. Adding the option needs orchestrator approval under the frozen-file rule.
 
 ### T2.4: `doyle cite`
 ```yaml

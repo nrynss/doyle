@@ -13,3 +13,4 @@ pub use model::{
     ChangeId, Citation, Decision, DecisionVerdict, ElementId, Flag, Memory, MemoryRef, Proposal,
     ProposalAction, Severity,
 };
+pub use store::Store;
