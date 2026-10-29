@@ -34,7 +34,9 @@ pub struct LamboAdapter {
     supersede_cache: RefCell<HashMap<String, (String, String)>>,
     // Restart loss (R2): supersede/scope caches are process-local. A restart
     // loses recorded warnings/scopes until the next supersede in that process.
-    recall_warnings: RefCell<Vec<String>>,
+    // Warnings are retained per recall batch (one Vec per list() call) so a
+    // read() can bind a Contradicted warning to the stale memory it belongs to.
+    recall_warning_batches: RefCell<Vec<Vec<String>>>,
     seen: RefCell<HashSet<String>>,
 }
 
@@ -56,7 +58,7 @@ impl LamboAdapter {
             content_cache: RefCell::new(HashMap::new()),
             scope_cache: RefCell::new(HashMap::new()),
             supersede_cache: RefCell::new(HashMap::new()),
-            recall_warnings: RefCell::new(Vec::new()),
+            recall_warning_batches: RefCell::new(Vec::new()),
             seen: RefCell::new(HashSet::new()),
         }
     }
@@ -94,7 +96,15 @@ impl LamboAdapter {
     }
 
     pub fn recall_warnings(&self) -> Vec<String> {
-        self.recall_warnings.borrow().clone()
+        self.recall_warning_batches
+            .borrow()
+            .iter()
+            .flat_map(|b| b.iter().cloned())
+            .collect()
+    }
+
+    pub fn recall_warning_batches(&self) -> Vec<Vec<String>> {
+        self.recall_warning_batches.borrow().clone()
     }
 
     pub fn recorded_requests(&self) -> Vec<crate::mcp::RecordedRequest> {
@@ -234,17 +244,21 @@ impl MemoryAdapter for LamboAdapter {
         }
         // Consume any contradiction warnings the server attached to this recall
         // (transcript 13): they are the source of read-time warnings, not the
-        // inspect neighbourhood (transcript 10 carries none).
+        // inspect neighbourhood (transcript 10 carries none). Retain them as a
+        // single batch for this list() call so read() can bind warnings to the
+        // stale memory they belong to.
         let server_warnings = structured
             .get("warnings")
             .and_then(|v| v.as_array())
             .cloned()
             .unwrap_or_default();
+        let mut batch: Vec<String> = Vec::new();
         for w in server_warnings {
             if let Some(t) = w.as_str() {
-                self.recall_warnings.borrow_mut().push(t.to_string());
+                batch.push(t.to_string());
             }
         }
+        self.recall_warning_batches.borrow_mut().push(batch);
         Ok(memories)
     }
 
@@ -297,11 +311,67 @@ impl MemoryAdapter for LamboAdapter {
             .cloned()
             .map(|(c, _)| c);
         let corr_from_recall = if corr_from_cache.is_none() {
-            self.recall_warnings
-                .borrow()
-                .iter()
-                .find(|w| w.contains("Contradicted"))
-                .and_then(|w| parse_contradicted_id(w))
+            let short = short_id(id);
+            let batches = self.recall_warning_batches.borrow();
+            let mut collected: Vec<String> = Vec::new();
+            for batch in batches.iter() {
+                // L1: a "Contradicts" (not "Contradicted") line naming this id
+                // or its short form — the stale-side marker.
+                let has_l1 = batch.iter().any(|w| {
+                    w.contains("Contradicts")
+                        && !w.contains("Contradicted")
+                        && (w.contains(id) || w.contains(&short))
+                });
+                if !has_l1 {
+                    continue;
+                }
+                // L2: "Contradicted" lines in the same batch.
+                let l2_indices: Vec<usize> = batch
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, w)| w.contains("Contradicted"))
+                    .map(|(i, _)| i)
+                    .collect();
+                if l2_indices.is_empty() {
+                    continue;
+                }
+                let l1_positions: Vec<usize> = batch
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, w)| {
+                        w.contains("Contradicts")
+                            && !w.contains("Contradicted")
+                            && (w.contains(id) || w.contains(&short))
+                    })
+                    .map(|(i, _)| i)
+                    .collect();
+                for &li in &l1_positions {
+                    // Pair this L1 with the nearest L2 positionally.
+                    let mut best: Option<(usize, usize)> = None;
+                    for &l2i in &l2_indices {
+                        let dist = l2i.abs_diff(li);
+                        match best {
+                            None => best = Some((dist, l2i)),
+                            Some((d, _)) if dist < d => best = Some((dist, l2i)),
+                            Some((d, _)) if dist == d && l2i < li => {
+                                best = Some((dist, l2i));
+                            }
+                            _ => {}
+                        }
+                    }
+                    if let Some((_, l2i)) = best
+                        && let Some(cid) = parse_contradicted_id(&batch[l2i])
+                    {
+                        collected.push(cid);
+                    }
+                }
+            }
+            let distinct: HashSet<String> = collected.into_iter().collect();
+            if distinct.len() == 1 {
+                distinct.into_iter().next()
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -839,6 +909,19 @@ mod tests {
                                 "\u{26a0} Contradicted at 2026-10-29T15:07:26Z by doyle-probe: \"{}\" (id {})",
                                 content, corr_short
                             ));
+                            for a in &against {
+                                let stale_short = a.as_str().unwrap_or("").to_string();
+                                let stale_content = st
+                                    .concepts
+                                    .iter()
+                                    .find(|(cc, _)| cc.starts_with(&stale_short))
+                                    .map(|(_, ct)| ct.clone())
+                                    .unwrap_or_default();
+                                st.warnings.push(format!(
+                                    "\u{26a0} Contradicts \"{}\" (id {})",
+                                    stale_content, stale_short
+                                ));
+                            }
                         }
                         created.push(cid);
                     }
@@ -1166,6 +1249,41 @@ mod tests {
             read.text.contains(&corr.id[..8]),
             "correction id did not reach read output: {}",
             read.text
+        );
+    }
+
+    #[test]
+    fn two_contradictions_each_own_correction() {
+        let (transport, _state) = scripted_server();
+        let adapter = LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(transport),
+        );
+        let stale1 = adapter.write("stale one", "s").unwrap();
+        let stale2 = adapter.write("stale two", "s").unwrap();
+        let corr1 = adapter.supersede(&stale1.id, "corr one").unwrap();
+        let corr2 = adapter.supersede(&stale2.id, "corr two").unwrap();
+        adapter.supersede_cache.borrow_mut().clear();
+        let _ = adapter.list("stale").ok();
+        let r1 = adapter.read(&stale1.id).unwrap();
+        assert!(
+            r1.text.contains(&corr1.id[..8]),
+            "stale1 should attach corr1, got: {}",
+            r1.text
+        );
+        let r2 = adapter.read(&stale2.id).unwrap();
+        assert!(
+            r2.text.contains(&corr2.id[..8]),
+            "stale2 should attach corr2, got: {}",
+            r2.text
+        );
+        // A correction read must not self-attach a warning.
+        let rc = adapter.read(&corr1.id).unwrap();
+        assert!(
+            !rc.text.contains("\u{26a0} Contradicted"),
+            "correction must not self-attach warning, got: {}",
+            rc.text
         );
     }
 }
