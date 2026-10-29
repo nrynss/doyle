@@ -15,6 +15,11 @@ mod contract;
 #[allow(dead_code)]
 mod core;
 
+// The models have no in-crate user until T1.5 turns this into a library;
+// the allow keeps the gate quiet until then.
+#[allow(dead_code)]
+mod models;
+
 use std::process::ExitCode;
 
 const USAGE: &str = "\

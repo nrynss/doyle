@@ -82,11 +82,18 @@ requires:   [T1.1]
 fixture-ok: yes
 size:       S · mid
 owns:       src/models/mod.rs, src/models/replay.rs
-status:     claimed:beam-free-t1.4
+status:     in-review
 ```
 The `ModelClient` trait: a request (model id, system prompt, user content, a JSON schema for the reply, a budget) in, parsed JSON plus usage (tokens, cost if known) out. A replay client keyed by a hash of the request serves recorded replies from a directory and fails loudly on a miss. A recording mode wraps any client and writes what it gets.
 
 **Done when:** the replay client serves a hand-written recording in a test, a miss fails with the request's key in the message, and recording then replaying gives the same reply.
+
+**Notes (T1.4)**
+- Built: `src/models/mod.rs` holds `ModelClient` (one method, `complete`, with a `call` alias), `ModelRequest`, `Budget`, `Usage`, `ModelResponse`, `ModelError` (with `ReplayMiss { key }`, `Backend`, `InvalidRequest`), and `request_key`. `src/models/replay.rs` holds `ReplayClient` (reads `<dir>/<key>.json`, `ReplayMiss` on a missing file with the key in the message) and `RecordingClient<C>` (wraps any client, writes each reply to `<dir>/<key>.json`). 5 tests in `replay.rs`: stable key, hand-written recording served, miss carries the key, record-then-replay equality, nested-dir creation.
+- Decided: hashing uses `std::hash::DefaultHasher` (SipHash-based, seeded per process) over the model id, system prompt, user content, the canonical JSON rendering of the schema, and the budget (f64 via `to_bits`). Documented in `request_key`'s doc comment. No new dependency. Recordings are serialized `ModelResponse` (`value` + `usage`), so a hand-written one needs both fields. `Budget` is a struct with `max_output_tokens`/`max_cost_usd` plus `UNLIMITED` and `tokens(n)`; `Usage::NONE` and `ModelError::backend` are convenience helpers. The `mod models;` line was added to `src/main.rs` (scoped `#[allow(dead_code)]`), mirroring the T1.1/T1.3 precedent; T1.5 relocates it.
+- Outside `owns`: only that single declaration line in `src/main.rs`. No change to `Cargo.toml`/`Cargo.lock`.
+- Gate: `./tools/check.sh` passed (rustfmt, clippy `-D warnings`, 58 tests including the 5 new).
+- Surprised me: `pub use replay::{...}` of items defined in `mod.rs` itself is not allowed (E0603), so the re-export lists only `RecordingClient` and `ReplayClient`; the rest are native to `mod.rs`. Also `DefaultHasher::finish` needs `Hasher` in scope.
 
 ---
 
