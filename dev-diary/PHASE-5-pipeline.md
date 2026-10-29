@@ -12,11 +12,16 @@ requires:   [T1.2, T3.1, T3.3, T4.3]
 fixture-ok: yes
 size:       S · mid
 owns:       src/curate.rs
-status:     claimed:beam-free-t5.1
+status:     in-review
 ```
 For each configured adapter, list memories, skip those already cited at their current text, run the curator against the current contract, and write citations. `--dry-run` prints what it would cite. A memory the curator ties to nothing is recorded as such, so it isn't asked again until its text changes.
 
 **Done when:** on the fixtures, through the Muse Code and Lambo adapters on replayed transports and the replay model client, the citations match T4.3's expected set; a second run makes no model calls.
+
+**Notes (T5.1)**
+- Built: `src/curate.rs` implements `run` plus `curate`/`curate_refs`/`curate_all`/`curate_slice`/`run_curate` entry points. For each adapter it searches once per contract entity (query from native location: path, operation id, type/field), dedupes memories, skips those already cited at their current text (citation claim compared to memory text), runs the Baseten curator model, and writes citations. Rests-on-nothing memories are recorded as citations with empty element lists. `--dry-run` prints (memory, claim, element count) and writes nothing.
+- Decided: citation claim stores the memory's text so skip-on-unchanged-text works across runs; the curator's restated claim is carried in the returned `CurateItem.claim` for reporting. Model id is the Baseten curator slug.
+- Verified: Muse Code fixture (4 memories) and a scripted Lambo server (4 concepts) each produce 4 citations; a second run issues zero model calls and writes nothing; `--dry-run` leaves the store empty. `./tools/check.sh` passes (195 tests).
 
 ---
 

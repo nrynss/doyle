@@ -43,6 +43,8 @@ pub struct CommonOpts {
     pub adapters: Vec<String>,
     /// Verbose output.
     pub verbose: bool,
+    /// Dry run: print what would be cited, write nothing (curate).
+    pub dry_run: bool,
 }
 
 /// The result of parsing the command line.
@@ -218,6 +220,8 @@ fn parse_common_and_positionals(args: &[String]) -> Result<(CommonOpts, Vec<Stri
             }
         } else if a == "--verbose" || a == "-v" {
             common.verbose = true;
+        } else if a == "--dry-run" {
+            common.dry_run = true;
         } else if a.starts_with('-') {
             return Err(format!("unknown option: {a}"));
         } else {
@@ -261,6 +265,7 @@ Shared options:
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
   -v, --verbose           Verbose output
+  --dry-run               Print what would be cited, write nothing
   -h, --help              Print help
 ";
 
