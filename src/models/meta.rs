@@ -1,1 +1,540 @@
-//! Stub for the Meta model client; filled in by T4.1.
+//! A [`ModelClient`] for the Meta Model API (Muse Spark, the re-check).
+//!
+//! The transport is deliberately behind a small seam ([`HttpTransport`])
+//! so the client, its retry, parsing and usage/cost logic can be exercised
+//! offline with a fake transport serving recorded HTTP replies. The
+//! ureq-backed transport implementation lands with T3.3's dependency line
+//! and is wired in T4.2/T4.1b; this module never touches `Cargo.toml`.
+//!
+//! The key is read from the environment at call time (see
+//! [`MetaModelClient::DEFAULT_ENV_VAR`], `MODEL_API_KEY`), never stored,
+//! never logged, and never placed in an error or `Display` output.
+
+use crate::models::{ModelClient, ModelError, ModelRequest, ModelResponse, Usage};
+
+/// A single HTTP response as seen by the client.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpResponse {
+    /// HTTP status code.
+    pub status: u16,
+    /// Response body as text.
+    pub body: String,
+}
+
+/// An error raised by an [`HttpTransport`] implementation (network failure,
+/// TLS failure, ...). It carries a message only; no headers or keys.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpTransportError {
+    /// What went wrong, in the transport's own terms.
+    pub message: String,
+}
+
+impl std::fmt::Display for HttpTransportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "http transport: {}", self.message)
+    }
+}
+
+impl std::error::Error for HttpTransportError {}
+
+/// The transport seam. Implementations perform one POST and return the
+/// status + body; they must not follow redirects in a way that hides the
+/// status, and must never log request headers or the authorization key.
+pub trait HttpTransport {
+    /// POST `body` (JSON) to `url` with the given headers, returning the
+    /// response or a transport-level error.
+    fn post(
+        &self,
+        url: &str,
+        headers: &[(&str, &str)],
+        body: &str,
+    ) -> Result<HttpResponse, HttpTransportError>;
+}
+
+/// A [`ModelClient`] for the Meta Model API.
+pub struct MetaModelClient {
+    transport: Box<dyn HttpTransport>,
+    base_url: String,
+    env_var: String,
+    reasoning_effort: Option<String>,
+    max_retries: u32,
+}
+
+impl MetaModelClient {
+    /// Default environment variable holding the API key.
+    pub const DEFAULT_ENV_VAR: &'static str = "MODEL_API_KEY";
+
+    /// Default base URL for the Meta Model API.
+    pub const DEFAULT_BASE_URL: &'static str = "https://api.meta.ai/v1";
+
+    /// Build a client over `transport`, reading the key from
+    /// [`DEFAULT_ENV_VAR`] at call time.
+    pub fn new(transport: Box<dyn HttpTransport>) -> Self {
+        Self {
+            transport,
+            base_url: Self::DEFAULT_BASE_URL.to_string(),
+            env_var: Self::DEFAULT_ENV_VAR.to_string(),
+            reasoning_effort: None,
+            max_retries: 3,
+        }
+    }
+
+    /// Override the base URL (useful for tests or proxies).
+    pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
+        self.base_url = base_url.into();
+        self
+    }
+
+    /// Override the environment variable the key is read from.
+    pub fn with_env_var(mut self, env_var: impl Into<String>) -> Self {
+        self.env_var = env_var.into();
+        self
+    }
+
+    /// Set the reasoning effort passed through to the API
+    /// (for example `"low"`, `"medium"`, `"high"`). When `None` the
+    /// parameter is omitted.
+    pub fn with_reasoning_effort(mut self, effort: impl Into<String>) -> Self {
+        self.reasoning_effort = Some(effort.into());
+        self
+    }
+
+    /// Cap the number of retries on 429 / 5xx / transport errors.
+    pub fn with_max_retries(mut self, n: u32) -> Self {
+        self.max_retries = n;
+        self
+    }
+
+    fn api_key(&self) -> Result<String, ModelError> {
+        std::env::var(&self.env_var).map_err(|_| ModelError::InvalidRequest {
+            message: format!("missing {} in the environment", self.env_var),
+        })
+    }
+
+    fn endpoint(&self) -> String {
+        format!("{}/chat/completions", self.base_url.trim_end_matches('/'))
+    }
+
+    fn build_body(&self, request: &ModelRequest) -> serde_json::Value {
+        let mut body = serde_json::json!({
+            "model": request.model,
+            "messages": [
+                { "role": "system", "content": request.system },
+                { "role": "user", "content": request.user },
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "response",
+                    "schema": request.schema,
+                    "strict": false,
+                }
+            }
+        });
+        if let Some(max) = request.budget.max_output_tokens {
+            body["max_tokens"] = serde_json::json!(max);
+        }
+        if let Some(effort) = &self.reasoning_effort {
+            body["reasoning_effort"] = serde_json::json!(effort);
+        }
+        body
+    }
+}
+
+impl std::fmt::Debug for MetaModelClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MetaModelClient")
+            .field("base_url", &self.base_url)
+            .field("env_var", &self.env_var)
+            .field("reasoning_effort", &self.reasoning_effort)
+            .field("max_retries", &self.max_retries)
+            .finish()
+    }
+}
+
+impl ModelClient for MetaModelClient {
+    fn complete(&self, request: &ModelRequest) -> Result<ModelResponse, ModelError> {
+        let key = self.api_key()?;
+        let url = self.endpoint();
+        let body = self.build_body(request);
+        let body_text = serde_json::to_string(&body)
+            .map_err(|e| ModelError::backend(format!("serialize request: {e}")))?;
+        let auth_header = format!("Bearer {key}");
+        let header_vec: Vec<(&str, &str)> = vec![
+            ("Authorization", auth_header.as_str()),
+            ("Content-Type", "application/json"),
+        ];
+
+        let model_id = request.model.clone();
+        let max_attempts = self.max_retries.saturating_add(1);
+        let mut last_error: Option<ModelError> = None;
+        for attempt in 0..max_attempts {
+            match self.transport.post(&url, &header_vec, &body_text) {
+                Ok(resp) => {
+                    if resp.status == 429 || (500..600).contains(&resp.status) {
+                        let label = if resp.status == 429 {
+                            "rate limited (429)"
+                        } else {
+                            "server error"
+                        };
+                        let err = ModelError::Backend {
+                            message: format!(
+                                "model {}: {} after attempt {}/{}: {}",
+                                model_id,
+                                label,
+                                attempt + 1,
+                                max_attempts,
+                                first_lines(&resp.body, 5)
+                            ),
+                        };
+                        if attempt + 1 < max_attempts {
+                            last_error = Some(err);
+                            continue;
+                        }
+                        return Err(err);
+                    }
+                    if !(200..300).contains(&resp.status) {
+                        return Err(ModelError::Backend {
+                            message: format!(
+                                "model {}: HTTP {} : {}",
+                                model_id,
+                                resp.status,
+                                first_lines(&resp.body, 5)
+                            ),
+                        });
+                    }
+                    return parse_reply(&model_id, &resp.body);
+                }
+                Err(te) => {
+                    let err = ModelError::Backend {
+                        message: format!(
+                            "model {}: transport error on attempt {}/{}: {}",
+                            model_id,
+                            attempt + 1,
+                            max_attempts,
+                            te.message
+                        ),
+                    };
+                    if attempt + 1 < max_attempts {
+                        last_error = Some(err);
+                        continue;
+                    }
+                    return Err(err);
+                }
+            }
+        }
+        Err(last_error.unwrap_or_else(|| ModelError::backend("model call failed")))
+    }
+}
+
+fn parse_reply(model_id: &str, body: &str) -> Result<ModelResponse, ModelError> {
+    let parsed: serde_json::Value = match serde_json::from_str(body) {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(ModelError::Backend {
+                message: format!(
+                    "model {}: malformed reply: {e}\n{}",
+                    model_id,
+                    first_lines(body, 5)
+                ),
+            });
+        }
+    };
+
+    let content = &parsed["choices"][0]["message"]["content"];
+    let value: serde_json::Value = match content {
+        serde_json::Value::String(s) => match serde_json::from_str(s) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(ModelError::Backend {
+                    message: format!(
+                        "model {}: malformed reply: {e}\n{}",
+                        model_id,
+                        first_lines(s, 5)
+                    ),
+                });
+            }
+        },
+        serde_json::Value::Null => {
+            return Err(ModelError::Backend {
+                message: format!(
+                    "model {}: malformed reply: missing choices[0].message.content\n{}",
+                    model_id,
+                    first_lines(body, 5)
+                ),
+            });
+        }
+        other => other.clone(),
+    };
+
+    let usage = parse_usage(&parsed);
+    Ok(ModelResponse { value, usage })
+}
+
+fn parse_usage(body: &serde_json::Value) -> Usage {
+    let usage = body.get("usage");
+    let input_tokens = usage
+        .and_then(|u| u.get("prompt_tokens").or_else(|| u.get("input_tokens")))
+        .and_then(|v| v.as_u64());
+    let output_tokens = usage
+        .and_then(|u| {
+            u.get("completion_tokens")
+                .or_else(|| u.get("output_tokens"))
+        })
+        .and_then(|v| v.as_u64());
+    let cost_usd = usage
+        .and_then(|u| {
+            u.get("cost")
+                .or_else(|| u.get("cost_usd"))
+                .or_else(|| u.get("total_cost"))
+        })
+        .and_then(|v| v.as_f64())
+        .or_else(|| body.get("cost").and_then(|v| v.as_f64()));
+    Usage {
+        input_tokens,
+        output_tokens,
+        cost_usd,
+    }
+}
+
+fn first_lines(s: &str, n: usize) -> String {
+    s.lines().take(n).collect::<Vec<_>>().join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct FakeTransport {
+        status: u16,
+        body: String,
+        calls: Arc<AtomicUsize>,
+    }
+
+    impl HttpTransport for FakeTransport {
+        fn post(
+            &self,
+            _url: &str,
+            _headers: &[(&str, &str)],
+            _body: &str,
+        ) -> Result<HttpResponse, HttpTransportError> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            Ok(HttpResponse {
+                status: self.status,
+                body: self.body.clone(),
+            })
+        }
+    }
+
+    fn env_guard() {
+        // SAFETY: test-only; env mutation is process-global but tests only set, never unset.
+        unsafe {
+            std::env::set_var(MetaModelClient::DEFAULT_ENV_VAR, "test-key-not-real");
+        }
+    }
+
+    fn sample_request() -> ModelRequest {
+        crate::models::ModelRequest {
+            model: "muse-spark-1.3".to_string(),
+            system: "you are a re-checker".to_string(),
+            user: "memory text".to_string(),
+            schema: serde_json::json!({"type": "object", "properties": {"answer": {"type": "integer"}}}),
+            budget: crate::models::Budget::tokens(100),
+        }
+    }
+
+    fn ok_body() -> String {
+        serde_json::json!({
+            "id": "resp-1",
+            "choices": [{
+                "message": {"role": "assistant", "content": "{\"answer\": 42}"}
+            }],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0.001}
+        })
+        .to_string()
+    }
+
+    #[test]
+    fn recorded_reply_parses_into_schema() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let transport = FakeTransport {
+            status: 200,
+            body: ok_body(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let resp = client.complete(&sample_request()).expect("must parse");
+        assert_eq!(resp.value, serde_json::json!({"answer": 42}));
+        assert_eq!(resp.usage.input_tokens, Some(10));
+        assert_eq!(resp.usage.output_tokens, Some(5));
+        assert_eq!(resp.usage.cost_usd, Some(0.001));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn malformed_reply_fails_with_model_id_and_first_lines() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = "not json at all\nsecond line here".to_string();
+        let transport = FakeTransport {
+            status: 200,
+            body: body.clone(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let err = client.complete(&sample_request()).expect_err("must fail");
+        let msg = err.to_string();
+        assert!(msg.contains("muse-spark-1.3"), "missing model id: {msg}");
+        assert!(
+            msg.contains("not json at all"),
+            "missing first lines: {msg}"
+        );
+    }
+
+    #[test]
+    fn rate_limit_retries_then_gives_up() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let transport = FakeTransport {
+            status: 429,
+            body: "rate limited\ntry later".to_string(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport)).with_max_retries(2);
+        let err = client
+            .complete(&sample_request())
+            .expect_err("must give up");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("429") || msg.to_lowercase().contains("rate limited"),
+            "unclear 429: {msg}"
+        );
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            3,
+            "should attempt 1 + 2 retries"
+        );
+    }
+
+    #[test]
+    fn missing_key_is_invalid_request() {
+        let calls = Arc::new(AtomicUsize::new(0));
+        let transport = FakeTransport {
+            status: 200,
+            body: ok_body(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport))
+            .with_env_var("DOYLE_T4_1_DEFINITELY_UNSET_VAR");
+        let err = client.complete(&sample_request()).expect_err("must fail");
+        match err {
+            ModelError::InvalidRequest { .. } => {}
+            other => panic!("expected InvalidRequest, got {other:?}"),
+        }
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            0,
+            "transport must not be called"
+        );
+    }
+
+    #[test]
+    fn reasoning_effort_is_passed_through() {
+        env_guard();
+        struct Capturing {
+            body: Arc<std::sync::Mutex<String>>,
+            calls: Arc<AtomicUsize>,
+        }
+        impl HttpTransport for Capturing {
+            fn post(
+                &self,
+                _url: &str,
+                _headers: &[(&str, &str)],
+                body: &str,
+            ) -> Result<HttpResponse, HttpTransportError> {
+                *self.body.lock().unwrap() = body.to_string();
+                self.calls.fetch_add(1, Ordering::SeqCst);
+                Ok(HttpResponse {
+                    status: 200,
+                    body: ok_body(),
+                })
+            }
+        }
+        let captured = Arc::new(std::sync::Mutex::new(String::new()));
+        let calls = Arc::new(AtomicUsize::new(0));
+        let transport = Capturing {
+            body: captured.clone(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport)).with_reasoning_effort("high");
+        let _ = client.complete(&sample_request()).expect("ok");
+        let body = captured.lock().unwrap().clone();
+        assert!(body.contains("\"reasoning_effort\""), "body: {body}");
+        assert!(body.contains("\"high\""), "body: {body}");
+    }
+
+    #[test]
+    fn five_xx_retries_then_gives_up() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let transport = FakeTransport {
+            status: 503,
+            body: "unavailable".to_string(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport)).with_max_retries(1);
+        let err = client
+            .complete(&sample_request())
+            .expect_err("must give up");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("503") || msg.contains("server error"),
+            "msg: {msg}"
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn non_retryable_status_fails_immediately() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let transport = FakeTransport {
+            status: 400,
+            body: "bad request".to_string(),
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let err = client.complete(&sample_request()).expect_err("must fail");
+        let msg = err.to_string();
+        assert!(msg.contains("400"), "msg: {msg}");
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn malformed_content_string_fails_with_model_id() {
+        env_guard();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let body = serde_json::json!({
+            "id": "resp-2",
+            "choices": [{"message": {"role": "assistant", "content": "not { valid json"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1}
+        })
+        .to_string();
+        let transport = FakeTransport {
+            status: 200,
+            body,
+            calls: calls.clone(),
+        };
+        let client = MetaModelClient::new(Box::new(transport));
+        let err = client.complete(&sample_request()).expect_err("must fail");
+        let msg = err.to_string();
+        assert!(msg.contains("muse-spark-1.3"), "msg: {msg}");
+        assert!(
+            msg.contains("not { valid json") || msg.contains("not {"),
+            "msg: {msg}"
+        );
+    }
+}

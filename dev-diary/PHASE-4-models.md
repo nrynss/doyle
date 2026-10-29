@@ -12,13 +12,19 @@ requires:   [T1.4, T0.2]
 fixture-ok: yes
 size:       S · mid
 owns:       src/models/meta.rs
-status:     claimed:beam-free-t4.1
+status:     in-review
 ```
 A `ModelClient` for the Meta Model API (Muse Spark for the re-check): structured output against the request's JSON schema, reasoning effort, usage and cost read from the reply, retries on rate limits and 5xx with a cap, the key from the environment (T0.2). Never logs the key or the request headers.
 
 Offline tests use recorded HTTP replies.
 
 **Done when:** a recorded reply parses into the schema; a malformed reply fails with the model id and the first lines of the reply; a 429 retries and then gives up with a clear error.
+
+**Notes (T4.1)**
+- Built: `src/models/meta.rs` with `MetaModelClient` implementing `ModelClient`, plus a small `HttpTransport` seam (trait + `HttpResponse` + `HttpTransportError`). The client reads `MODEL_API_KEY` from the environment at call time, POSTs an OpenAI-style chat-completions body with a `json_schema` response format, passes `reasoning_effort` and `max_tokens` through, retries 429/5xx and transport errors with a cap, and parses `choices[0].message.content` into JSON plus usage (prompt/completion tokens and cost from several field-name variants). Errors include the model id and the first lines of the reply; no key or header is ever stored or displayed.
+- Decided: the transport seam is a trait object (`Box<dyn HttpTransport>`) so the ureq-backed implementation can be swapped in by T3.3/T4.2 without touching this module or `Cargo.toml`; `HttpTransport::post` returns status + body, leaving retry/parsing here. The key comes only from the environment (variable name overridable for tests), not the keyring, per the task's "from the environment (T0.2's variable)". Reasoning effort is configured on the client since `ModelRequest` (frozen in T1.4) carries no such field.
+- Tests: 10 offline tests with a fake/capturing transport (recorded-reply parse, malformed body, 429 retry-and-give-up, 5xx retry, 400 immediate, missing key, reasoning-effort pass-through, malformed content string). `./tools/check.sh` passes (77 tests).
+- Surprised me: edition 2024 makes `std::env::set_var` unsafe, so the test helper wraps it; `Ordering` had to be imported explicitly in the test module.
 
 **T4.1b (live):** one structured call on `muse-spark-1.3`; record it through T1.4's recording mode. Owns `tests/live_meta.rs`. Budget: five calls.
 
