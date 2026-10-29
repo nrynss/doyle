@@ -150,11 +150,11 @@ requires:   []
 fixture-ok: no
 size:       M · frontier
 owns:       testdata/contracts/second/, docs/second-upgrade.md
-status:     in-review
+status:     done
 ```
 product.md's open question: a real public API upgrade with visible stakes (payments, auth, personal data) where a memory written against the old version would cause harm. Find candidates, capture both versions from their public sources, run Vimanam on them, and write three to five memories an agent plausibly would have saved. The user picks one.
 
-**Done when:** `docs/second-upgrade.md` lists the candidates with their source links and diffs; the chosen pair and its memories are in `testdata/contracts/second/`; the user has chosen.
+**Done when:** `docs/second-upgrade.md` lists the candidates with their source links and diffs; the chosen pair and its memories are in `testdata/contracts/second/`; the user has chosen. The user chose A (Stripe Charges → PaymentIntents).
 
 **Notes (in review)**
 - Built: `testdata/contracts/second/` (hand-written `second-v1.yaml`/`second-v2.yaml` for invented Bellflower Market payments, `memories.md` with S1–S4 in Muse Code format, `README.md` provenance note with the unpaid-shipment story and expected flag set `{S1, S2}`) and `docs/second-upgrade.md` (three candidates with verified source links, recommendation of Stripe Charges → PaymentIntents, recorded Vimanam output). Vimanam 2.0.0 installed into `/tmp/opencode/vimanam2` (`--locked` worked); CLI JSON and library diff agree on all 8 change IDs. Both contracts parse; `getCharge`/`createRefund` subtrees have no facts.

@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0's critical tasks are done (T0.1–T0.6); T0.7 is ready. P1 can start with T1.1.
+**Current status:** P0 done (T0.1–T0.7); P1 can start with T1.1 (T1.1 is with Muse Code).
 
 ---
 
@@ -140,7 +140,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 | Phase | Tasks complete | Status |
 |---|---|---|
-| P0 | 6 / 7 | T0.1–T0.6 done. T0.7 (a second real upgrade, off the critical path) is ready. |
+| P0 | 7 / 7 | Done. T0.7 (second real upgrade) closed on the user's pick of Stripe Charges → PaymentIntents. |
 | P1 | 0 / 5 | T1.1 is with Muse Code. |
 | P2 | 0 / 4 | Waits for P1. |
 | P3 | 0 / 3 | Waits for P1. |
@@ -157,6 +157,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 Newest first. One entry per closed task, finding, or split.
 
 - **The user assigns agents and models.** From P1 on the user chooses who implements each task and on which model; the orchestrator prepares the worktree and brief, then validates, lands and closes as before. T1.1 is the first, in its own worktree outside the repository.
+- **T0.7 closed: a second real upgrade, payments chosen.** Three verified candidates in `docs/second-upgrade.md` (Stripe Charges → PaymentIntents, GitHub OAuth Authorizations removal, Google OOB deprecation); the user picked A for its silent money harm and T0.3-shaped fixtures. Captured pair + 4 memories (flag set `{S1, S2}`) + provenance in `testdata/contracts/second/`; Vimanam 2.0.0 CLI and library agree on 8 change facts (1 breaking removal, 6 non-breaking additions, 1 review). Validated by the orchestrator: replay from the branch reproduces all 8 change IDs and the 1/6/1 summary, no key or personal data in the files, the gate passed on `main` after the merge. Vimanam issue, second confirming pair: the Markdown diff omits the type-level facts the JSON carries (prints 1/3/0, JSON says 1/6/1).
 - **T0.6 closed: Vimanam 2.0's view of the Quiet Migration.** Vimanam 2.0.0, installed into a scratch root (not globally), gives 11 change facts for v1 → v2; the CLI's JSON and the library agree on every change ID. Pagination is detected: `pagination_changed` on `listPatients`, severity `review` (native `pagination_inferred`). M1 is flagged by the breaking `field_type_changed` (`array` → `object`) on `listPatients`' 200 response, the `review` `constraint_changed` on the same response, and the pagination fact. `getPatient`, `Patient` and `decommission` have no change facts. Entity IDs for the five elements later tasks cite are in `testdata/vimanam/README.md`; all are the same in v1 and v2. Files: `testdata/vimanam/` (JSON diff, Markdown diff, v1 and v2 entities, change facts). Validated by the orchestrator: the change facts read back from the JSON, no private paths, the gate passed on `main` after the merge.
   - **Risk for T2.2:** the optional `generated_at` added to the `Stats` type is `review` at the type level but non-breaking on `getStats`' response, so a naive "review flags" rule would flag M3. Written into T2.2.
   - **Vimanam issue texts, for the user to file:** (1) "An optional field added to a named type is `review` at the type level but `non_breaking` on the response that references it": `Stats.generated_at` in this repository's `testdata/contracts/patients-v*.yaml`. (2) "The Markdown diff omits the pagination and type-level facts the JSON carries": the Markdown says 1 to review, the JSON summary 3, and the Markdown lists neither `pagination_changed` nor the two type-level facts.

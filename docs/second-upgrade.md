@@ -165,4 +165,4 @@ Stable across v1 and v2. New v2 entities marked (*).
 ## Open issues
 
 - The Markdown/JSON gap above repeats T0.6's Vimanam finding on a second pair; the handoff log carries the issue text.
-- The user still picks the evaluation upgrade (product.md open question). Recommended: A.
+- The user picked A (Stripe Charges → PaymentIntents) as the evaluation upgrade (product.md open question).
