@@ -12,7 +12,7 @@ requires:   [T1.3, T0.4]
 fixture-ok: yes
 size:       M · mid
 owns:       src/adapters/muse_code/mod.rs, src/adapters/muse_code/locate.rs, src/adapters/muse_code/parse.rs
-status:     claimed:beam-free-t3.1
+status:     in-review
 ```
 Find a repository's memory scopes: the private per-project folder under `~/.local/share/muse/memory/projects/` (by the derivation T0.4 settled, or its recorded fallback) and the shared `<repo>/.agents/memory/`. Parse `MEMORY.md` and topic files: frontmatter, inline notes, index lines pointing at files. Each note becomes a `Memory` with a stable `MemoryRef` (scope, file, and the note's position or name) that survives an unrelated edit to the same file.
 
@@ -21,6 +21,11 @@ Tests run on copies of `testdata/memories/muse-code/` in temporary directories, 
 **Done when:** the trait's conformance test passes for list and read; every note in the fixture is read with its frontmatter; a hand-edited `MEMORY.md` with an extra note keeps the other notes' references stable.
 
 ---
+
+**Notes (T3.1)**
+- Built: `src/adapters/muse_code/{mod,locate,parse}.rs`. `locate` computes the FNV-1a-64 hash of the canonicalised starting directory, matches the private per-project folder under `~/.local/share/muse/memory/projects/` on the hash suffix alone, and adds the shared `<repo>/.agents/memory/` folder. `parse` splits frontmatter (`type`/`description`), collects inline `- ` notes, and follows `[label](file.md)` index lines into topic files. Each note becomes a `Memory` with a stable id `{file}#{fnv1a64(text)}` that survives an unrelated edit to the same file. `MuseCodeAdapter` implements `name`/`capabilities`/`list`/`read`/`write` (write is a minimal in-memory stub; full file write/annotate/supersede/watch land in T3.2 and currently report `Unsupported`).
+- Decided: capabilities report `NONE`, so annotate/supersede/watch return typed `Unsupported` and the shared conformance passes for list and read. `list("")` returns every note across all scopes; non-empty query is a case-insensitive substring filter. `new(path)` locates scopes and falls back to treating the path as a single memory folder, so tests can point it at a copied fixture. Frontmatter is parsed and attached per note but not surfaced on `Memory` (no field exists); it is available via `parse::Note`/`Frontmatter`.
+- Surprised me: the slug cut at 96 characters makes the slug alone ambiguous, so matching on the hash suffix is required. Tests use nanosecond temp dir names to avoid parallel-test collisions.
 
 ### T3.2: Muse Code adapter: annotate and supersede ★
 ```yaml
