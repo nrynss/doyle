@@ -228,6 +228,11 @@ mod tests {
         "vc2_d82adaee7e47799b8027d3c1b9f458e16be8a20df1696186f351369f07e011e0";
     const STATS_TYPE_REVIEW: &str =
         "vc2_6cfe1d7e93fec49f1e8a37c39c64364e23dbcd0ae3384e882ee8850d533903e0";
+    // Change ID for the synthetic breaking fact built in
+    // already_flagged_memory_is_not_flagged_twice: a clone of M1_BREAKING
+    // retargeted at getPatient, so it would flag M2.
+    const SYNTHETIC_GET_PATIENT_BREAKING: &str =
+        "vc2_synthetic00000000000000000000000000000000getpatient";
 
     fn fixture(name: &str) -> String {
         format!("{}/testdata/{name}", env!("CARGO_MANIFEST_DIR"))
@@ -366,6 +371,29 @@ mod tests {
     }
 
     #[test]
+    fn operation_change_does_not_flag_citers_of_descendant_only() {
+        let old = old_index();
+        // M1_PAGINATION subjects the listPatients operation itself. A memory
+        // citing only its descendant (the 200 response) must stay quiet:
+        // propagation is upward-only, never down to descendants.
+        let pagination: Vec<Change> = demo_changes()
+            .into_iter()
+            .filter(|c| c.id == M1_PAGINATION)
+            .collect();
+        assert_eq!(pagination.len(), 1);
+        let citations = vec![citation(
+            "response-only-citer",
+            "200 is an array",
+            &[LIST_PATIENTS_200],
+        )];
+        let flags = flag_citations(&citations, &pagination, &old, &[], "v1", "v2");
+        assert!(
+            flags.is_empty(),
+            "citing a descendant of the subject never flags, got {flags:?}"
+        );
+    }
+
+    #[test]
     fn response_change_does_not_cross_the_shared_ref() {
         let old = old_index();
         let changes = demo_changes();
@@ -489,8 +517,32 @@ mod tests {
             new_version: "v2".to_string(),
             evidence: None,
         }];
-        let flags = flag_citations(&demo_citations(), &demo_changes(), &old, &open, "v1", "v2");
-        assert!(flags.is_empty(), "M1 is already open: got {flags:?}");
+        // A synthetic breaking change retargeted at getPatient would flag
+        // M2. Suppression must be per-memory: M1 stays quiet while M2's
+        // flag is still produced. (A buggy "return empty if ANY open flag
+        // exists" would produce nothing and fail the M2 assertions.)
+        let mut changes = demo_changes();
+        let mut extra: Vec<Change> = demo_changes()
+            .into_iter()
+            .filter(|c| c.id == M1_BREAKING)
+            .collect();
+        assert_eq!(extra.len(), 1);
+        extra[0].subject = GET_PATIENT.to_string();
+        extra[0].id = SYNTHETIC_GET_PATIENT_BREAKING.to_string();
+        changes.push(extra.into_iter().next().unwrap());
+        let flags = flag_citations(&demo_citations(), &changes, &old, &open, "v1", "v2");
+        let flagged: Vec<&str> = flags.iter().map(|f| f.memory.id.as_str()).collect();
+        assert!(
+            !flagged.contains(&"M1"),
+            "M1 is already open: got {flags:?}"
+        );
+        assert_eq!(
+            flagged,
+            ["M2"],
+            "other memories still flag while M1 is suppressed: {flagged:?}"
+        );
+        assert_eq!(change_ids(&flags[0]), [SYNTHETIC_GET_PATIENT_BREAKING]);
+        assert_eq!(flags[0].severity, Severity::Breaking);
     }
 
     #[test]
