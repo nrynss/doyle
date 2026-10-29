@@ -1,6 +1,7 @@
 //! Muse Code built-in memory adapter: locate and read memory scopes.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::adapters::{AdapterError, Capabilities, MemoryAdapter};
@@ -8,14 +9,15 @@ use crate::core::{Memory, MemoryRef};
 
 pub mod locate;
 pub mod parse;
+mod write;
 
 pub use locate::{canonical_dir, fnv1a64, locate, slug};
 pub use parse::{Frontmatter, Note, collect_notes, read_folder, split_frontmatter};
 
 #[derive(Debug, Default)]
 struct State {
-    next: usize,
     writes: Vec<Memory>,
+    scopes: HashMap<String, String>,
 }
 
 pub struct MuseCodeAdapter {
@@ -72,15 +74,26 @@ impl MemoryAdapter for MuseCodeAdapter {
     }
 
     fn capabilities(&self) -> Capabilities {
-        Capabilities::NONE
+        Capabilities {
+            annotate: true,
+            supersede: true,
+            watch: false,
+        }
     }
 
     fn list(&self, query: &str) -> Result<Vec<Memory>, AdapterError> {
         let query = query.to_lowercase();
         let mut out = self.read_files();
-        // in-memory writes
+        // Apply scopes recorded for notes Doyle wrote, so a write's scope
+        // round-trips even though Muse Code stores no per-note scope on disk.
         let state = self.state.borrow();
+        for m in &mut out {
+            if let Some(s) = state.scopes.get(&m.reference.id) {
+                m.scope = s.clone();
+            }
+        }
         out.extend(state.writes.clone());
+        drop(state);
         if query.is_empty() {
             Ok(out)
         } else {
@@ -97,31 +110,30 @@ impl MemoryAdapter for MuseCodeAdapter {
         if let Some(m) = state.writes.iter().find(|m| m.reference.id == id) {
             return Ok(m.clone());
         }
+        // recorded scope for a written note
+        let recorded_scope = state.scopes.get(id).cloned();
         drop(state);
-        for m in self.read_files() {
+        for mut m in self.read_files() {
             if m.reference.id == id {
+                if let Some(s) = recorded_scope {
+                    m.scope = s;
+                }
                 return Ok(m);
             }
         }
         Err(AdapterError::not_found(&self.name, id))
     }
 
-    // T3.1 stub — real file write lands in T3.2 (owns write.rs)
     fn write(&self, text: &str, scope: &str) -> Result<MemoryRef, AdapterError> {
-        let mut state = self.state.borrow_mut();
-        state.next += 1;
-        let n = state.next;
-        let reference = MemoryRef {
-            adapter: self.name.clone(),
-            id: format!("mem-{n}"),
-        };
-        state.writes.push(Memory {
-            reference: reference.clone(),
-            text: text.to_string(),
-            updated_at: None,
-            scope: scope.to_string(),
-        });
-        Ok(reference)
+        write::write(self, text, scope)
+    }
+
+    fn annotate(&self, id: &str, warning: &str) -> Result<(), AdapterError> {
+        write::annotate(self, id, warning)
+    }
+
+    fn supersede(&self, stale_id: &str, correction_text: &str) -> Result<MemoryRef, AdapterError> {
+        write::supersede(self, stale_id, correction_text)
     }
 }
 
@@ -130,6 +142,7 @@ mod tests {
     use super::*;
     use crate::adapters::check_conformance;
     use crate::adapters::muse_code::parse;
+    use crate::adapters::muse_code::write;
     use std::collections::HashSet;
     use std::fs;
     use std::os::unix::fs::symlink;
@@ -419,6 +432,83 @@ mod tests {
         assert!(all.iter().any(|m| m.text == "shared note"));
         assert!(all.iter().any(|m| m.scope == "shared"));
         let _ = fs::remove_dir_all(&start);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn annotate_in_place_keeps_ref_and_text() {
+        let _g = HOME_LOCK.lock().unwrap();
+        let home = temp_dir("home");
+        set_home(&home);
+        let dir = temp_fixture();
+        let adapter = MuseCodeAdapter::new(&dir);
+        let first = adapter.list("").unwrap().into_iter().next().unwrap();
+        let id = first.reference.id.clone();
+        adapter.annotate(&id, "[STALE test warning]").unwrap();
+        let read = adapter.read(&id).unwrap();
+        assert!(read.text.contains("[STALE test warning]"));
+        assert_eq!(read.reference.id, id);
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn supersede_creates_and_links_and_retry_noop() {
+        let _g = HOME_LOCK.lock().unwrap();
+        let home = temp_dir("home");
+        set_home(&home);
+        let dir = temp_fixture();
+        let adapter = MuseCodeAdapter::new(&dir);
+        let first = adapter.list("").unwrap().into_iter().next().unwrap();
+        let id = first.reference.id.clone();
+        let correction = adapter
+            .supersede(
+                &id,
+                "GET /patients returns one page of 100 plus next_cursor",
+            )
+            .unwrap();
+        let read = adapter.read(&id).unwrap();
+        assert!(read.text.contains(&correction.id));
+        let stored = adapter.read(&correction.id).unwrap();
+        assert!(
+            stored
+                .text
+                .contains("GET /patients returns one page of 100 plus next_cursor")
+        );
+        // retry no-op
+        let retry = adapter
+            .supersede(
+                &id,
+                "GET /patients returns one page of 100 plus next_cursor",
+            )
+            .unwrap();
+        assert_eq!(retry, correction);
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn interrupted_write_leaves_original_intact() {
+        let _g = HOME_LOCK.lock().unwrap();
+        let home = temp_dir("home");
+        set_home(&home);
+        let dir = temp_fixture();
+        let adapter = MuseCodeAdapter::new(&dir);
+        let path = dir.join("MEMORY.md");
+        let before = fs::read_to_string(&path).unwrap();
+
+        // inject failure at the rename seam
+        write::set_rename_hook(Some(|_src, _dst| Err(std::io::Error::other("boom"))));
+        let res = adapter.write("INTERRUPTED NOTE", "personal_project");
+        assert!(res.is_err());
+        write::set_rename_hook(None);
+
+        let after = fs::read_to_string(&path).unwrap();
+        assert_eq!(before, after, "original file must be unchanged");
+        // temp file may remain; clean it
+        let tmp = dir.join(".MEMORY.md.doyle-tmp");
+        let _ = fs::remove_file(&tmp);
+        let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&home);
     }
 }
