@@ -287,9 +287,10 @@ pub fn parse_response(value: &serde_json::Value) -> Result<RecheckProposal, Pars
 
 /// Enforce guideline 7 on replacement text. See the module docs for the rule.
 ///
-/// Trade-off, chosen deliberately: the verbs are matched anywhere in the
-/// text, so a truthful description of a removal ("the endpoint was
-/// removed") would be rejected as well. That is accepted because removals
+/// Trade-off, chosen deliberately: the verbs are matched whole-word anywhere
+/// in the text, so an imperative removal description ("remove the old
+/// endpoint") would be rejected as well, while past-tense description
+/// ("the endpoint was removed") passes. That is accepted because removals
 /// normally resolve to `retire`, which carries no replacement text at all;
 /// the check errs toward rejecting instruction-shaped wording and leaves
 /// the rest to the reviewer on the review page.

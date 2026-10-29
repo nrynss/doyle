@@ -80,7 +80,7 @@ requires:   [T4.1, T2.2]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/prompts/recheck.rs, testdata/replies/recheck/
-status:     in-review:muse-spark-t4.4
+status:     done
 ```
 Given a flagged memory, its citation, the changes behind the flag, and the old and new versions of each cited element, propose: **correct** (with replacement text that is true of the new contract, short and plain), **retire** (the memory no longer applies), or **keep** (the change doesn't touch what the memory claims), with a one-line rationale. Replacement text quotes nothing from the contract that could read as an instruction (README, guideline 7).
 
@@ -89,7 +89,7 @@ Measure on the demo's flag and on cases built to need each answer, including a f
 **Done when:** the prompt and schema are in `src/prompts/recheck.rs`; recordings replay offline; each answer type is produced where expected, and the handoff text gives the measured results.
 
 **Notes (T4.4)**
-- Built: `src/prompts/recheck.rs` — `system_prompt`, `response_schema` (action enum correct/retire/keep + nullable new_text + rationale), `RecheckInput`/`ChangeFact`/`CitedElement`, `build_user_prompt`/`build_request` (model `muse-spark-1.3`, 2000 output-token cap), `parse_response` (correct needs non-empty guideline-7-clean new_text; retire/keep need empty new_text), `check_replacement_text` (the operational guideline-7 rule: ≤280 chars, single line, no markdown, no clause opening with an instruction verb from `FORBIDDEN_CLAUSE_OPENERS`, no contract-derived instruction phrase from `FORBIDDEN_CONTRACT_PHRASES`), and `measurement_cases` (4 fixed cases with expected answers).
+- Built: `src/prompts/recheck.rs` — `system_prompt`, `response_schema` (action enum correct/retire/keep + nullable new_text + rationale), `RecheckInput`/`ChangeFact`/`CitedElement`, `build_user_prompt`/`build_request` (model `muse-spark-1.3`, 2000 output-token cap), `parse_response` (correct needs non-empty guideline-7-clean new_text; retire/keep need empty new_text), `check_replacement_text` (the operational guideline-7 rule: ≤280 chars, single line, no markdown, no instruction verb used whole-word anywhere, no contract-derived instruction phrase), and `measurement_cases` (4 fixed cases with expected answers).
 - Cases: `m1_correct` (demo M1 → correct), `s1_retire` (removed POST /charges, second-upgrade shape → retire), `m3_keep` (type-level review adding optional generated_at → keep), `m4_keep_unchanged` (pagination flag on an element the decommission memory never cites → keep).
 - Measured live on Muse Spark via T4.1's client (scratch driver + RecordingClient outside the repo; recordings committed under `testdata/replies/recheck/` with `MEASUREMENT.md`): 4/4 match. Spend: 6 calls of a 50-call cap (1 failed probe at a 500-token cap — reasoning ate it all, content null — then 4 scoring calls + 1 re-run after a driver-side match-string bug; no 429/5xx retries). Usage 2591 in / 4617 out tokens total; API reports no cost field.
 - Decided: output cap 2000 (probe evidence); retire-steering line "do not rewrite the memory to be about a different endpoint"; recordings named `<request_key>.json` for `ReplayClient`.
@@ -104,4 +104,4 @@ Measure on the demo's flag and on cases built to need each answer, including a f
 - [ ] The Meta Model API client works offline and live (T4.1, T4.1b).
 - [ ] The Baseten client works offline and live (T4.2, T4.2b).
 - [x] The curator's citations are measured on both models, and the user has chosen its model (T4.3). Chosen: Muse Spark Open on Baseten (open-weight bonus over Spark's precision edge).
-- [ ] The re-check produces correct, retire and keep where each is right, measured (T4.4).
+- [x] The re-check produces correct, retire and keep where each is right, measured (T4.4).
