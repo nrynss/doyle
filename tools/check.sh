@@ -7,6 +7,8 @@ echo "-- cargo fmt"
 cargo fmt --all --check
 echo "-- cargo clippy"
 cargo clippy --all-targets --locked -- -D warnings
+echo "-- cargo build"
+cargo build --locked
 echo "-- cargo test"
 cargo test --all-targets --locked
 echo "gate passed"

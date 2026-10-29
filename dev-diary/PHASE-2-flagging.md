@@ -72,7 +72,7 @@ requires:   [T1.2, T2.1, T1.5]
 fixture-ok: yes
 size:       XS · light
 owns:       src/cite.rs
-status:     in-review
+status:     done
 ```
 Record a citation by hand: a memory reference, the contract, and an element given by its native location (`GET /patients`) or its `ElementId`. Refuse an element the contract doesn't have, naming the closest matches.
 
@@ -86,5 +86,5 @@ Notes (T2.4, in-review): `src/cite.rs` implements `run`: reads citation specs fr
 
 - [ ] The contract index answers every query the flagging and the guard need (T2.1).
 - [ ] The demo's expected flag set is produced exactly, and the additive change flags nothing (T2.2).
-- [ ] `doyle check` runs end to end without a model, with CI exit codes (T2.3).
-- [ ] Citations can be recorded by hand (T2.4).
+- [x] `doyle check` runs end to end without a model, with CI exit codes (T2.3).
+- [x] Citations can be recorded by hand (T2.4).
