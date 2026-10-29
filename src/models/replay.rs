@@ -216,4 +216,119 @@ mod tests {
         recorder.complete(&request).expect("record");
         assert!(dir.exists());
     }
+
+    // LB3: golden value pins the FNV-1a key for a known request.
+    #[test]
+    fn request_key_golden_value() {
+        assert_eq!(request_key(&sample_request()), "76c0de1fa816862c");
+    }
+
+    // LB1: a missing cost cap and a zero cost cap must not collide.
+    #[test]
+    fn request_key_budget_cost_none_vs_zero_differs() {
+        let base = sample_request();
+        let mut zero_cost = sample_request();
+        zero_cost.budget = Budget {
+            max_output_tokens: base.budget.max_output_tokens,
+            max_cost_usd: Some(0.0),
+        };
+        assert_ne!(request_key(&base), request_key(&zero_cost));
+    }
+
+    // LB2: reordering schema keys must not change the key.
+    #[test]
+    fn request_key_schema_key_order_invariant() {
+        let mut a = sample_request();
+        a.schema = serde_json::json!({"type": "object", "properties": {"b": {"type": "string"}, "a": {"type": "integer"}}});
+        let mut b = sample_request();
+        b.schema = serde_json::json!({"properties": {"a": {"type": "integer"}, "b": {"type": "string"}}, "type": "object"});
+        assert_eq!(request_key(&a), request_key(&b));
+    }
+
+    // LB4: varying each keyed field alone flips the key.
+    #[test]
+    fn request_key_varies_model() {
+        let base = sample_request();
+        let mut v = sample_request();
+        v.model = "other-model".to_string();
+        assert_ne!(request_key(&base), request_key(&v));
+    }
+
+    #[test]
+    fn request_key_varies_system() {
+        let base = sample_request();
+        let mut v = sample_request();
+        v.system = "different system".to_string();
+        assert_ne!(request_key(&base), request_key(&v));
+    }
+
+    #[test]
+    fn request_key_varies_user() {
+        let base = sample_request();
+        let mut v = sample_request();
+        v.user = "different user".to_string();
+        assert_ne!(request_key(&base), request_key(&v));
+    }
+
+    #[test]
+    fn request_key_varies_schema() {
+        let base = sample_request();
+        let mut v = sample_request();
+        v.schema = serde_json::json!({"type": "array"});
+        assert_ne!(request_key(&base), request_key(&v));
+    }
+
+    #[test]
+    fn request_key_varies_max_output_tokens() {
+        let base = sample_request();
+        let mut v = sample_request();
+        v.budget = Budget::tokens(101);
+        assert_ne!(request_key(&base), request_key(&v));
+    }
+
+    #[test]
+    fn request_key_varies_max_cost_usd() {
+        let base = sample_request();
+        // base has no cost cap; set a cap on the variant
+        let mut v = sample_request();
+        v.budget = Budget {
+            max_output_tokens: base.budget.max_output_tokens,
+            max_cost_usd: Some(1.0),
+        };
+        assert_ne!(request_key(&base), request_key(&v));
+    }
+
+    #[test]
+    fn request_key_varies_cost_none_vs_some_zero() {
+        // LB1 dimension: None vs Some(0.0) on cost flips the key even with
+        // identical tokens.
+        let a = Budget {
+            max_output_tokens: Some(100),
+            max_cost_usd: None,
+        };
+        let b = Budget {
+            max_output_tokens: Some(100),
+            max_cost_usd: Some(0.0),
+        };
+        let mut ra = sample_request();
+        ra.budget = a;
+        let mut rb = sample_request();
+        rb.budget = b;
+        assert_ne!(request_key(&ra), request_key(&rb));
+    }
+
+    #[test]
+    fn request_key_varies_tokens_none_vs_some_zero() {
+        let mut ra = sample_request();
+        ra.budget = Budget {
+            max_output_tokens: None,
+            max_cost_usd: Some(1.0),
+        };
+        let mut rb = sample_request();
+        rb.budget = Budget {
+            max_output_tokens: Some(0),
+            max_cost_usd: Some(1.0),
+        };
+        assert_ne!(request_key(&ra), request_key(&rb));
+    }
 }

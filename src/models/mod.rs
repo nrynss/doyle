@@ -148,25 +148,90 @@ pub trait ModelClient {
 /// hex. The replay and recording clients key their files by this value, so a
 /// hand-written recording must be named `<key>.json`.
 ///
-/// Hashing uses [`std::hash::DefaultHasher`] over the model id, system
-/// prompt, user content, the canonical JSON rendering of the schema, and the
-/// budget. Documented so recordings can be named by hand: compute the key
-/// with this function in a test, or run once in recording mode and read the
-/// filename it writes.
+/// Hashing uses a version-stable FNV-1a hash (implemented by hand over
+/// [`std::hash::Hasher`], no dependency) over the model id, system prompt,
+/// user content, the canonical (recursively key-sorted) JSON rendering of the
+/// schema, and the budget. The budget's `None`/`Some` discriminants are
+/// hashed before any payload, so a missing cap and a zero cap never collide.
+/// Documented so recordings can be named by hand: compute the key with this
+/// function in a test, or run once in recording mode and read the filename it
+/// writes.
+///
+/// Keys are stable across toolchains and Rust versions: the algorithm and
+/// field sequence are fixed in this crate. They are *not* stable across
+/// changes to that sequence, which is a deliberate, versioned contract.
 pub fn request_key(request: &ModelRequest) -> String {
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let mut hasher = Fnv1aHasher::new();
     request.model.hash(&mut hasher);
     request.system.hash(&mut hasher);
     request.user.hash(&mut hasher);
-    // Canonical rendering keeps the hash stable across equivalent JSON.
-    let schema_text = serde_json::to_string(&request.schema).unwrap_or_default();
+    // Canonical rendering: sort object keys recursively so key order does
+    // not change the key. Arrays keep their order (they are ordered data).
+    let schema_text = canonical_schema_text(&request.schema);
     schema_text.hash(&mut hasher);
     request.budget.max_output_tokens.hash(&mut hasher);
-    // f64 is not Hash; render it canonically.
-    if let Some(cost) = request.budget.max_cost_usd {
-        cost.to_bits().hash(&mut hasher);
-    } else {
-        0u64.hash(&mut hasher);
+    // f64 is not Hash; hash the discriminant first so None and Some(0.0)
+    // cannot collide, then the bits.
+    match request.budget.max_cost_usd {
+        Some(cost) => {
+            true.hash(&mut hasher);
+            cost.to_bits().hash(&mut hasher);
+        }
+        None => {
+            false.hash(&mut hasher);
+        }
     }
     format!("{:x}", hasher.finish())
+}
+
+/// FNV-1a hasher, 64-bit, implemented by hand so the key does not depend on
+/// `std::hash::DefaultHasher`'s toolchain-specific seeding.
+struct Fnv1aHasher {
+    state: u64,
+}
+
+impl Fnv1aHasher {
+    fn new() -> Self {
+        Self {
+            state: 0xcbf2_9ce4_8422_2325,
+        }
+    }
+}
+
+impl Hasher for Fnv1aHasher {
+    fn finish(&self) -> u64 {
+        self.state
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        for &byte in bytes {
+            self.state ^= byte as u64;
+            self.state = self.state.wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+}
+
+/// Render `value` as compact JSON with object keys sorted recursively.
+fn canonical_schema_text(value: &serde_json::Value) -> String {
+    serde_json::to_string(&canonicalize_value(value)).unwrap_or_default()
+}
+
+fn canonicalize_value(value: &serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            let mut out = serde_json::Map::new();
+            for key in keys {
+                if let Some(v) = map.get(key) {
+                    out.insert(key.clone(), canonicalize_value(v));
+                }
+            }
+            serde_json::Value::Object(out)
+        }
+        serde_json::Value::Array(items) => {
+            serde_json::Value::Array(items.iter().map(canonicalize_value).collect())
+        }
+        other => other.clone(),
+    }
 }
