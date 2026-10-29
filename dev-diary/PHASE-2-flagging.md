@@ -12,11 +12,13 @@ requires:   [T1.1, T0.6]
 fixture-ok: yes
 size:       M · mid
 owns:       src/contract.rs, Cargo.toml (the vimanam line), Cargo.lock
-status:     claimed:muse-spark-t2.1
+status:     in-review
 ```
 Load a contract file through Vimanam's library (default features off) and build an index Doyle can query: entity by `ElementId`; parent chain; entities that reference a named type; native location (method and path, operation ID, type and field name) for display and for the guard. Diff two versions into Vimanam's change facts, kept as Vimanam gives them.
 
 **Done when:** on the demo contracts, the index answers each query in a test, matching `testdata/vimanam/`; the diff gives the recorded change set; a malformed contract fails with the file name and Vimanam's reason.
+
+Notes (T2.1, in-review): `src/contract.rs` holds `ContractIndex` (Vimanam's neutral surface plus the parsed document the diff reads, one `parse_openapi` then `adapt`, no double parse), `NativeLocation` (Doyle's own display/guard struct), and `ContractError` (file plus Vimanam's reason verbatim; `Display` names the file). `entity`, `parent_chain` (entity itself first, then ancestors, cycle-guarded), `referencers` (native order), `native_location` (operation ID and type name resolved through the parent chain; non-OpenAPI natives give `None` for method/path), `diff` (old.diff(new), facts untouched). Seven tests against the demo contracts: entity-ID lists equal `entities-v1/v2.json` (32/38), chain `[200, listPatients]`, v1 `Patient` referencers are the two 200s, v2 adds `PatientPage`, locations for the operation/result/type/field cases, diff IDs equal `changes-v1-v2.json` (11, severity 1/3/7) with M1's three facts on their subjects, malformed file fails naming the file. Surprises: hand-copied `ve2_`/`vc2_` IDs dropped single characters in three constants (caught by the tests, then every test ID checked against the fixtures by script); Vimanam's `ApiDocumentation` is `Debug`-only so the index is not `Clone`. Outside `owns`, approved: one `mod contract;` declaration line in `src/main.rs` with a scoped allow, mirroring T1.1's `mod core;` precedent. Gate passes in the worktree.
 
 ---
 

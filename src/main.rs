@@ -1,5 +1,10 @@
 //! Doyle: truth maintenance for agent memory.
 
+// The contract index has no in-crate user until T2.3 wires up `doyle check`;
+// the allow keeps the gate quiet until then.
+#[allow(dead_code)]
+mod contract;
+
 // The core has no in-crate user until T1.5 turns this into a library;
 // the allow keeps the gate quiet until then.
 #[allow(dead_code)]
