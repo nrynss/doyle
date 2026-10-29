@@ -1,0 +1,41 @@
+{
+  "_note": "Hand-written expected citation sets for the T4.3 curator measurement, against patients-v1.yaml. 'expected' is the minimal set (the operation plus the most specific element the claim names); 'also_accepted' are related elements that genuinely support the claim (ancestors, arguments, types named by the claim) and count as true positives. 'rests_on_nothing' cases expect an empty citation. IDs are Vimanam ve2_ values from testdata/vimanam/README.md.",
+  "elements": {
+    "LIST_OP": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+    "LIST_200": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+    "GET_OP": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+    "GET_ID_ARG": "ve2_af1735706acc63d2252039f28ad29f2bb87c849543cd048196f1132e3a16dc38",
+    "GET_200": "ve2_96428f299ec6118d1033428207bf665fbaa05b25dc4e771eb79060b6d9bf0806",
+    "GET_404": "ve2_6add08d53def059f4e973257dc9e174a5398208bce2fa4d719e0418ca523349e",
+    "STATS_OP": "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c",
+    "STATS_200": "ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c",
+    "STATS_TYPE": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+    "PATIENT_COUNT": "ve2_99aaf77708e08db6ee0c7bd151e3044ef33e089e1bbe915fe889e7330b79058f",
+    "DECOM_OP": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+    "DECOM_BODY_ARG": "ve2_961aa3ef3e4dcfb88a106954f24e7b98bbeac77cbbd840ad30138558aa607c9c",
+    "DECOM_200": "ve2_7b2fe814702fee516a298fa7d2dde87c41638d860c96e14885faf599fc26ec24",
+    "DECOM_REQ_TYPE": "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355",
+    "CONF_TOKEN_FIELD": "ve2_eaa9caa44e2da53743bb372db1b7511946f9903fd9255609357a85e6ab932bfd",
+    "PATIENT_TYPE": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+    "VACC_FIELD": "ve2_71d78093d70ad33f22ad0fc20f9814316f78abbe0a139827f18210ef3a193c5d",
+    "ALLERGIES_FIELD": "ve2_f93936af278525eb2e468a133674ce8c34885c034d2738e953cdcbd6c3647dd2"
+  },
+  "cases": {
+    "M1": {"memory": "GET /patients returns every patient in one response; one call exports the whole clinic", "expected": ["LIST_OP", "LIST_200"], "also_accepted": []},
+    "M2": {"memory": "GET /patients/{id} returns 404 for an unknown patient id", "expected": ["GET_OP", "GET_404"], "also_accepted": []},
+    "M3": {"memory": "GET /stats patient_count is the total number of patients", "expected": ["STATS_OP", "PATIENT_COUNT"], "also_accepted": ["STATS_200", "STATS_TYPE"]},
+    "M4": {"memory": "POST /admin/decommission is permanent once confirmed; there is no undo", "expected": ["DECOM_OP"], "also_accepted": ["DECOM_BODY_ARG", "DECOM_200", "DECOM_REQ_TYPE", "CONF_TOKEN_FIELD"]},
+    "X1": {"memory": "A GET to /patients/{id} with an id that does not exist comes back 404 (endpoint named by path)", "expected": ["GET_OP", "GET_404"], "also_accepted": []},
+    "X2": {"memory": "listPatients gives back the full patient list in a single call (endpoint named by operation ID)", "expected": ["LIST_OP", "LIST_200"], "also_accepted": []},
+    "X3": {"memory": "One export call fetches the entire clinic; there is no paging to handle (behaviour only, no names)", "expected": ["LIST_OP", "LIST_200"], "also_accepted": []},
+    "X4": {"memory": "The monthly patient-count report runs at 02:00 on the first of the month (outside the contract)", "rests_on_nothing": true},
+    "X5": {"memory": "patient_count on the stats endpoint tells you how many patients there are in total (M3 paraphrase)", "expected": ["STATS_OP", "PATIENT_COUNT"], "also_accepted": ["STATS_200", "STATS_TYPE"]},
+    "X6": {"memory": "Decommissioning takes a confirmation token and cannot be reversed (M4 variant)", "expected": ["DECOM_OP"], "also_accepted": ["DECOM_BODY_ARG", "DECOM_200", "DECOM_REQ_TYPE", "CONF_TOKEN_FIELD"]},
+    "X7": {"memory": "Every patient record carries its vaccination history and allergy notes (type fields)", "expected": ["VACC_FIELD", "ALLERGIES_FIELD"], "also_accepted": ["PATIENT_TYPE"]},
+    "X8": {"memory": "Lambo marks a contradicted memory with a warning when it is recalled (about the memory system, not the contract)", "rests_on_nothing": true},
+    "X9": {"memory": "Looking up a single patient by id returns that patient's record (behaviour only, success path)", "expected": ["GET_OP", "GET_200"], "also_accepted": ["GET_ID_ARG", "PATIENT_TYPE"]},
+    "X10": {"memory": "The stats endpoint reports when the counts were generated (generated_at exists only in v2, not in v1)", "rests_on_nothing": true},
+    "X11": {"memory": "POST /patients creates a new patient and returns its id (no such endpoint in the contract)", "rests_on_nothing": true},
+    "X12": {"memory": "The list endpoint accepts a cursor to page through patients (cursor exists only in v2, not in v1)", "rests_on_nothing": true}
+  }
+}

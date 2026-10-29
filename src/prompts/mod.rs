@@ -1,1 +1,4 @@
-//! Stub for prompt templates; filled in by T4.3 and T4.4.
+//! Prompt templates for the model calls. T4.3 owns the curator prompt;
+//! T4.4 will own the re-check prompt (its `mod recheck;` line lands with it).
+
+pub mod curator;

@@ -1,0 +1,62 @@
+{
+  "case_id": "X3",
+  "memory_text": "One export call fetches the entire clinic; there is no paging to handle",
+  "request": {
+    "model": "meta-models/muse-spark-open-1026",
+    "system": "You curate memory citations for Doyle, which tracks what each agent memory rests on in an API contract. For one memory and a list of contract elements: return the IDs of the elements the memory's claim rests on (the operation, type, field, argument or result whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Cite only IDs from the list you were given; any other ID is dropped. If the memory is about nothing in this contract, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).",
+    "user": "Memory:\nOne export call fetches the entire clinic; there is no paging to handle\n\nContract elements (cite only these IDs):\n- ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6 operation listPatients (GET /patients)\n- ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba result '200' of listPatients (GET /patients)\n- ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5 operation getPatient (GET /patients/{id})\n- ve2_af1735706acc63d2252039f28ad29f2bb87c849543cd048196f1132e3a16dc38 argument 'id' of getPatient (GET /patients/{id})\n- ve2_96428f299ec6118d1033428207bf665fbaa05b25dc4e771eb79060b6d9bf0806 result '200' of getPatient (GET /patients/{id})\n- ve2_6add08d53def059f4e973257dc9e174a5398208bce2fa4d719e0418ca523349e result '404' of getPatient (GET /patients/{id})\n- ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c operation getStats (GET /stats)\n- ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c result '200' of getStats (GET /stats)\n- ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846 operation decommission (POST /admin/decommission)\n- ve2_961aa3ef3e4dcfb88a106954f24e7b98bbeac77cbbd840ad30138558aa607c9c argument 'requestBody' of decommission (POST /admin/decommission)\n- ve2_7b2fe814702fee516a298fa7d2dde87c41638d860c96e14885faf599fc26ec24 result '200' of decommission (POST /admin/decommission)\n- ve2_bcec4b557ee0c12474dda82f0710f44e2ed024f9d370dcadbbfcc8d465414bd1 result '400' of decommission (POST /admin/decommission)\n- ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a type Patient\n- ve2_ed07c0eb1b09b8b598532183e7b0978cda07ca6d020bf75174773136eed5dde3 field Patient.id\n- ve2_12642b08dc3604fe711e89771d05e342639d5f3afc96235cf5ed1942eddc4714 field Patient.name\n- ve2_b68e0a30fef05631a0d8c95a40e173eeecb0fa7d5886b807e2ed934c6600380c field Patient.species\n- ve2_96701b99a984df88038e17d71117384a0536bdb4a9852c3ca46b9f7b70722016 field Patient.breed\n- ve2_7fbf38acfd6b0c0786e29ff171828d04f6bc83fba6abdf88f899280d9bb21a0e field Patient.owner_id\n- ve2_71d78093d70ad33f22ad0fc20f9814316f78abbe0a139827f18210ef3a193c5d field Patient.vaccinations\n- ve2_f93936af278525eb2e468a133674ce8c34885c034d2738e953cdcbd6c3647dd2 field Patient.allergies\n- ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff type Vaccination\n- ve2_8d3394e293bb679db7f4bad28b2ca780119bf7bc3b188e2a14ea2fedbbdb1ed4 field Vaccination.vaccine\n- ve2_fb09958570cc3e479e0d21be809df104c8d63dd1a34cd1af1bc61d11dbe695df field Vaccination.given_on\n- ve2_296f8ec0b4571620dd9e8e6a43123f8cd11d0d6e723a4762f98ca89bdd114f67 field Vaccination.due_on\n- ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b type Allergy\n- ve2_621610e7df79d5c5bd7cdd9435455ccb4e854393baa3491425e73b4793694a6a field Allergy.substance\n- ve2_a594d340576fc9b2ee074906c5ab73222ae2bf1877055693e731970882b82c64 field Allergy.reaction\n- ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809 type Stats\n- ve2_99aaf77708e08db6ee0c7bd151e3044ef33e089e1bbe915fe889e7330b79058f field Stats.patient_count\n- ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355 type DecommissionRequest\n- ve2_eaa9caa44e2da53743bb372db1b7511946f9903fd9255609357a85e6ab932bfd field DecommissionRequest.confirmation_token",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "element_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IDs from the contract element list the memory rests on; empty when it rests on nothing."
+        },
+        "claim": {
+          "type": "string",
+          "description": "The memory's claim in one line, short and plain."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "0.0 to 1.0: how confident the citation is."
+        },
+        "rests_on_nothing": {
+          "type": "boolean",
+          "description": "True when the memory is about nothing in this contract."
+        }
+      },
+      "required": [
+        "element_ids",
+        "claim",
+        "confidence",
+        "rests_on_nothing"
+      ],
+      "additionalProperties": false
+    },
+    "budget": {
+      "max_output_tokens": 2048,
+      "max_cost_usd": null
+    }
+  },
+  "response": {
+    "value": {
+      "element_ids": [
+        "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+        "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba"
+      ],
+      "claim": "A single GET /patients call returns the entire clinic with no paging required",
+      "confidence": 0.92,
+      "rests_on_nothing": false
+    },
+    "usage": {
+      "input_tokens": 1809,
+      "output_tokens": 1199,
+      "cost_usd": null
+    }
+  }
+}
