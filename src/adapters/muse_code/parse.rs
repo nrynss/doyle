@@ -2,11 +2,9 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::core::{Memory, MemoryRef};
-
-use super::locate::fnv1a64;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Frontmatter {
@@ -19,6 +17,7 @@ pub struct Note {
     pub text: String,
     pub frontmatter: Frontmatter,
     pub source: String,
+    pub ordinal: usize,
 }
 
 /// Split leading `---\n...\n---` frontmatter from the body.
@@ -87,6 +86,7 @@ pub fn collect_notes(root: &Path, entry_rel: &str, seen: &mut HashSet<String>) -
     };
     let (fm, body) = split_frontmatter(&content);
     let mut notes = Vec::new();
+    let mut ordinal = 0usize;
     for line in body.lines() {
         let trimmed = line.trim();
         let bullet = match trimmed.strip_prefix("- ") {
@@ -96,9 +96,9 @@ pub fn collect_notes(root: &Path, entry_rel: &str, seen: &mut HashSet<String>) -
         if bullet.is_empty() {
             continue;
         }
+        ordinal += 1;
         if let Some(target) = index_target(bullet) {
             // Resolve relative to the entry's directory.
-            let base = full.parent().unwrap_or(root);
             let target_rel = if let Some(parent) = Path::new(entry_rel).parent() {
                 if parent == Path::new("") {
                     target.clone()
@@ -108,7 +108,6 @@ pub fn collect_notes(root: &Path, entry_rel: &str, seen: &mut HashSet<String>) -
             } else {
                 target.clone()
             };
-            let _ = base;
             let sub = collect_notes(root, &target_rel, seen);
             notes.extend(sub);
         } else {
@@ -116,15 +115,19 @@ pub fn collect_notes(root: &Path, entry_rel: &str, seen: &mut HashSet<String>) -
                 text: bullet.to_string(),
                 frontmatter: fm.clone(),
                 source: entry_rel.to_string(),
+                ordinal,
             });
         }
     }
     notes
 }
 
-/// Stable id for a note: source file + short hash of its text.
-pub fn note_id(source: &str, text: &str) -> String {
-    format!("{}#{:016x}", source, fnv1a64(text.trim()))
+/// Stable id for a note: source file + ordinal position within that file.
+/// The ordinal is positional, not content-derived, so the id survives both
+/// unrelated appends and in-place annotation of the note itself, and two
+/// notes with identical text never collide.
+pub fn note_id(source: &str, ordinal: usize) -> String {
+    format!("{}#{}", source, ordinal)
 }
 
 /// Read all notes from a memory folder into Memories.
@@ -141,7 +144,7 @@ pub fn read_folder(folder: &Path, scope: &str, adapter_name: &str) -> Vec<Memory
         .map(|n| Memory {
             reference: MemoryRef {
                 adapter: adapter_name.to_string(),
-                id: note_id(&n.source, &n.text),
+                id: note_id(&n.source, n.ordinal),
             },
             text: n.text,
             updated_at: None,
@@ -150,7 +153,38 @@ pub fn read_folder(folder: &Path, scope: &str, adapter_name: &str) -> Vec<Memory
         .collect()
 }
 
-/// Expose PathBuf for callers.
-pub fn folder_path(folder: &Path) -> PathBuf {
-    folder.to_path_buf()
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn split_frontmatter_memory_md() {
+        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let content =
+            fs::read_to_string(base.join("testdata/memories/muse-code/MEMORY.md")).unwrap();
+        let (fm, body) = split_frontmatter(&content);
+        assert_eq!(fm.note_type.as_deref(), Some("reference"));
+        assert_eq!(
+            fm.description.as_deref(),
+            Some("Fernwhistle patient records API")
+        );
+        assert!(body.contains("GET /patients"));
+        assert!(!body.trim_start().starts_with("---"));
+    }
+
+    #[test]
+    fn split_frontmatter_patients_stats() {
+        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let content =
+            fs::read_to_string(base.join("testdata/memories/muse-code/patients-stats.md")).unwrap();
+        let (fm, body) = split_frontmatter(&content);
+        assert_eq!(fm.note_type.as_deref(), Some("reference"));
+        assert_eq!(
+            fm.description.as_deref(),
+            Some("Fernwhistle patient records stats endpoint")
+        );
+        assert!(body.contains("GET /stats"));
+    }
 }
