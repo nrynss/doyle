@@ -130,11 +130,17 @@ requires:   [T0.3]
 fixture-ok: yes
 size:       XS · light
 owns:       testdata/vimanam/
-status:     claimed:haiku-t0.6
+status:     in-review
 ```
 Run Vimanam 2.x on the demo contracts, through its CLI and a scratch program using the library, and record what Doyle will get: the entity IDs for every operation, type and field touched, and the change facts (`subject`, `kind`, `severity`) for v1 → v2. Confirm the pagination change is reported, and with which severity. The scratch program is not committed; its output is.
 
 **Done when:** `testdata/vimanam/patients-v1-v2.json` holds the v2 JSON diff and `testdata/vimanam/entities-v1.json` the v1 entity list; the handoff text says whether the pagination change is detected and how it is classified.
+
+**Notes (T0.6)**
+- Built: `testdata/vimanam/` with the CLI JSON and Markdown diffs, the library's v1 and v2 entity lists and change facts, and a README with the change-fact table and the entity IDs the later tasks cite. Vimanam 2.0.0 installed into a scratch root with `--locked`; the scratch library program is not committed.
+- Decided: the README reports the facts as Vimanam emits them and marks what the flagging rules must handle. It does not tune the flag set to match `testdata/README.md`.
+- Surprised me: the pagination change is reported as `pagination_changed`, severity `review`, on the `listPatients` operation (inferred from list, cursor and limit, and `next_cursor`), and the breaking fact is the 200 response's `array` → `object`. The Markdown report omits the pagination fact and reports one review item where the JSON has three. Also, an optional additive field on the `Stats` type is `review` at the type level, while the same field on the `getStats` response is non-breaking. That review fact can reach M3 through the shared `Stats` type, which the expected flag set `{M1}` says must not flag. Filed as issue text in the README, for the flagging task to settle.
+- Checked: the change facts are the 11 the CLI emits, and the library's diff gives the same IDs. `getPatient`, `Patient` and `decommission` have no change facts in their subtrees.
 
 ---
 

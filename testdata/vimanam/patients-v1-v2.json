@@ -1,0 +1,2245 @@
+{
+  "schema_version": 2,
+  "generator": {
+    "name": "vimanam",
+    "version": "2.0.0"
+  },
+  "old": {
+    "file_sha256": "01ad855dcee1c182b95c04095e4bc3f9669ff37c3561db53fe4a5d29fbdaca5a",
+    "contract": {
+      "format": "openapi",
+      "title": "Fernwhistle Veterinary Group patient records",
+      "version": "1.0.0",
+      "entities": [
+        {
+          "id": "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536",
+          "kind": "service",
+          "name": "API",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/services/API",
+            "resolved": false
+          },
+          "attributes": {},
+          "references": []
+        },
+        {
+          "id": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+          "kind": "operation",
+          "name": "listPatients",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "listPatients",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Patient"
+            }
+          },
+          "references": [
+            "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a"
+          ]
+        },
+        {
+          "id": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "kind": "operation",
+          "name": "getPatient",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getPatient",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_af1735706acc63d2252039f28ad29f2bb87c849543cd048196f1132e3a16dc38",
+          "kind": "argument",
+          "name": "id",
+          "parent": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": "path",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_96428f299ec6118d1033428207bf665fbaa05b25dc4e771eb79060b6d9bf0806",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "references": [
+            "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a"
+          ]
+        },
+        {
+          "id": "ve2_6add08d53def059f4e973257dc9e174a5398208bce2fa4d719e0418ca523349e",
+          "kind": "result",
+          "name": "404",
+          "parent": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": null,
+            "status": "404",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c",
+          "kind": "operation",
+          "name": "getStats",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/stats",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getStats",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/stats",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Stats"
+          },
+          "references": [
+            "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809"
+          ]
+        },
+        {
+          "id": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "kind": "operation",
+          "name": "decommission",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "decommission",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_961aa3ef3e4dcfb88a106954f24e7b98bbeac77cbbd840ad30138558aa607c9c",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DecommissionRequest"
+            }
+          },
+          "references": [
+            "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355"
+          ]
+        },
+        {
+          "id": "ve2_7b2fe814702fee516a298fa7d2dde87c41638d860c96e14885faf599fc26ec24",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_bcec4b557ee0c12474dda82f0710f44e2ed024f9d370dcadbbfcc8d465414bd1",
+          "kind": "result",
+          "name": "400",
+          "parent": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": null,
+            "status": "400",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "kind": "type",
+          "name": "Patient",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Patient",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "species": {
+                "type": "string"
+              },
+              "breed": {
+                "type": "string"
+              },
+              "owner_id": {
+                "type": "string"
+              },
+              "vaccinations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Vaccination"
+                }
+              },
+              "allergies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Allergy"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "species",
+              "owner_id",
+              "vaccinations",
+              "allergies"
+            ]
+          },
+          "references": [
+            "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+            "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b"
+          ]
+        },
+        {
+          "id": "ve2_ed07c0eb1b09b8b598532183e7b0978cda07ca6d020bf75174773136eed5dde3",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_12642b08dc3604fe711e89771d05e342639d5f3afc96235cf5ed1942eddc4714",
+          "kind": "field",
+          "name": "name",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/name",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_b68e0a30fef05631a0d8c95a40e173eeecb0fa7d5886b807e2ed934c6600380c",
+          "kind": "field",
+          "name": "species",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/species",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_96701b99a984df88038e17d71117384a0536bdb4a9852c3ca46b9f7b70722016",
+          "kind": "field",
+          "name": "breed",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/breed",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_7fbf38acfd6b0c0786e29ff171828d04f6bc83fba6abdf88f899280d9bb21a0e",
+          "kind": "field",
+          "name": "owner_id",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/owner_id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_71d78093d70ad33f22ad0fc20f9814316f78abbe0a139827f18210ef3a193c5d",
+          "kind": "field",
+          "name": "vaccinations",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/vaccinations",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vaccination"
+            },
+            "x-vimanam-required": true
+          },
+          "references": [
+            "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff"
+          ]
+        },
+        {
+          "id": "ve2_f93936af278525eb2e468a133674ce8c34885c034d2738e953cdcbd6c3647dd2",
+          "kind": "field",
+          "name": "allergies",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/allergies",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allergy"
+            },
+            "x-vimanam-required": true
+          },
+          "references": [
+            "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b"
+          ]
+        },
+        {
+          "id": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "kind": "type",
+          "name": "Vaccination",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Vaccination",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "vaccine": {
+                "type": "string"
+              },
+              "given_on": {
+                "type": "string",
+                "format": "date"
+              },
+              "due_on": {
+                "type": "string",
+                "format": "date"
+              }
+            },
+            "required": [
+              "vaccine",
+              "given_on"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_8d3394e293bb679db7f4bad28b2ca780119bf7bc3b188e2a14ea2fedbbdb1ed4",
+          "kind": "field",
+          "name": "vaccine",
+          "parent": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/vaccine",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_fb09958570cc3e479e0d21be809df104c8d63dd1a34cd1af1bc61d11dbe695df",
+          "kind": "field",
+          "name": "given_on",
+          "parent": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/given_on",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "format": "date",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_296f8ec0b4571620dd9e8e6a43123f8cd11d0d6e723a4762f98ca89bdd114f67",
+          "kind": "field",
+          "name": "due_on",
+          "parent": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/due_on",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "format": "date",
+            "x-vimanam-required": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b",
+          "kind": "type",
+          "name": "Allergy",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Allergy",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "substance": {
+                "type": "string"
+              },
+              "reaction": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "substance",
+              "reaction"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_621610e7df79d5c5bd7cdd9435455ccb4e854393baa3491425e73b4793694a6a",
+          "kind": "field",
+          "name": "substance",
+          "parent": "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/substance",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_a594d340576fc9b2ee074906c5ab73222ae2bf1877055693e731970882b82c64",
+          "kind": "field",
+          "name": "reaction",
+          "parent": "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/reaction",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+          "kind": "type",
+          "name": "Stats",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Stats",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "patient_count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "patient_count"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_99aaf77708e08db6ee0c7bd151e3044ef33e089e1bbe915fe889e7330b79058f",
+          "kind": "field",
+          "name": "patient_count",
+          "parent": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/patient_count",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355",
+          "kind": "type",
+          "name": "DecommissionRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/DecommissionRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "confirmation_token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "confirmation_token"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_eaa9caa44e2da53743bb372db1b7511946f9903fd9255609357a85e6ab932bfd",
+          "kind": "field",
+          "name": "confirmation_token",
+          "parent": "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/confirmation_token",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        }
+      ]
+    }
+  },
+  "new": {
+    "file_sha256": "b0fd334fefcbd8476542637907b6bf92a1805a430c359427c034f82cb0e646ff",
+    "contract": {
+      "format": "openapi",
+      "title": "Fernwhistle Veterinary Group patient records",
+      "version": "2.0.0",
+      "entities": [
+        {
+          "id": "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536",
+          "kind": "service",
+          "name": "API",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/services/API",
+            "resolved": false
+          },
+          "attributes": {},
+          "references": []
+        },
+        {
+          "id": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+          "kind": "operation",
+          "name": "listPatients",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "listPatients",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_e9e6eff5e7653c9030cf2ac908ba27473bd2011c6aa7abf41abd8298abf45df6",
+          "kind": "argument",
+          "name": "cursor",
+          "parent": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients",
+            "parameter_in": "query",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_70215df48c165084129a175bf46d68fab5bfbd1eb5cca30250892848c2fa044b",
+          "kind": "argument",
+          "name": "limit",
+          "parent": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients",
+            "parameter_in": "query",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/PatientPage"
+          },
+          "references": [
+            "ve2_4e6b19cef1c5b0524fb5c8b9f921fc6df3117360c29c2c2d22e58aa536c547a4"
+          ]
+        },
+        {
+          "id": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "kind": "operation",
+          "name": "getPatient",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getPatient",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_af1735706acc63d2252039f28ad29f2bb87c849543cd048196f1132e3a16dc38",
+          "kind": "argument",
+          "name": "id",
+          "parent": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": "path",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_96428f299ec6118d1033428207bf665fbaa05b25dc4e771eb79060b6d9bf0806",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "references": [
+            "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a"
+          ]
+        },
+        {
+          "id": "ve2_6add08d53def059f4e973257dc9e174a5398208bce2fa4d719e0418ca523349e",
+          "kind": "result",
+          "name": "404",
+          "parent": "ve2_c69ae2bf6960e6f28e01bf913a93aa0a325f6d3ee49d445a68b1f580f27af2b5",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/patients/{id}",
+            "parameter_in": null,
+            "status": "404",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c",
+          "kind": "operation",
+          "name": "getStats",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/stats",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "getStats",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_88f1296b143cdad99952319ae783095b3386438f0c8932538d9bfbe1b7fcfb0c",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "GET",
+            "path": "/stats",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Stats"
+          },
+          "references": [
+            "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809"
+          ]
+        },
+        {
+          "id": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "kind": "operation",
+          "name": "decommission",
+          "parent": null,
+          "services": [
+            "ve2_82627720cb1a73314e1e9428a6fa42079087f62821268b5010999a8afd226536"
+          ],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": null,
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "operation_id": "decommission",
+            "deprecated": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_961aa3ef3e4dcfb88a106954f24e7b98bbeac77cbbd840ad30138558aa607c9c",
+          "kind": "argument",
+          "name": "requestBody",
+          "parent": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": "body",
+            "status": null,
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": {
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DecommissionRequest"
+            }
+          },
+          "references": [
+            "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355"
+          ]
+        },
+        {
+          "id": "ve2_7b2fe814702fee516a298fa7d2dde87c41638d860c96e14885faf599fc26ec24",
+          "kind": "result",
+          "name": "200",
+          "parent": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": null,
+            "status": "200",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_bcec4b557ee0c12474dda82f0710f44e2ed024f9d370dcadbbfcc8d465414bd1",
+          "kind": "result",
+          "name": "400",
+          "parent": "ve2_9e9663295485ddf808651f117c8ca42ab58e33fbe49a27309e0547f77c866846",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": "POST",
+            "path": "/admin/decommission",
+            "parameter_in": null,
+            "status": "400",
+            "pointer": "",
+            "resolved": false
+          },
+          "attributes": null,
+          "references": []
+        },
+        {
+          "id": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "kind": "type",
+          "name": "Patient",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Patient",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "species": {
+                "type": "string"
+              },
+              "breed": {
+                "type": "string"
+              },
+              "owner_id": {
+                "type": "string"
+              },
+              "vaccinations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Vaccination"
+                }
+              },
+              "allergies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Allergy"
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "species",
+              "owner_id",
+              "vaccinations",
+              "allergies"
+            ]
+          },
+          "references": [
+            "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+            "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b"
+          ]
+        },
+        {
+          "id": "ve2_ed07c0eb1b09b8b598532183e7b0978cda07ca6d020bf75174773136eed5dde3",
+          "kind": "field",
+          "name": "id",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_12642b08dc3604fe711e89771d05e342639d5f3afc96235cf5ed1942eddc4714",
+          "kind": "field",
+          "name": "name",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/name",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_b68e0a30fef05631a0d8c95a40e173eeecb0fa7d5886b807e2ed934c6600380c",
+          "kind": "field",
+          "name": "species",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/species",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_96701b99a984df88038e17d71117384a0536bdb4a9852c3ca46b9f7b70722016",
+          "kind": "field",
+          "name": "breed",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/breed",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_7fbf38acfd6b0c0786e29ff171828d04f6bc83fba6abdf88f899280d9bb21a0e",
+          "kind": "field",
+          "name": "owner_id",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/owner_id",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_71d78093d70ad33f22ad0fc20f9814316f78abbe0a139827f18210ef3a193c5d",
+          "kind": "field",
+          "name": "vaccinations",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/vaccinations",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Vaccination"
+            },
+            "x-vimanam-required": true
+          },
+          "references": [
+            "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff"
+          ]
+        },
+        {
+          "id": "ve2_f93936af278525eb2e468a133674ce8c34885c034d2738e953cdcbd6c3647dd2",
+          "kind": "field",
+          "name": "allergies",
+          "parent": "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/allergies",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allergy"
+            },
+            "x-vimanam-required": true
+          },
+          "references": [
+            "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b"
+          ]
+        },
+        {
+          "id": "ve2_4e6b19cef1c5b0524fb5c8b9f921fc6df3117360c29c2c2d22e58aa536c547a4",
+          "kind": "type",
+          "name": "PatientPage",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/PatientPage",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Patient"
+                }
+              },
+              "next_cursor": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "items"
+            ]
+          },
+          "references": [
+            "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a"
+          ]
+        },
+        {
+          "id": "ve2_33a142e6d06866abbd564b5a4cc2fcf26aedd7de2cc0b7ebab571855f2e3c31d",
+          "kind": "field",
+          "name": "items",
+          "parent": "ve2_4e6b19cef1c5b0524fb5c8b9f921fc6df3117360c29c2c2d22e58aa536c547a4",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/items",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Patient"
+            },
+            "x-vimanam-required": true
+          },
+          "references": [
+            "ve2_ca77e31b900362a36a579ba59cdebfd8302cbfad2ec4b2d544857c0fcd30167a"
+          ]
+        },
+        {
+          "id": "ve2_f8f5cd86b04f416aebdc09cabc520fae01f409e33af2a0a123a4e38ecb428c1d",
+          "kind": "field",
+          "name": "next_cursor",
+          "parent": "ve2_4e6b19cef1c5b0524fb5c8b9f921fc6df3117360c29c2c2d22e58aa536c547a4",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/next_cursor",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "nullable": true,
+            "x-vimanam-required": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "kind": "type",
+          "name": "Vaccination",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Vaccination",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "vaccine": {
+                "type": "string"
+              },
+              "given_on": {
+                "type": "string",
+                "format": "date"
+              },
+              "due_on": {
+                "type": "string",
+                "format": "date"
+              }
+            },
+            "required": [
+              "vaccine",
+              "given_on"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_8d3394e293bb679db7f4bad28b2ca780119bf7bc3b188e2a14ea2fedbbdb1ed4",
+          "kind": "field",
+          "name": "vaccine",
+          "parent": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/vaccine",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_fb09958570cc3e479e0d21be809df104c8d63dd1a34cd1af1bc61d11dbe695df",
+          "kind": "field",
+          "name": "given_on",
+          "parent": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/given_on",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "format": "date",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_296f8ec0b4571620dd9e8e6a43123f8cd11d0d6e723a4762f98ca89bdd114f67",
+          "kind": "field",
+          "name": "due_on",
+          "parent": "ve2_c3a164db428104a416cb4baeb14852e8cf5986a0c2b3fe9eb66606682f6b0fff",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/due_on",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "format": "date",
+            "x-vimanam-required": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b",
+          "kind": "type",
+          "name": "Allergy",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Allergy",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "substance": {
+                "type": "string"
+              },
+              "reaction": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "substance",
+              "reaction"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_621610e7df79d5c5bd7cdd9435455ccb4e854393baa3491425e73b4793694a6a",
+          "kind": "field",
+          "name": "substance",
+          "parent": "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/substance",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_a594d340576fc9b2ee074906c5ab73222ae2bf1877055693e731970882b82c64",
+          "kind": "field",
+          "name": "reaction",
+          "parent": "ve2_1dd1441785508691d9e1c7d84624a612f683143342de7ab3bd5979fea647c36b",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/reaction",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+          "kind": "type",
+          "name": "Stats",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/Stats",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "patient_count": {
+                "type": "integer"
+              },
+              "generated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "patient_count"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_99aaf77708e08db6ee0c7bd151e3044ef33e089e1bbe915fe889e7330b79058f",
+          "kind": "field",
+          "name": "patient_count",
+          "parent": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/patient_count",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "integer",
+            "x-vimanam-required": true
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_ebb75b72f4c31d9ac0530deaf7f0c2fe273c0092e0f9cf5d63ef8d679933275f",
+          "kind": "field",
+          "name": "generated_at",
+          "parent": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/generated_at",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "format": "date-time",
+            "x-vimanam-required": false
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355",
+          "kind": "type",
+          "name": "DecommissionRequest",
+          "parent": null,
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/types/DecommissionRequest",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "confirmation_token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "confirmation_token"
+            ]
+          },
+          "references": []
+        },
+        {
+          "id": "ve2_eaa9caa44e2da53743bb372db1b7511946f9903fd9255609357a85e6ab932bfd",
+          "kind": "field",
+          "name": "confirmation_token",
+          "parent": "ve2_e9959823b68116d2498f7d823c14b316b045df638495fe9d496c0f7430538355",
+          "services": [],
+          "native": {
+            "format": "openapi",
+            "method": null,
+            "path": null,
+            "parameter_in": null,
+            "status": null,
+            "pointer": "/properties/confirmation_token",
+            "resolved": false
+          },
+          "attributes": {
+            "type": "string",
+            "x-vimanam-required": true
+          },
+          "references": []
+        }
+      ]
+    }
+  },
+  "summary": {
+    "operations_added": 0,
+    "operations_removed": 0,
+    "operations_changed": 2,
+    "breaking": 1,
+    "non_breaking": 7,
+    "review": 3
+  },
+  "changes": [
+    {
+      "id": "vc2_6b9ac1411b5ee9a1075ddfbb0c5bd42539fa90e3db1f5b8a56cde2f66c3ef0f5",
+      "subject": "ve2_e9e6eff5e7653c9030cf2ac908ba27473bd2011c6aa7abf41abd8298abf45df6",
+      "kind": "argument_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": "query",
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "parameter_added",
+      "details": {
+        "name": "cursor",
+        "location": "query",
+        "required": false
+      }
+    },
+    {
+      "id": "vc2_c51832b42d95b3bd08010fe6d45ec3cdc7fe8ff962297759210d436fedda79c5",
+      "subject": "ve2_70215df48c165084129a175bf46d68fab5bfbd1eb5cca30250892848c2fa044b",
+      "kind": "argument_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": "query",
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "parameter_added",
+      "details": {
+        "name": "limit",
+        "location": "query",
+        "required": false
+      }
+    },
+    {
+      "id": "vc2_d7e1b2acbebe45b089106951b949710e3112d1586ed74cfe5fab47d702987277",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "constraint_changed",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/items",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/items",
+          "target": "other",
+          "member": null,
+          "operation": "removed",
+          "before": {
+            "present": true,
+            "value": {
+              "properties": {
+                "allergies": {
+                  "items": {
+                    "properties": {
+                      "reaction": {
+                        "type": "string"
+                      },
+                      "substance": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "reaction",
+                      "substance"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "breed": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "owner_id": {
+                  "type": "string"
+                },
+                "species": {
+                  "type": "string"
+                },
+                "vaccinations": {
+                  "items": {
+                    "properties": {
+                      "due_on": {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      "given_on": {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      "vaccine": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "given_on",
+                      "vaccine"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "allergies",
+                "id",
+                "name",
+                "owner_id",
+                "species",
+                "vaccinations"
+              ],
+              "type": "object"
+            }
+          },
+          "after": {
+            "present": false
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_9bedbbb47825fa87ea41aa38342d0492948286a7dd4a5ecbb378310261df6841",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_type_changed",
+      "severity": "breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/type",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/type",
+          "target": "type",
+          "member": null,
+          "operation": "changed",
+          "before": {
+            "present": true,
+            "value": "array"
+          },
+          "after": {
+            "present": true,
+            "value": "object"
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_14d63f17bdfb4467870f8a2cd2e5e918171ba29935cb75283f9abc8693441609",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/properties/items",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/properties/items",
+          "target": "property",
+          "member": "items",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": {
+              "items": {
+                "properties": {
+                  "allergies": {
+                    "items": {
+                      "properties": {
+                        "reaction": {
+                          "type": "string"
+                        },
+                        "substance": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "reaction",
+                        "substance"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "breed": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "owner_id": {
+                    "type": "string"
+                  },
+                  "species": {
+                    "type": "string"
+                  },
+                  "vaccinations": {
+                    "items": {
+                      "properties": {
+                        "due_on": {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        "given_on": {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        "vaccine": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "given_on",
+                        "vaccine"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "allergies",
+                  "id",
+                  "name",
+                  "owner_id",
+                  "species",
+                  "vaccinations"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_0653a7b991e46fa63f3df84606327c461a5dceed99cafa93a2a229ab8dc8fd24",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/properties/next_cursor",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/properties/next_cursor",
+          "target": "property",
+          "member": "next_cursor",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_bfadda2dfdd29ad547e6471ed1597cd0926bdc571bf5e34d558069ba7a43ef86",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_required_changed",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/required/items",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/required/items",
+          "target": "required_member",
+          "member": "items",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": "items"
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_7fa66397deef0d8f9302af4c94fcccdfdd0b3909895ed54b008b2103808cc132",
+      "subject": "ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c",
+      "kind": "field_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/stats",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/properties/generated_at",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/properties/generated_at",
+          "target": "property",
+          "member": "generated_at",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_6cfe1d7e93fec49f1e8a37c39c64364e23dbcd0ae3384e882ee8850d533903e0",
+      "subject": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+      "kind": "field_added",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/Stats/properties/generated_at",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {
+        "pointer": "/properties/generated_at",
+        "before": {
+          "present": false
+        },
+        "after": {
+          "present": true,
+          "value": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_63939142fa4b5f773d88166a6342c46dc416777aea41b2ed9d40b03ad23fe2b3",
+      "subject": "ve2_4e6b19cef1c5b0524fb5c8b9f921fc6df3117360c29c2c2d22e58aa536c547a4",
+      "kind": "type_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/PatientPage",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {}
+    },
+    {
+      "id": "vc2_d82adaee7e47799b8027d3c1b9f458e16be8a20df1696186f351369f07e011e0",
+      "subject": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+      "kind": "pagination_changed",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": null,
+        "pointer": "",
+        "resolved": true
+      },
+      "native_kind": "pagination_inferred",
+      "details": {
+        "before": null,
+        "after": {
+          "controls": [
+            {
+              "name": "cursor",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "default": 100,
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": [
+            {
+              "status": "200",
+              "continuation": [
+                "next_cursor"
+              ]
+            }
+          ]
+        },
+        "confidence": "inferred",
+        "evidence_rule": "list+request_controls+continuation"
+      }
+    }
+  ]
+}

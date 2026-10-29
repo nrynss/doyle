@@ -1,0 +1,512 @@
+{
+  "source": "vimanam 2.0.0 contract::openapi::diff (library), parse via contract::openapi::parse / parse_openapi",
+  "changes": [
+    {
+      "id": "vc2_6b9ac1411b5ee9a1075ddfbb0c5bd42539fa90e3db1f5b8a56cde2f66c3ef0f5",
+      "subject": "ve2_e9e6eff5e7653c9030cf2ac908ba27473bd2011c6aa7abf41abd8298abf45df6",
+      "kind": "argument_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": "query",
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "parameter_added",
+      "details": {
+        "name": "cursor",
+        "location": "query",
+        "required": false
+      }
+    },
+    {
+      "id": "vc2_c51832b42d95b3bd08010fe6d45ec3cdc7fe8ff962297759210d436fedda79c5",
+      "subject": "ve2_70215df48c165084129a175bf46d68fab5bfbd1eb5cca30250892848c2fa044b",
+      "kind": "argument_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": "query",
+        "status": null,
+        "pointer": "",
+        "resolved": false
+      },
+      "native_kind": "parameter_added",
+      "details": {
+        "name": "limit",
+        "location": "query",
+        "required": false
+      }
+    },
+    {
+      "id": "vc2_d7e1b2acbebe45b089106951b949710e3112d1586ed74cfe5fab47d702987277",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "constraint_changed",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/items",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/items",
+          "target": "other",
+          "member": null,
+          "operation": "removed",
+          "before": {
+            "present": true,
+            "value": {
+              "properties": {
+                "allergies": {
+                  "items": {
+                    "properties": {
+                      "reaction": {
+                        "type": "string"
+                      },
+                      "substance": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "reaction",
+                      "substance"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "breed": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "owner_id": {
+                  "type": "string"
+                },
+                "species": {
+                  "type": "string"
+                },
+                "vaccinations": {
+                  "items": {
+                    "properties": {
+                      "due_on": {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      "given_on": {
+                        "format": "date",
+                        "type": "string"
+                      },
+                      "vaccine": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "given_on",
+                      "vaccine"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "allergies",
+                "id",
+                "name",
+                "owner_id",
+                "species",
+                "vaccinations"
+              ],
+              "type": "object"
+            }
+          },
+          "after": {
+            "present": false
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_9bedbbb47825fa87ea41aa38342d0492948286a7dd4a5ecbb378310261df6841",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_type_changed",
+      "severity": "breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/type",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/type",
+          "target": "type",
+          "member": null,
+          "operation": "changed",
+          "before": {
+            "present": true,
+            "value": "array"
+          },
+          "after": {
+            "present": true,
+            "value": "object"
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_14d63f17bdfb4467870f8a2cd2e5e918171ba29935cb75283f9abc8693441609",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/properties/items",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/properties/items",
+          "target": "property",
+          "member": "items",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": {
+              "items": {
+                "properties": {
+                  "allergies": {
+                    "items": {
+                      "properties": {
+                        "reaction": {
+                          "type": "string"
+                        },
+                        "substance": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "reaction",
+                        "substance"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "breed": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "owner_id": {
+                    "type": "string"
+                  },
+                  "species": {
+                    "type": "string"
+                  },
+                  "vaccinations": {
+                    "items": {
+                      "properties": {
+                        "due_on": {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        "given_on": {
+                          "format": "date",
+                          "type": "string"
+                        },
+                        "vaccine": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "given_on",
+                        "vaccine"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "allergies",
+                  "id",
+                  "name",
+                  "owner_id",
+                  "species",
+                  "vaccinations"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_0653a7b991e46fa63f3df84606327c461a5dceed99cafa93a2a229ab8dc8fd24",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/properties/next_cursor",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/properties/next_cursor",
+          "target": "property",
+          "member": "next_cursor",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_bfadda2dfdd29ad547e6471ed1597cd0926bdc571bf5e34d558069ba7a43ef86",
+      "subject": "ve2_86d3cdb7ce3a7f0b1a2fefa696f0acbbcf2d5406c717bb1f1f1cb5f4f62667ba",
+      "kind": "field_required_changed",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/required/items",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/required/items",
+          "target": "required_member",
+          "member": "items",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": "items"
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_7fa66397deef0d8f9302af4c94fcccdfdd0b3909895ed54b008b2103808cc132",
+      "subject": "ve2_6c3962f4033a5832c062e5d2bce8458ec018d67d8ff15cdbf109543d63662c5c",
+      "kind": "field_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/stats",
+        "parameter_in": null,
+        "status": "200",
+        "pointer": "/properties/generated_at",
+        "resolved": true
+      },
+      "native_kind": "response_schema_changed",
+      "details": {
+        "status": "200",
+        "schema_change": {
+          "pointer": "/properties/generated_at",
+          "target": "property",
+          "member": "generated_at",
+          "operation": "added",
+          "before": {
+            "present": false
+          },
+          "after": {
+            "present": true,
+            "value": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_6cfe1d7e93fec49f1e8a37c39c64364e23dbcd0ae3384e882ee8850d533903e0",
+      "subject": "ve2_c09c07ec8983f09afc5dafed67ee0e3e0d271de3b8f8f1bd61daa1111f063809",
+      "kind": "field_added",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/Stats/properties/generated_at",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {
+        "pointer": "/properties/generated_at",
+        "before": {
+          "present": false
+        },
+        "after": {
+          "present": true,
+          "value": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "id": "vc2_63939142fa4b5f773d88166a6342c46dc416777aea41b2ed9d40b03ad23fe2b3",
+      "subject": "ve2_4e6b19cef1c5b0524fb5c8b9f921fc6df3117360c29c2c2d22e58aa536c547a4",
+      "kind": "type_added",
+      "severity": "non_breaking",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": null,
+        "path": null,
+        "parameter_in": null,
+        "status": null,
+        "pointer": "/types/PatientPage",
+        "resolved": false
+      },
+      "native_kind": "surface_changed",
+      "details": {}
+    },
+    {
+      "id": "vc2_d82adaee7e47799b8027d3c1b9f458e16be8a20df1696186f351369f07e011e0",
+      "subject": "ve2_c81e37b7c42c484a1859c09e95bf8cec89a360db6743a691afab818f177c7bc6",
+      "kind": "pagination_changed",
+      "severity": "review",
+      "impacts": [
+        "source"
+      ],
+      "native": {
+        "format": "openapi",
+        "method": "GET",
+        "path": "/patients",
+        "parameter_in": null,
+        "status": null,
+        "pointer": "",
+        "resolved": true
+      },
+      "native_kind": "pagination_inferred",
+      "details": {
+        "before": null,
+        "after": {
+          "controls": [
+            {
+              "name": "cursor",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "default": 100,
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": [
+            {
+              "status": "200",
+              "continuation": [
+                "next_cursor"
+              ]
+            }
+          ]
+        },
+        "confidence": "inferred",
+        "evidence_rule": "list+request_controls+continuation"
+      }
+    }
+  ]
+}
