@@ -1,0 +1,13 @@
+{
+  "method": "POST",
+  "url": "http://127.0.0.1:7700/mcp/s/doyle-probe",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream",
+    "Mcp-Session-Id": "<mcp-session-id>"
+  },
+  "body": {
+    "jsonrpc": "2.0",
+    "method": "notifications/initialized"
+  }
+}

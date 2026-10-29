@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "url": "http://127.0.0.1:7700/mcp/s/doyle-probe",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream",
+    "Mcp-Session-Id": "<mcp-session-id>"
+  },
+  "body": {
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "id": 9,
+    "params": {
+      "name": "lambo_recall",
+      "arguments": {
+        "agent_id": "doyle-probe",
+        "query": "GET /patients export every patient",
+        "top_k": 5
+      }
+    }
+  }
+}

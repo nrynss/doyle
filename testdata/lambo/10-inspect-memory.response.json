@@ -1,0 +1,72 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "focus: GET /patients returns every patient in one response; one call exports the whole clinic [Logic]\ncanonization (Swarm): None -> Candidate refused\n  - survived 0 GC sweeps, needs at least 3\n  - dependents from 0 other interactions, needs at least 2\n\nhop 1:\n  Derives\n    <- <interaction 627e129f-24d3-4e3b-be66-ab1eefc8e2a8>\n"
+        }
+      ],
+      "structuredContent": {
+        "admission": {
+          "checks": [
+            {
+              "bar": 3.0,
+              "comparison": "at_least",
+              "current": 0.0,
+              "gate": "gc_survived",
+              "met": false,
+              "stage": 1
+            },
+            {
+              "bar": 2.0,
+              "comparison": "at_least",
+              "current": 0.0,
+              "gate": "dependent_interactions",
+              "met": false,
+              "stage": 1
+            }
+          ],
+          "eligible": false,
+          "next": "Candidate",
+          "policy": "Swarm",
+          "reasons": [
+            "survived 0 GC sweeps, needs at least 3",
+            "dependents from 0 other interactions, needs at least 2"
+          ],
+          "status": "None"
+        },
+        "focus": {
+          "blast_radius": 0,
+          "dependents": [],
+          "dependents_truncated": false,
+          "label": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic]",
+          "levels": [
+            {
+              "hop": 1,
+              "neighbours": [
+                {
+                  "direction": "<-",
+                  "edge_type": "Derives",
+                  "label": "<interaction 627e129f-24d3-4e3b-be66-ab1eefc8e2a8>",
+                  "node_id": "627e129f-24d3-4e3b-be66-ab1eefc8e2a8",
+                  "weight": 0.9
+                }
+              ]
+            }
+          ],
+          "node_id": "810c1cbf-0800-4bce-8cde-077edce7c15d"
+        },
+        "resolution": null,
+        "view": "focus: GET /patients returns every patient in one response; one call exports the whole clinic [Logic]\ncanonization (Swarm): None -> Candidate refused\n  - survived 0 GC sweeps, needs at least 3\n  - dependents from 0 other interactions, needs at least 2\n\nhop 1:\n  Derives\n    <- <interaction 627e129f-24d3-4e3b-be66-ab1eefc8e2a8>\n",
+        "warnings": []
+      },
+      "isError": false
+    }
+  }
+}

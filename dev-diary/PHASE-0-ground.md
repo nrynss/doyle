@@ -101,7 +101,7 @@ requires:   []
 fixture-ok: no
 size:       S · light
 owns:       testdata/lambo/, docs/lambo.md
-status:     blocked
+status:     done
 ```
 Turn "Lambo is reached as a client" into recorded calls Doyle can be built against without a running server.
 
@@ -112,6 +112,8 @@ Turn "Lambo is reached as a client" into recorded calls Doyle can be built again
 **Notes (blocked, not in review).** The read half is done: `initialize`, `notifications/initialized` and `tools/list` are recorded in `testdata/lambo/`, and `docs/lambo.md` lists the calls with their shapes. The write half is not done. The running server (Lambo 0.8.0) pins only `lambo-dev`; `/mcp/s/<scratch>` answers 404, and the docs show no scratch session reachable without a configuration change and a restart of that server. No write was sent. Options and the choice are in `docs/lambo.md`, "Addressing a session other than `lambo-dev`". The warning on a contradicted memory is therefore not observed. Unblock by choosing one of the three options there, then the write steps run.
 
 **Done when:** `docs/lambo.md` lists the calls Doyle needs with their request and response shapes; the transcripts are in `testdata/lambo/`; the warning on recall was seen, or the gap is written as issue text in the handoff log.
+
+**Closed.** The user chose option 1. `lambo-dogfood.service` now pins `lambo-dev` (still first and the default), `doyle` and `doyle-probe`; the HTTP writer holds all three leases. The write half was recorded against `doyle-probe` (`testdata/lambo/05`–`15`): derive, receipt applied, recall, inspect, a correction with `against`, and recall again. Recall warned on the stale memory itself on the first recall after the correction, with `⚠ Contradicted … (id <correction>)` on the stale memory and `⚠ Contradicts … (id <stale>)` on the correction, unchanged 75 seconds later. The docs' 60-second delay did not apply. No Lambo issue needed.
 
 ---
 
@@ -149,5 +151,5 @@ product.md's open question: a real public API upgrade with visible stakes (payme
 - [ ] Every key Doyle needs is named in `.env.example`, and access is confirmed (T0.2).
 - [ ] The demo contracts and seed memories exist, with the expected flag set written down (T0.3).
 - [x] The memory folder hash, hook registration and hook payloads are settled with evidence (T0.4).
-- [ ] Lambo's calls are recorded, and the warning on a contradicted memory is confirmed (T0.5).
+- [x] Lambo's calls are recorded, and the warning on a contradicted memory is confirmed (T0.5).
 - [ ] Vimanam's view of the demo change is recorded (T0.6).

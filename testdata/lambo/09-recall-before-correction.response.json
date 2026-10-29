@@ -1,0 +1,32 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic] (score 1.14, id 810c1cbf)"
+        }
+      ],
+      "structuredContent": {
+        "context": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic] (score 1.14, id 810c1cbf)",
+        "hits": [
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "GET /patients returns every patient in one response; one call exports the whole clinic",
+            "is_canonical": false,
+            "node_id": "810c1cbf-0800-4bce-8cde-077edce7c15d",
+            "score": 1.1442051811294522
+          }
+        ],
+        "warnings": []
+      },
+      "isError": false
+    }
+  }
+}

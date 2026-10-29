@@ -1,0 +1,27 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "0 stale direct dependenc(ies), showing 0 from offset 0\n[]"
+        }
+      ],
+      "structuredContent": {
+        "offset": 0,
+        "stale_report": {
+          "dependents": [],
+          "total": 0
+        },
+        "summary": "0 stale direct dependenc(ies), showing 0 from offset 0",
+        "warnings": []
+      },
+      "isError": false
+    }
+  }
+}

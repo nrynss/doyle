@@ -1,0 +1,47 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 8,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic] (score 0.94, id 810c1cbf)\n\u26a0 Contradicted at 2026-10-29T15:07:26Z by doyle-probe: \"GET /patients returns 100 patients per page and a next_cursor; follow next_curso\u2026\" (id 1be4e4a6)\n\nGET /patients returns 100 patients per page and a next_cursor; follow next_cursor until it is null to export every patient [Logic] (score 0.88, id 1be4e4a6)\n\u26a0 Contradicts \"GET /patients returns every patient in one response; one call exports the whole \u2026\" (id 810c1cbf)"
+        },
+        {
+          "type": "text",
+          "text": "warnings:\n- \u26a0 Contradicted at 2026-10-29T15:07:26Z by doyle-probe: \"GET /patients returns 100 patients per page and a next_cursor; follow next_curso\u2026\" (id 1be4e4a6)\n- \u26a0 Contradicts \"GET /patients returns every patient in one response; one call exports the whole \u2026\" (id 810c1cbf)"
+        }
+      ],
+      "structuredContent": {
+        "context": "GET /patients returns every patient in one response; one call exports the whole clinic [Logic] (score 0.94, id 810c1cbf)\n\u26a0 Contradicted at 2026-10-29T15:07:26Z by doyle-probe: \"GET /patients returns 100 patients per page and a next_cursor; follow next_curso\u2026\" (id 1be4e4a6)\n\nGET /patients returns 100 patients per page and a next_cursor; follow next_cursor until it is null to export every patient [Logic] (score 0.88, id 1be4e4a6)\n\u26a0 Contradicts \"GET /patients returns every patient in one response; one call exports the whole \u2026\" (id 810c1cbf)",
+        "hits": [
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "GET /patients returns every patient in one response; one call exports the whole clinic",
+            "is_canonical": false,
+            "node_id": "810c1cbf-0800-4bce-8cde-077edce7c15d",
+            "score": 0.9414200803795794
+          },
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "GET /patients returns 100 patients per page and a next_cursor; follow next_cursor until it is null to export every patient",
+            "is_canonical": false,
+            "node_id": "1be4e4a6-47c5-4f5e-9311-556452637b94",
+            "score": 0.8807358987634677
+          }
+        ],
+        "warnings": [
+          "\u26a0 Contradicted at 2026-10-29T15:07:26Z by doyle-probe: \"GET /patients returns 100 patients per page and a next_cursor; follow next_curso\u2026\" (id 1be4e4a6)",
+          "\u26a0 Contradicts \"GET /patients returns every patient in one response; one call exports the whole \u2026\" (id 810c1cbf)"
+        ]
+      },
+      "isError": false
+    }
+  }
+}

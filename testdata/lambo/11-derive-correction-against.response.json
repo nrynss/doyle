@@ -1,0 +1,25 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "accepted 1 concept(s) for background write; validated and ordered, not yet applied\nreceipt lwr1.5bcbfc577bfe3727.1a188339bde.2: pending \u2014 admitted, not yet applied; ask again\nThe outcome arrives on your next tool response. To wait for it, call lambo_stats with receipt=lwr1.5bcbfc577bfe3727.1a188339bde.2 (add wait_ms to block).\nRecorded under agent_id \"doyle-probe\"; send this same id on every call."
+        }
+      ],
+      "structuredContent": {
+        "agent_id": "doyle-probe",
+        "receipt": "lwr1.5bcbfc577bfe3727.1a188339bde.2",
+        "receipt_state": "pending",
+        "summary": "accepted 1 concept(s) for background write; validated and ordered, not yet applied",
+        "warnings": []
+      },
+      "isError": false
+    }
+  }
+}
