@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P6 done. T7.1 done. T7.2 is user-run; then T7.3+.
+**Current status:** P0–P6 done. T7.1 done. T7.2 is user-run; then T7.3+. P9 (beyond the spec) is planned: T9.1 and T9.2 are ready now and touch nothing P7 needs.
 
 ---
 
@@ -41,6 +41,7 @@ Do not wait for a whole phase to finish. If a task requires only `T1.1`, start i
 | **P6** Surfaces | [PHASE-6-surfaces.md](PHASE-6-surfaces.md) | T2.2, P5 for the review page | P5 | P7 |
 | **P7** Evidence | [PHASE-7-evidence.md](PHASE-7-evidence.md) | P5, P6 | none | P8 |
 | **P8** Ship | [PHASE-8-ship.md](PHASE-8-ship.md) | P7 | none | submission |
+| **P9** Beyond the spec | [PHASE-9-beyond-the-spec.md](PHASE-9-beyond-the-spec.md) | P5, P6; its probes need nothing | P7 | the extended runs (T9.10), if the user chooses them |
 
 ```text
   P0 ──▶ P1 ──┬──▶ P2 flagging ──┐
@@ -62,6 +63,7 @@ P0 and P1 are the serial bottleneck. Once the contracts freeze, three tracks run
 | **B: Adapters** | P3 | `b` tasks only | T3.1 | Muse Code built-in memory and Lambo, behind one trait |
 | **C: Models** | P4 | `b` tasks only | T4.1 | The clients, then the curator and re-check prompts, verified by measurement |
 | **D: Guard** | P6 | No | T6.1 | Starts when T2.2 lands; needs only flags and the recorded hook payloads |
+| **E: Beyond the spec** | P9 | Probes and `b` tasks | T9.1, T9.2 | Legacy COBOL and screens as evidence. Runs beside P7 without touching its files |
 
 If capacity is short, run A and B first. A makes the flags true and B makes the correction land. Both are on the critical path.
 
@@ -103,7 +105,7 @@ A `b` task (T3.3b) is the live sibling of its parent. It owns only its live test
 2. **Stay inside `owns`.** A change outside it is a new task or a handoff note.
 3. **Contracts freeze at the end of P1.** A change to a type in `src/core/model.rs` or to either trait updates its fixtures in `testdata/` in the same commit, and is the orchestrator's call.
 4. **The core never names a memory system.** Nothing under `src/core/` imports an adapter. Lambo gets no special path; a second adapter must be one new file and nothing else.
-5. **Every flag traces to a Vimanam change.** No flag without a `vc2_` change ID and a citation behind it. The flag decision is computed, never a model's word.
+5. **Every flag traces to a change fact.** No flag without a change ID from an evidence source (Vimanam's `vc2_`, or a P9 source's) and a citation behind it. The flag decision is computed, never a model's word.
 6. **No model call on the guard's path.** The guard decides from Doyle's state alone, fast enough for a `PreToolUse` hook.
 7. **What Doyle writes into a memory is short and plain.** Muse Code loads memory into context even in an untrusted workspace (product.md, Cautions). An annotation quotes nothing from a contract that could read as an instruction.
 8. **New work only.** Write it here. Never copy code from Lambo, Vimanam or any earlier project; depend on the published crate or talk to the running server.
@@ -149,6 +151,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 2 / 2 | Done. P7 evidence next (user runs T7.2). |
 | P7 | 1 / 5 | T7.1 done. T7.2 is user-run. |
 | P8 | 0 / 4 | Waits for P7. |
+| P9 | 0 / 10 | Planned. T9.1 and T9.2 ready. |
 
 ---
 
@@ -156,6 +159,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **P9 planned: beyond the spec (user decision).** The user widened the pitch: Doyle lets Muse Wonder run a full migration on its own, and Wonder does the migration, a COBOL rewrite included; Doyle keeps what it believes true. Multimodal goes through Wonder: Doyle's eyes are `muse-wonder-1.0` on the Meta Model API. PHASE-9 adds legacy COBOL, screens and differential runs as evidence sources behind one seam, each behind a probe, without disturbing T7.2/T7.3. The first multimodal probe (one run each, about $0.17, no key in any file): Wonder accepted images as OpenAI `image_url` data URLs and an mp4 as a `video_url` data URL (`input_video` and `type: video` give 400); it listed a screen's elements with full recall, caught all three changes between two screen versions with none invented, and timestamped a 12-second four-step clip exactly. `muse-spark-1.3` missed text elements; Baseten's Muse Spark Open dropped a field label. Reasoning tokens count against `max_tokens`: at default effort a 1500 cap returned no content. Muse Code can see a PNG (`read_file`, `--image`) but has no browser or screenshot tool. GnuCOBOL is not installed and not in the main repositories (T9.1).
 - **T3.2 closed: Muse Code annotate and supersede.** `src/adapters/muse_code/write.rs` holds write/annotate/supersede over atomic temp+rename (interrupt seam-tested), `.muse-memory.lock` honored with fail-open on missing/malformed/dead locks, stable positional refs preserved (in-place annotation never renumbers; empty bullets skipped on both sides). Supersede is one atomic write when stale and correction share a file, with a tested split-file recovery (retry reuses the identical-text correction, converging to one). Adversarial review found 5 LBs including a clause citing a T0.4 index limit that never existed (amended honestly at land: no limit enforced, writes small by construction) and a real ordinal-desync bug on empty bullets (fixed write-side, regression-tested). Re-review verified every mutant kill and the single-write code path — clean. mod.rs delegation wiring approved as necessary (all file logic in write.rs). Before/after of the stale note — before: `GET /patients returns every patient in one response; one call exports the whole clinic`; annotated appends ` [STALE test warning]` with ref unchanged; superseded gains ` [Superseded by MEMORY.md#5]` with the correction readable under it. Follow-ups filed, not fixed: dead `State.writes`, per-module HOME_LOCK races, strict-vs-prefix correction matching. Gate passed on `main` after the merge.
 - **T3.1 closed: Muse Code locate and read.** `src/adapters/muse_code/{mod,locate,parse}.rs`: FNV-1a-64 folder location, shared scope, frontmatter + inline notes + index lines, stable `{file}#{ordinal}` refs, list/read (+in-memory write stub, unsupported optionals). Adversarial review forced a ref-scheme change before landing: content-hash refs rehash on in-place annotation and collide on duplicate text, unimplementable against the trait contract — positional refs survive both appends and annotation. Also pinned: verbatim texts/frontmatter, genuine hash→folder locate (symlink + shared-scope cases), HOME never leaves temp dirs in tests. Re-review clean. Advisory for T3.2: ordinal refs shift if an earlier bullet is deleted or an index line is inserted mid-file (user-side edits via edit_memory are a real-world event) — plan a fallback (e.g. text-match on read miss); T3.2's own in-place annotation is safe. Gate passed on `main` after the merge.
 - **T7.1 closed: the demo workspace.** `demo/` holds the old service (v1/v2 on :8091, 4,812 deterministic patients, token-gated real decommission), the new platform (import + count on :8092), start/stop/reset/check/migration scripts, and the client repo with `TASK.md`. Adversarial review reproduced everything live: v1 moves 4,812 (PASS), naive v2 moves exactly 100 (FAIL 100 vs 4,812), paged v2 moves all 49 pages; cursor continuity verified page by page (48×100+12, sequential ids, no gaps); limit capped at 100, bogus cursor 400s, decommission really deletes, `patient_count` tracks live. Reset is byte-identical across runs; no leftovers; gate passes server-free; no committed dumps, no non-localhost contact, no implementer paths. Nits recorded for later (stop.sh pkill self-match footgun, naive-migration exit code, empty demo/tests + client memory dirs, negative-cursor clamp, inert hooks placeholder for T7.2/T7.3). Gate passed on `main` after the merge.

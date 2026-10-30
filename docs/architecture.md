@@ -59,6 +59,19 @@ Additive, non-breaking changes flag nothing. `Review` severity (Vimanam's inferr
 - **`ModelClient`** (trait). One call: a prompt and a JSON schema in, structured JSON out. Implementations: the Meta Model API (Muse Spark, the re-check), Baseten (Muse Spark Open, the curator), and a replay client that serves recorded responses, for tests and an offline demo.
 - **Contract source.** Vimanam's `contract` module, used as a library with default features off. OpenAPI first; protobuf comes free with Vimanam 2.0.
 
+## Evidence sources (P9, proposed)
+
+A memory rests on evidence, and an API contract is one kind. PHASE-9 puts the contract source behind an **evidence source** seam (T9.5): index a version into elements (ID, kind, parent, references, native location), and diff two versions into change facts (ID, subject, kind, severity). Flagging, the guard and the review page read only the seam.
+
+| Source | Elements | Change facts from | ID prefix |
+|---|---|---|---|
+| **Vimanam** (built) | operations, types, fields, results | Vimanam's diff | `ve2_` / `vc2_`, unchanged |
+| **Legacy** (T9.6) | COBOL programs, paragraphs, copybook records and fields, files | Doyle's diff of two parsed versions | decided in T9.3 |
+| **Screens** (T9.7) | screens, elements, steps with time spans | Doyle's diff of two element lists that `muse-wonder-1.0` read, one call per version | decided in T9.7 |
+| **Differential run** (T9.8) | the legacy source's paragraphs | mismatched outputs between the COBOL batch and a rewrite, traced to the paragraphs that ran | the legacy source's |
+
+The model reads pixels once per version. Everything after that, the diff and the flag, is computed. Doyle never writes the rewrite it checks: Muse Wonder does.
+
 ## Commands
 
 | Command | Does |
