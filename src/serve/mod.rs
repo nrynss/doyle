@@ -22,7 +22,11 @@
 //! Which copies hold a flagged memory is resolved here, as T5.3's caller
 //! contract requires: the flag's own reference first (read back, or found
 //! by its cited text when the store's ID is a logical one such as `M1`),
-//! then every other configured adapter searched for the same text.
+//! then every other configured adapter searched for the same text. A stored
+//! note matches when it equals the cited text or starts with it (the cite
+//! path keeps the short restated claim while the note itself is long); a
+//! short note that merely prefixes the cited text is refused, so a prefix
+//! decoy can never stand in for the true copy.
 //!
 //! Serving from another directory: `cite` and `check` anchor everything on
 //! the state dir, and `serve` follows them. The provenance file resolves
@@ -595,11 +599,15 @@ impl ReviewServer {
         texts
     }
 
+    /// Whether a stored note is the flagged memory: exact equality, or the
+    /// stored note starting with the cited text (length >= 8). The cite
+    /// path records the short restated claim while the note itself is long,
+    /// so this direction must match. The reverse — a short stored note that
+    /// merely prefixes the cited text — is refused: it lets a short decoy
+    /// sharing a prefix resolve as the copy.
     fn text_matches(memory_text: &str, texts: &[String]) -> bool {
         texts.iter().any(|t| {
-            memory_text == t
-                || (t.chars().count() >= 8 && memory_text.starts_with(t.as_str()))
-                || (memory_text.chars().count() >= 8 && t.starts_with(memory_text))
+            memory_text == t || (t.chars().count() >= 8 && memory_text.starts_with(t.as_str()))
         })
     }
 
@@ -2578,6 +2586,87 @@ mod tests {
                 other => panic!("{} must have succeeded, got {other:?}", result.adapter),
             }
         }
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    // LB2: the match is asymmetric. A long note starting with the short
+    // cited claim still resolves (the cite path the demo relies on); a
+    // short note that merely prefixes the cited text is refused, so a
+    // prefix decoy alongside the true copy never resolves as the copy.
+    #[test]
+    fn lb2_short_prefix_decoy_is_refused_but_long_note_kept() {
+        const LONG: &str = "GET /patients returns every patient in one response; one call exports the whole clinic";
+        const CLAIM: &str = "GET /patients returns every patient in one response";
+        const DECOY: &str = "GET /patients returns every";
+        assert!(CLAIM.chars().count() >= 8 && DECOY.chars().count() >= 8);
+        // Kept direction: the cite path's short claim resolves the long note.
+        assert!(
+            ReviewServer::text_matches(LONG, &[CLAIM.to_string()]),
+            "long note starting with the short claim must resolve"
+        );
+        // Refused direction: the short decoy prefixes the cited text.
+        assert!(
+            !ReviewServer::text_matches(DECOY, &[CLAIM.to_string()]),
+            "short note prefixing the claim must not resolve"
+        );
+        assert!(
+            !ReviewServer::text_matches(DECOY, &[LONG.to_string()]),
+            "short note prefixing the cited text must not resolve"
+        );
+
+        // Resolution level: decoy alongside the true copy in one adapter
+        // resolves to exactly the true target. The nonsense source text
+        // matches no note, so the query pass finds nothing and the
+        // unfiltered pass filters both notes by the predicate: the true
+        // copy matches via the kept direction, the decoy via neither.
+        let root = temp_dir("lb2");
+        let state_dir = root.join(".doyle");
+        let mut store = Store::open(&state_dir).unwrap();
+        let fake = FakeAdapter::new("fake");
+        let true_ref = fake.write(LONG, "s").unwrap();
+        let decoy_ref = fake.write(DECOY, "s").unwrap();
+        assert_ne!(true_ref.id, decoy_ref.id);
+        let flagged = crate::core::MemoryRef {
+            adapter: "muse-code".to_string(),
+            id: "M1".to_string(),
+        };
+        store
+            .record_citation(Citation {
+                memory: flagged.clone(),
+                elements: vec![crate::core::ElementId(LIST_PATIENTS.to_string())],
+                claim: CLAIM.to_string(),
+                recorded_by: "test".to_string(),
+                confidence: 1.0,
+                source_text: "zzz-no-such-phrase-lb2".to_string(),
+            })
+            .unwrap();
+        let flag_id = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: flagged,
+                changes: vec![crate::core::ChangeId("vc2_test".to_string())],
+                severity: crate::core::Severity::Breaking,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: None,
+            })
+            .unwrap();
+        drop(store);
+        let store = Store::open(&state_dir).unwrap();
+        let server = ReviewServer::new(store, vec![Box::new(fake)]);
+        let flag = server.store.flag(&flag_id).unwrap();
+        let resolved = server.resolve_copies(&flag);
+        let fake_copies: Vec<&str> = resolved
+            .copies
+            .iter()
+            .filter(|c| c.adapter == "fake")
+            .map(|c| c.memory_id.as_str())
+            .collect();
+        assert_eq!(
+            fake_copies,
+            vec![true_ref.id.as_str()],
+            "exactly the true copy resolves; the prefix decoy is refused"
+        );
         let _ = fs::remove_dir_all(&root);
     }
 
