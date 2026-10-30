@@ -604,7 +604,9 @@ impl ReviewServer {
     /// path records the short restated claim while the note itself is long,
     /// so this direction must match. The reverse — a short stored note that
     /// merely prefixes the cited text — is refused: it lets a short decoy
-    /// sharing a prefix resolve as the copy.
+    /// sharing a prefix resolve as the copy. Residual: two distinct long
+    /// notes sharing the cited prefix both resolve; the page lists every
+    /// resolved copy so the operator sees exactly what approve will write.
     fn text_matches(memory_text: &str, texts: &[String]) -> bool {
         texts.iter().any(|t| {
             memory_text == t || (t.chars().count() >= 8 && memory_text.starts_with(t.as_str()))
