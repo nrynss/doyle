@@ -47,6 +47,11 @@ A `ModelClient` for Muse Spark Open on Baseten (the curator, for the open-weight
 - Decided: duplicate the transport seam rather than reuse a shared one, because `models/mod.rs` has none and file ownership forbids editing it; the ureq-backed transport lands with T3.3's dependency line. Reasoning effort is configured on the client since `ModelRequest` carries no such field. Strict is kept `false` to mirror the Meta client; Muse Spark Open accepts `json_schema` but does not enforce it.
 - Tests: 23 offline tests with a fake/capturing transport (recorded-reply parse, malformed body, 429 retry-and-give-up, 5xx retry, 400 immediate, missing key, reasoning-effort pass-through, malformed content string, pinned body/headers, bounded error, transport-error retry, usage spellings, constants, Debug no-leak). `./tools/check.sh` passes in the worktree.
 
+**T4.2b notes (live):**
+- Built: `tests/live_baseten.rs` with a small ureq-backed `HttpTransport` (per-request `http_status_as_error(false)` so the client's own retry/error logic sees real statuses; sends the client's body verbatim with its headers) plus one `#[ignore]`d `live_*` test that runs a single structured probe (`answer`/`note` schema, 2048-token cap) through `RecordingClient` into a temp dir and replays it with `ReplayClient`, asserting equality.
+- Live wire confirmed: `POST https://inference.baseten.co/v1/chat/completions` with model `meta-models/muse-spark-open-1026` returns 200 and a schema-conformant reply `{"answer":42,"note":"As requested."}`; usage 174 in / 429 out tokens, no cost field (same as the T4.3 finding).
+- Surprised me: a 256-token cap fails with `content: null` — the model spends the whole budget on `reasoning_content` (the reasoning text even contains the intended JSON) and returns nothing parseable. 2048 fixes it, matching the T4.3/T4.4 experience. Spend: 2 calls of the 5-call budget.
+
 **T4.2b (live):** one structured call on the curator model; record it. Owns `tests/live_baseten.rs`. Budget: five calls.
 
 ---
