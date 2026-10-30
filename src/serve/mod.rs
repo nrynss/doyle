@@ -1,5 +1,7 @@
 //! Stub for the `serve` command; filled in by T6.2.
 
+pub mod logo;
+
 use std::process::ExitCode;
 
 use crate::cli;
