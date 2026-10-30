@@ -113,7 +113,7 @@ Measure on the demo's flag and on cases built to need each answer, including a f
 
 ## Exit Criteria
 
-- [ ] The Meta Model API client works offline and live (T4.1, T4.1b).
+- [x] The Meta Model API client works offline and live (T4.1, T4.1b). Live: `muse-spark-1.3` returned `{"answer":42}` (72 in / 258 out, no cost); reasoning tokens bill as output, so size output budgets generously.
 - [x] The Baseten client works offline and live (T4.2, T4.2b). Live: `meta-models/muse-spark-open-1026` returned schema-conformant JSON (174 in / 429 out, no cost); 256-token cap starves content, 2048 works.
 - [x] The curator's citations are measured on both models, and the user has chosen its model (T4.3). Chosen: Muse Spark Open on Baseten (open-weight bonus over Spark's precision edge).
 - [x] The re-check produces correct, retire and keep where each is right, measured (T4.4).
