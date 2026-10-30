@@ -20,7 +20,7 @@ requires:   []
 fixture-ok: no
 size:       S · mid
 owns:       docs/legacy.md, testdata/legacy/runtime/
-status:     not-started
+status:     claimed:msc-t9.1
 ```
 Make COBOL run on this machine and in the gate's world. GnuCOBOL is not installed and not in the main package repositories: try the AUR package, then a container, and record which works, with versions. Compile and run a small batch program that reads a fixed-width file through a copybook, writes a report, and uses `ROUNDED` arithmetic and a `PERFORM` of a named paragraph. Find out how to trace which paragraphs ran for a given input (`-ftrace`, `-ftraceall`, or a `DISPLAY` convention) and what the trace looks like.
 
@@ -36,7 +36,7 @@ requires:   []
 fixture-ok: no
 size:       M · frontier
 owns:       docs/wonder-vision.md, testdata/vision/
-status:     not-started
+status:     claimed:msc-t9.2
 ```
 The first probe ran each case once, on clean web pages and a 12-second clip of still screens. Measure what Doyle will rely on:
 - a 3270-style green screen (80×24, monospace, field labels and protected fields), rendered as an image: element list against ground truth;
