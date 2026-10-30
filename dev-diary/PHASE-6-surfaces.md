@@ -41,7 +41,7 @@ requires:   [T5.2, T5.3]
 fixture-ok: yes
 size:       L · frontier
 owns:       src/serve/ (except judges.rs, T7.5), Cargo.toml (the server line, if any), Cargo.lock
-status:     not-started
+status:     claimed:meta-wonder-t6.2
 ```
 `doyle serve`: a local page, server-rendered, no build step. For each open flag: what changed (the Vimanam change, old and new), the memory as each system holds it, which agents relied on it, the proposal and its rationale, and approve / edit / retire / keep, which call T5.3. A settled flag shows what was written where. Decide here whether `serve` uses a small server crate or `std::net`, and say why in the commit.
 
