@@ -73,6 +73,12 @@ Offline tests replay `testdata/lambo/` through a fake transport.
 - Tests: `recorded_read_path` and `recorded_full_scenario` replay `testdata/lambo/` through `FakeTransport`; `unreachable_server_fails_with_url` hits a closed local port with a 200 ms timeout and asserts the URL appears in the error. Gate passes.
 - Surprised me: recorded contradiction warnings use the 8-hex short id, not the full node id, so inspect-first retry resolves short → full via a second inspect before reading content. Also `lambo_inspect` carries no warnings; the contradiction text comes from recall, so read appends from the supersede cache instead.
 
+**T3.3b notes (live):**
+- Built: `tests/live_lambo.rs`, one `#[ignore]`d `live_*` test driving the real adapter against `http://127.0.0.1:7700/mcp/s/doyle-probe` with a pass-through counting transport (wraps `UreqTransport`, counts `lambo_derive` bodies) so the retry no-op can prove zero new derives. Unique per-run content (`t33b-<pid>-<nanos>` token) keeps the shared scratch session collision-free.
+- Result: write returned a new node id; supersede derived the correction with `against` naming the stale short id and returned a different node id; recall returned both warnings (`⚠ Contradicted … (id <correction>)` on the stale memory, `⚠ Contradicts … (id <stale>)` on the correction); read of the stale id carries `⚠ Contradicted (id <correction full id>)`. Second supersede with identical text returned the existing correction ref with the derive count unchanged (2 → 2) — the in-process supersede-cache no-op, no duplicate derive.
+- Broad-watch `*` verdict: the server answers `list("*")` with hits, not an error — the probe returned every concept in the session (both probe memories plus the earlier recorded pair), so `*` serves as a match-all on this server. `watch()`'s `BROAD_WATCH_QUERY` strategy is confirmed live.
+- Surprised me: recall for the narrow token query returned all 4 session concepts, and the warnings array still carries the earlier recorded contradiction pair alongside the new one — warnings are session-global, not query-scoped, which is exactly why the adapter's batch-scoped pairing (never the first flat match) matters.
+
 ---
 
 ## Exit Criteria
