@@ -54,7 +54,7 @@ requires:   [T1.2, T3.2, T3.3]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/core/decide.rs
-status:     not-started
+status:     claimed:muse-spark-t5.3
 ```
 Apply a person's decision to a proposal: approve (write the correction), edit then approve, retire, or keep. Write it through every adapter holding the memory, by each one's capabilities: supersede where supported, else annotate, else write a new memory and report that the old one stays. Record the decision and, per adapter, what was done. A partial failure (Lambo down, Muse Code fine) leaves the decision recorded with the failed adapter marked for retry, never half-silent.
 
