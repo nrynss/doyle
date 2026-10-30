@@ -23,6 +23,17 @@
 //! contract requires: the flag's own reference first (read back, or found
 //! by its cited text when the store's ID is a logical one such as `M1`),
 //! then every other configured adapter searched for the same text.
+//!
+//! Serving from another directory: `cite` and `check` anchor everything on
+//! the state dir, and `serve` follows them. The provenance file resolves
+//! relative to the state dir first (`<state_dir>/provenance.json`), then the
+//! legacy demo location (`testdata/memories/provenance.json`, cwd-relative);
+//! when neither exists the page names the state-dir path instead of claiming
+//! nothing was recorded. Contract paths are used exactly as recorded (the
+//! same way `check` resolves them), so cite/check with absolute contract
+//! paths — or serve from the same cwd for relative ones. The muse-code
+//! adapter resolves from serve's cwd, so serve from the cwd that holds the
+//! memories.
 
 pub mod logo;
 mod render;
@@ -39,7 +50,9 @@ use crate::adapters::lambo::LamboAdapter;
 use crate::adapters::muse_code::MuseCodeAdapter;
 use crate::cli;
 use crate::contract::ContractIndex;
-use crate::core::decide::{AdapterOutcome, DecisionReport, Target, apply_decision, retry_failed};
+use crate::core::decide::{
+    AdapterOutcome, DecisionReport, PerAdapterResult, Target, apply_decision, retry_failed,
+};
 use crate::core::{Citation, Decision, DecisionVerdict, Flag, Proposal, ProposalAction, Store};
 
 use render::{esc, page, severity_badge};
@@ -176,7 +189,24 @@ impl Response {
 struct Resolved {
     copies: Vec<Copy>,
     notes: Vec<String>,
+    unsearchable: Vec<Unsearchable>,
 }
+
+/// An adapter whose list failed during resolution: no copy is known, but a
+/// copy may still be held there. Decide time turns each of these into a
+/// `Failed { retryable: true }` report entry (naming the adapter and the
+/// list failure) instead of silently dropping the adapter; retry re-searches
+/// it by the same cited-text search the decide path uses.
+struct Unsearchable {
+    adapter: String,
+    message: String,
+}
+
+/// Placeholder memory id for a report entry where decide time could not
+/// resolve a copy: the adapter was unsearchable, so no id is known. Retry
+/// re-searches the adapter and replaces this entry with what the search
+/// finds (exactly one correction per adapter once the transport heals).
+const UNRESOLVED_ID: &str = "<unresolved>";
 
 /// A memory copy the page resolved: which adapter holds it, under which ID.
 #[derive(Debug, Clone)]
@@ -193,6 +223,7 @@ pub struct ReviewServer {
     store: Store,
     adapters: Vec<Box<dyn MemoryAdapter>>,
     provenance: Option<Provenance>,
+    provenance_missing_at: Option<PathBuf>,
     reports: HashMap<String, DecisionReport>,
 }
 
@@ -202,12 +233,20 @@ impl ReviewServer {
             store,
             adapters,
             provenance: None,
+            provenance_missing_at: None,
             reports: HashMap::new(),
         }
     }
 
     pub fn with_provenance(mut self, provenance: Option<Provenance>) -> Self {
         self.provenance = provenance;
+        self
+    }
+
+    /// Where the provenance file was looked for but not found. The flag page
+    /// names this path instead of claiming nothing was recorded.
+    pub fn with_provenance_missing_at(mut self, path: Option<PathBuf>) -> Self {
+        self.provenance_missing_at = path;
         self
     }
 
@@ -325,8 +364,9 @@ impl ReviewServer {
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "reviewer".to_string());
 
-        let copies = self.resolve_copies(&flag).copies;
+        let copies = self.resolve_copies(&flag);
         let targets: Vec<Target> = copies
+            .copies
             .iter()
             .filter_map(|c| {
                 c.adapter_index.map(|i| Target {
@@ -335,7 +375,7 @@ impl ReviewServer {
                 })
             })
             .collect();
-        if targets.is_empty() {
+        if targets.is_empty() && copies.unsearchable.is_empty() {
             return Response::html(
                 409,
                 page(
@@ -356,7 +396,26 @@ impl ReviewServer {
             &utc_now_rfc3339(),
             &targets,
         ) {
-            Ok(report) => {
+            Ok(mut report) => {
+                // An adapter that could not be searched contributes no
+                // target, so the core never sees it: synthesize a
+                // failed-retryable entry naming the adapter and the list
+                // failure, or the correction for that system would need a
+                // whole new flag cycle (the decision settles the flag, and
+                // re-decide is refused 409).
+                for unsearchable in &copies.unsearchable {
+                    report.results.push(PerAdapterResult {
+                        adapter: unsearchable.adapter.clone(),
+                        memory_id: UNRESOLVED_ID.to_string(),
+                        outcome: AdapterOutcome::Failed {
+                            message: format!(
+                                "{}: could not be searched at decide time ({}); no copy resolved, retry re-searches",
+                                unsearchable.adapter, unsearchable.message
+                            ),
+                            retryable: true,
+                        },
+                    });
+                }
                 self.reports.insert(proposal.id.clone(), report);
                 Response::redirect(format!("/flag/{}", flag.id))
             }
@@ -418,13 +477,24 @@ impl ReviewServer {
         if failed.is_empty() {
             return Response::redirect(format!("/flag/{}", flag.id));
         }
-        let copies = self.resolve_copies(&flag).copies;
+        // Adapters that were unsearchable at decide time carry the
+        // UNRESOLVED_ID placeholder: re-resolve them by the same cited-text
+        // search the decide path uses, now that the transport may have
+        // healed. Resolved failures still match by (adapter, memory id).
+        let unresolved: Vec<String> = failed
+            .iter()
+            .filter(|(_, m)| m == UNRESOLVED_ID)
+            .map(|(a, _)| a.clone())
+            .collect();
+        let copies = self.resolve_copies(&flag);
         let targets: Vec<Target> = copies
+            .copies
             .iter()
             .filter(|c| {
                 failed
                     .iter()
                     .any(|(a, m)| a == &c.adapter && m == &c.memory_id)
+                    || unresolved.iter().any(|a| a == &c.adapter)
             })
             .filter_map(|c| {
                 c.adapter_index.map(|i| Target {
@@ -442,6 +512,19 @@ impl ReviewServer {
                     .find(|r| r.adapter == result.adapter && r.memory_id == result.memory_id)
                 {
                     *slot = result;
+                } else if let Some(slot) = stored
+                    .results
+                    .iter_mut()
+                    .find(|r| r.adapter == result.adapter && r.memory_id == UNRESOLVED_ID)
+                {
+                    // The re-search found the copy decide time could not:
+                    // replace the placeholder with the actual outcome.
+                    *slot = result;
+                } else {
+                    // The re-search found more copies than placeholders
+                    // (e.g. two copies in one healed adapter): disclose each
+                    // additional outcome rather than dropping it.
+                    stored.results.push(result);
                 }
             }
         }
@@ -523,11 +606,13 @@ impl ReviewServer {
     /// Every copy of the flagged memory the configured adapters hold. The
     /// flag's own system is tried first (by its recorded ID, then by text),
     /// then the others by text. Adapters that cannot be searched are noted
-    /// for the page, never silently skipped.
+    /// for the page and recorded as unsearchable, never silently skipped:
+    /// decide time marks them failed-retryable and retry re-searches them.
     fn resolve_copies(&self, flag: &Flag) -> Resolved {
         let texts = self.match_texts(flag);
         let mut copies: Vec<Copy> = Vec::new();
         let mut notes: Vec<String> = Vec::new();
+        let mut unsearchable: Vec<Unsearchable> = Vec::new();
         let push = |copy: Copy, copies: &mut Vec<Copy>| {
             if !copies
                 .iter()
@@ -553,6 +638,7 @@ impl ReviewServer {
             // pass for enumerable adapters when the query found nothing.
             let query = texts.first().cloned().unwrap_or_default();
             let mut found: Vec<String> = Vec::new();
+            let mut list_error: Option<String> = None;
             if !query.is_empty() {
                 match adapter.list(&query) {
                     Ok(memories) => {
@@ -564,8 +650,9 @@ impl ReviewServer {
                         );
                     }
                     Err(e) => {
+                        list_error = Some(e.to_string());
                         notes.push(format!(
-                            "{} could not be searched ({}), so a copy held there, if any, is not shown and cannot be written from this page.",
+                            "{} could not be searched ({}), so a copy held there, if any, is not shown; it is marked failed-retryable and a retry re-searches it.",
                             name,
                             e
                         ));
@@ -592,6 +679,16 @@ impl ReviewServer {
                     &mut copies,
                 );
             }
+            if !copies
+                .iter()
+                .any(|c| c.adapter == name && c.adapter_index.is_some())
+                && let Some(message) = list_error
+            {
+                unsearchable.push(Unsearchable {
+                    adapter: name,
+                    message,
+                });
+            }
         }
         // The flag's own reference, when no configured adapter holds it:
         // shown from Doyle's state, with the gap named on the page.
@@ -605,7 +702,11 @@ impl ReviewServer {
                 },
             );
         }
-        Resolved { copies, notes }
+        Resolved {
+            copies,
+            notes,
+            unsearchable,
+        }
     }
 
     // ----- pages -----
@@ -926,7 +1027,13 @@ impl ReviewServer {
                 }
             }
             None => {
-                out.push_str("<p>No provenance is recorded for this memory, so Doyle cannot name the sessions that relied on it.</p>");
+                match &self.provenance_missing_at {
+                    Some(path) => out.push_str(&format!(
+                        "<p>Doyle cannot name the sessions that relied on this memory: provenance file not found at {}.</p>",
+                        esc(&path.display().to_string())
+                    )),
+                    None => out.push_str("<p>No provenance is recorded for this memory, so Doyle cannot name the sessions that relied on it.</p>"),
+                }
                 if let Some(citation) = self.citation_for(flag) {
                     out.push_str(&format!(
                         "<p class=\"small muted\">The citation was recorded by {} (confidence {:.2}).</p>",
@@ -1264,8 +1371,10 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let provenance = load_provenance();
-    let mut server = ReviewServer::new(store, adapters).with_provenance(provenance);
+    let provenance = load_provenance(&state_dir);
+    let mut server = ReviewServer::new(store, adapters)
+        .with_provenance(provenance.0)
+        .with_provenance_missing_at(provenance.1);
 
     let port = std::env::var("DOYLE_SERVE_PORT")
         .ok()
@@ -1292,6 +1401,9 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
 }
 
 fn build_adapters(cli: &cli::Cli) -> Result<Vec<Box<dyn MemoryAdapter>>, String> {
+    // The muse-code adapter resolves from serve's cwd: run serve from the
+    // cwd that holds the memories (same cwd as cite/check for relative
+    // contract paths).
     let names: Vec<String> = if cli.common.adapters.is_empty() {
         vec!["muse-code".to_string(), "lambo".to_string()]
     } else {
@@ -1314,10 +1426,35 @@ fn build_adapters(cli: &cli::Cli) -> Result<Vec<Box<dyn MemoryAdapter>>, String>
     Ok(adapters)
 }
 
-fn load_provenance() -> Option<Provenance> {
-    let candidate = PathBuf::from("testdata/memories/provenance.json");
-    let text = std::fs::read_to_string(candidate).ok()?;
-    Provenance::parse(&text)
+/// Where `doyle serve` looks for the provenance file, in order:
+/// 1. `<state_dir>/provenance.json` — the primary location, anchored on the
+///    same state dir `cite` and `check` use, so serving from any cwd finds it;
+/// 2. `<cwd>/testdata/memories/provenance.json` — the legacy demo location,
+///    kept so a checkout served from its own root still renders.
+fn provenance_candidates(state_dir: &str, cwd: &Path) -> Vec<PathBuf> {
+    vec![
+        PathBuf::from(state_dir).join("provenance.json"),
+        cwd.join("testdata/memories/provenance.json"),
+    ]
+}
+
+/// Load the provenance file, or report where it was looked for but not
+/// found. Returns the parsed provenance (when some candidate reads and
+/// parses) and, when no candidate reads, the primary path the flag page
+/// names instead of claiming nothing was recorded. A candidate that reads
+/// but does not parse counts as absent, as before.
+fn load_provenance(state_dir: &str) -> (Option<Provenance>, Option<PathBuf>) {
+    load_provenance_from(state_dir, Path::new("."))
+}
+
+fn load_provenance_from(state_dir: &str, cwd: &Path) -> (Option<Provenance>, Option<PathBuf>) {
+    let candidates = provenance_candidates(state_dir, cwd);
+    for candidate in &candidates {
+        if let Ok(text) = std::fs::read_to_string(candidate) {
+            return (Provenance::parse(&text), None);
+        }
+    }
+    (None, candidates.into_iter().next())
 }
 
 /// Accept and answer requests until the listener fails. One at a time: the
@@ -2295,5 +2432,345 @@ mod tests {
         assert_eq!(form["new_text"], "a b;c&d");
         assert_eq!(url_decode("/flag/flag%2D1"), "/flag/flag-1");
         assert_eq!(url_decode("100%"), "100%");
+    }
+
+    // LB1 repro: one adapter whose list fails must not be silently dropped.
+    #[test]
+    fn lb1_list_failure_marks_failed_retryable_and_retry_heals() {
+        use crate::adapters::{AdapterError, Capabilities, MemoryAdapter};
+        use crate::core::Memory;
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        struct ListFailing {
+            inner: FakeAdapter,
+            fail: std::sync::Arc<AtomicBool>,
+        }
+        impl MemoryAdapter for ListFailing {
+            fn name(&self) -> &str {
+                self.inner.name()
+            }
+            fn capabilities(&self) -> Capabilities {
+                self.inner.capabilities()
+            }
+            fn list(&self, query: &str) -> Result<Vec<Memory>, AdapterError> {
+                if self.fail.load(Ordering::SeqCst) {
+                    Err(AdapterError::Backend {
+                        adapter: self.name().to_string(),
+                        memory: None,
+                        message: "connection refused (test)".to_string(),
+                    })
+                } else {
+                    self.inner.list(query)
+                }
+            }
+            fn read(&self, id: &str) -> Result<Memory, AdapterError> {
+                self.inner.read(id)
+            }
+            fn write(
+                &self,
+                text: &str,
+                scope: &str,
+            ) -> Result<crate::core::MemoryRef, AdapterError> {
+                self.inner.write(text, scope)
+            }
+            fn annotate(&self, id: &str, warning: &str) -> Result<(), AdapterError> {
+                self.inner.annotate(id, warning)
+            }
+            fn supersede(
+                &self,
+                stale_id: &str,
+                correction_text: &str,
+            ) -> Result<crate::core::MemoryRef, AdapterError> {
+                self.inner.supersede(stale_id, correction_text)
+            }
+            fn watch(&self) -> Result<Vec<Memory>, AdapterError> {
+                self.inner.watch()
+            }
+        }
+
+        const LONG: &str = "GET /patients returns every patient in one response; one call exports the whole clinic";
+        let root = temp_dir("lb1");
+        let state_dir = root.join(".doyle");
+        let mut store = Store::open(&state_dir).unwrap();
+        let good = FakeAdapter::new("good");
+        let flaky_inner = FakeAdapter::new("flaky");
+        let stale_good = good.write(LONG, "s").unwrap();
+        let _stale_flaky = flaky_inner.write(LONG, "s").unwrap();
+        store
+            .record_citation(Citation {
+                memory: stale_good.clone(),
+                elements: vec![crate::core::ElementId(LIST_PATIENTS.to_string())],
+                claim: M1_CLAIM.to_string(),
+                recorded_by: "test".to_string(),
+                confidence: 1.0,
+                source_text: LONG.to_string(),
+            })
+            .unwrap();
+        let flag_id = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: stale_good.clone(),
+                changes: vec![crate::core::ChangeId("vc2_test".to_string())],
+                severity: crate::core::Severity::Breaking,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: Some(M1_CLAIM.to_string()),
+            })
+            .unwrap();
+        store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: flag_id.clone(),
+                action: ProposalAction::Correct {
+                    new_text: "paged".to_string(),
+                },
+                rationale: "it pages now".to_string(),
+                proposed_by: "test-model".to_string(),
+            })
+            .unwrap();
+        drop(store);
+        let store = Store::open(&state_dir).unwrap();
+        let fail = std::sync::Arc::new(AtomicBool::new(true));
+        let flaky = ListFailing {
+            inner: flaky_inner,
+            fail: fail.clone(),
+        };
+        let mut server = ReviewServer::new(store, vec![Box::new(good), Box::new(flaky)]);
+        let flag_path = format!("/flag/{flag_id}");
+        let r = server.handle(
+            "POST",
+            &format!("{flag_path}/decide"),
+            "verdict=approve&decided_by=judge",
+        );
+        assert_eq!(r.status, 303, "decide records: {}", r.body);
+        let settled = server.handle("GET", &flag_path, "");
+        assert!(
+            settled.body.contains("Failed") && settled.body.contains("marked for retry"),
+            "settled marks the unsearchable adapter failed-retryable, not silently complete: {}",
+            settled.body
+        );
+        assert!(
+            settled.body.contains("flaky"),
+            "settled names the adapter: {}",
+            settled.body
+        );
+        // The transport heals; the retry re-searches the adapter by the
+        // cited text and lands exactly one correction there.
+        fail.store(false, Ordering::SeqCst);
+        let r = server.handle("POST", &format!("{flag_path}/retry"), "");
+        assert_eq!(r.status, 303, "retry redirects: {}", r.body);
+        let settled = server.handle("GET", &flag_path, "");
+        assert!(
+            !settled.body.contains("marked for retry"),
+            "retry healed the failed write-back: {}",
+            settled.body
+        );
+        let report = server.reports.values().next().unwrap().clone();
+        assert_eq!(
+            report.results.len(),
+            2,
+            "one entry per adapter: {:?}",
+            report.results
+        );
+        for result in &report.results {
+            match &result.outcome {
+                AdapterOutcome::Superseded { .. } => {}
+                other => panic!("{} must have succeeded, got {other:?}", result.adapter),
+            }
+        }
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    // LB3: provenance resolves from the state dir, so serving from another
+    // cwd still renders it. The temp-cwd test drives the real binary (its own
+    // process, so no process-wide chdir can disturb parallel tests); the
+    // loader order and the honest-absence message are pinned in-process.
+    fn lb3_free_port() -> u16 {
+        std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port()
+    }
+
+    fn lb3_get_flag_page(port: u16, flag_id: &str) -> String {
+        use std::io::{Read, Write};
+        let addr = format!("127.0.0.1:{port}");
+        for _ in 0..200 {
+            if let Ok(mut stream) = std::net::TcpStream::connect(&addr) {
+                stream
+                    .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                    .ok();
+                let request = format!(
+                    "GET /flag/{flag_id} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n"
+                );
+                stream.write_all(request.as_bytes()).ok();
+                let mut out = String::new();
+                stream.read_to_string(&mut out).ok();
+                if out.contains("<html") {
+                    return out;
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(25));
+        }
+        panic!("doyle serve did not answer on {addr}");
+    }
+
+    /// Seed M1 through the real cite and check paths with absolute contract
+    /// paths, and copy the provenance fixture into the state dir (marked so
+    /// the test can tell it apart from the legacy checkout copy). Returns
+    /// the temp root and the flag id.
+    fn lb3_seed() -> (PathBuf, String) {
+        let root = temp_dir("lb3");
+        let state_dir = root.join(".doyle");
+        let v1 = fixture("testdata/contracts/patients-v1.yaml");
+        let v2 = fixture("testdata/contracts/patients-v2.yaml");
+        let cite_input = serde_json::json!([
+            {"adapter": "muse-code", "memory_id": "M1", "contract": v1,
+             "elements": [LIST_PATIENTS, LIST_PATIENTS_200], "claim": M1_CLAIM,
+             "recorded_by": "test-curator", "confidence": 0.95},
+        ]);
+        let cite_cli = crate::cli::Cli {
+            command: crate::cli::Command::Cite,
+            common: crate::cli::CommonOpts {
+                state_dir: Some(state_dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let code = crate::cite::run_with_input(
+            &cite_cli,
+            &cite_input.to_string(),
+            &state_dir.to_string_lossy(),
+        );
+        assert_eq!(code, ExitCode::SUCCESS, "cite path records M1");
+        let check_cli = crate::cli::Cli {
+            command: crate::cli::Command::Check {
+                old: v1.clone(),
+                new: v2.clone(),
+                format: "json".to_string(),
+                no_recheck: false,
+            },
+            common: crate::cli::CommonOpts {
+                state_dir: Some(state_dir.to_string_lossy().to_string()),
+                ..Default::default()
+            },
+        };
+        let (code, _out) = crate::check::execute(&check_cli, "json").expect("check runs");
+        assert_eq!(code, ExitCode::from(1), "check must flag M1");
+        let store = Store::open(&state_dir).unwrap();
+        assert_eq!(store.flags().len(), 1, "exactly M1 is flagged");
+        let flag_id = store.flags()[0].id.clone();
+        let text = fs::read_to_string(fixture("testdata/memories/provenance.json")).unwrap();
+        fs::write(
+            state_dir.join("provenance.json"),
+            text.replace(
+                "Build the monthly patient-count report",
+                "state-dir provenance marker",
+            ),
+        )
+        .unwrap();
+        (root, flag_id)
+    }
+
+    #[test]
+    fn lb3_serve_from_temp_cwd_renders_provenance_and_contracts() {
+        let (root, flag_id) = lb3_seed();
+        let state_dir = root.join(".doyle");
+        // The state-dir copy wins even though the legacy checkout copy also
+        // exists under this process's cwd.
+        let (provenance, missing) = load_provenance(&state_dir.to_string_lossy());
+        assert!(provenance.is_some(), "state-dir provenance loads");
+        assert!(missing.is_none(), "nothing missing to report");
+        // The real binary, serving from an empty cwd against the
+        // absolute-path state dir.
+        let port = lb3_free_port();
+        let empty = temp_dir("lb3cwd");
+        let bin = format!("{}/target/debug/doyle", env!("CARGO_MANIFEST_DIR"));
+        let mut child = std::process::Command::new(&bin)
+            .args(["serve", "--state-dir", &state_dir.to_string_lossy()])
+            .env("DOYLE_SERVE_PORT", port.to_string())
+            .current_dir(&empty)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .expect("spawn doyle serve");
+        let body = lb3_get_flag_page(port, &flag_id);
+        child.kill().ok();
+        let _ = child.wait();
+        assert!(
+            body.contains("state-dir provenance marker"),
+            "provenance came from the state dir, not the legacy path"
+        );
+        assert!(body.contains("migration-1"), "relying session named");
+        assert!(
+            body.contains("field_type_changed"),
+            "contract change facts render from absolute paths"
+        );
+        let _ = fs::remove_dir_all(&empty);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn lb3_state_dir_wins_and_absence_names_the_path() {
+        assert_eq!(
+            provenance_candidates("/s", Path::new("/c")),
+            vec![
+                PathBuf::from("/s/provenance.json"),
+                PathBuf::from("/c/testdata/memories/provenance.json"),
+            ],
+            "state dir first, legacy demo path second"
+        );
+        // Absence, independent of this process's cwd: a state dir without
+        // the file and a cwd without the legacy copy.
+        let root = temp_dir("lb3absent");
+        let state_dir = root.join(".doyle");
+        std::fs::create_dir_all(&state_dir).unwrap();
+        let nowhere = temp_dir("lb3nowhere");
+        let (provenance, missing) = load_provenance_from(&state_dir.to_string_lossy(), &nowhere);
+        assert!(provenance.is_none(), "no provenance anywhere");
+        let missing = missing.expect("names the state-dir path");
+        assert_eq!(missing, state_dir.join("provenance.json"));
+        let _ = fs::remove_dir_all(&nowhere);
+        // The flag page names that path instead of claiming nothing exists.
+        let mut store = Store::open(&state_dir).unwrap();
+        let fake = FakeAdapter::new("fake");
+        let stale = fake.write(STALE, "scope").unwrap();
+        store
+            .record_citation(Citation {
+                memory: stale.clone(),
+                elements: vec![crate::core::ElementId(LIST_PATIENTS.to_string())],
+                claim: M1_CLAIM.to_string(),
+                recorded_by: "test".to_string(),
+                confidence: 1.0,
+                source_text: STALE.to_string(),
+            })
+            .unwrap();
+        let flag_id = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: stale.clone(),
+                changes: vec![crate::core::ChangeId("vc2_test".to_string())],
+                severity: crate::core::Severity::Review,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: Some(M1_CLAIM.to_string()),
+            })
+            .unwrap();
+        drop(store);
+        let store = Store::open(&state_dir).unwrap();
+        let mut server = ReviewServer::new(store, vec![Box::new(fake)])
+            .with_provenance(provenance)
+            .with_provenance_missing_at(Some(missing.clone()));
+        let response = server.handle("GET", &format!("/flag/{flag_id}"), "");
+        assert_eq!(response.status, 200);
+        assert!(
+            response.body.contains(&format!(
+                "provenance file not found at {}",
+                missing.display()
+            )),
+            "honest absence names the path: {}",
+            response.body
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 }
