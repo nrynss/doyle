@@ -65,7 +65,7 @@ requires:   []
 fixture-ok: no
 size:       M · frontier
 owns:       docs/wonder-vision.md, testdata/vision/
-status:     in-review
+status:     done
 ```
 The first probe ran each case once, on clean web pages and a 12-second clip of still screens. Measure what Doyle will rely on:
 - a 3270-style green screen (80×24, monospace, field labels and protected fields), rendered as an image: element list against ground truth;
@@ -243,7 +243,7 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 ## Exit Criteria
 
 - [x] COBOL runs here and the gate does not need it (T9.1). Two routes, both GnuCOBOL 3.2.0; gate verified COBOL-free.
-- [ ] Wonder's vision is measured, with what Doyle can and cannot build on (T9.2).
+- [x] Wonder's vision is measured, with what Doyle can and cannot build on (T9.2). Screens 0.92–0.95 recall, diffs 18/18 with zero inventions, recordings with ±5 s padding; ~127k tokens, under $2 of $3.
 - [x] A memory can cite legacy code by a stable ID (T9.3). Six kinds, `le2_`/`lc2_`, name-path-keyed SHA-256 IDs; curator 3/3 on the sample.
 - [ ] The extended story and its traps are signed off by the user (T9.4).
 - [ ] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5).
