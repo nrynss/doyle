@@ -28,6 +28,13 @@ Offline tests use recorded HTTP replies.
 
 **T4.1b (live):** one structured call on `muse-spark-1.3`; record it through T1.4's recording mode. Owns `tests/live_meta.rs`. Budget: five calls.
 
+**T4.1b notes (live):**
+- Built: `tests/live_meta.rs` with `live_meta_spark_structured_call` (`#[ignore]`, runs only under `cargo test -- --ignored live_`). The ureq-backed `HttpTransport` lives inside the test file (production wiring lands with T3.3; nothing in `src/` touched). One call: model `muse-spark-1.3`, trivial `{"answer": 42}` schema, budget 512 tokens, wrapped in `RecordingClient` writing to a temp dir outside the repo; the test then replays the recording through `ReplayClient` and asserts equality.
+- Wire shape confirmed live: base URL `https://api.meta.ai/v1`, `POST {base}/chat/completions`, OpenAI-style body (`model`, `messages`, `response_format: {type: json_schema, json_schema: {name, schema, strict: false}}`, `max_tokens`), `Authorization: Bearer` read from `MODEL_API_KEY` at call time. An unauthenticated probe returned 401 (host/path reachable); the authenticated call returned 200 with `choices[0].message.content` parsing into the schema and usage read from `usage.prompt_tokens` / `usage.completion_tokens`.
+- Evidence: `value: {"answer":42}`; `usage: input_tokens=72 output_tokens=258 cost_usd=None` (API returns no cost field, same as T4.3/T4.4 observed). Recording on disk is 126 bytes holding only `value` + `usage` — no key, no headers.
+- Spend: 1 call of 5. No 429/5xx, no retries. `./tools/check.sh` passes; the live test is ignored by the gate and CI.
+- Surprised me: output tokens (258) dwarf the tiny reply — reasoning/thinking tokens are billed as output on this endpoint, so even trivial calls cost a few hundred output tokens; size output budgets accordingly.
+
 ---
 
 ### T4.2: Baseten client
