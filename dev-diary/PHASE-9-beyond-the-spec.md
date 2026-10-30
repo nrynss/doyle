@@ -20,7 +20,7 @@ requires:   []
 fixture-ok: no
 size:       S · mid
 owns:       docs/legacy.md, testdata/legacy/runtime/
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.1): done, awaiting orchestrator validation.
@@ -216,7 +216,7 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 
 ## Exit Criteria
 
-- [ ] COBOL runs here and the gate does not need it (T9.1).
+- [x] COBOL runs here and the gate does not need it (T9.1). Two routes, both GnuCOBOL 3.2.0; gate verified COBOL-free.
 - [ ] Wonder's vision is measured, with what Doyle can and cannot build on (T9.2).
 - [ ] A memory can cite legacy code by a stable ID (T9.3).
 - [ ] The extended story and its traps are signed off by the user (T9.4).
