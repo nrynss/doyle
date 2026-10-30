@@ -89,7 +89,7 @@ requires:   [T9.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       docs/legacy-ids.md, testdata/legacy/ids/
-status:     not-started
+status:     claimed:msc-t9.3
 ```
 Decide how a memory cites COBOL, before any code. An element is a program, a paragraph or section, a copybook record or field (with its level path and `PIC`), or a file. Its ID must stay the same across versions when the element means the same thing, the way Vimanam's do: derive it from the program ID and the element's name path, never from line numbers. Say what counts as a change to each kind (a field's `PIC` changes, a paragraph's statements change, a paragraph is removed) and its severity.
 
