@@ -11,7 +11,11 @@ use std::path::Path;
 
 use vimanam::contract::{Change, Entity, EntityKind};
 
-use crate::core::ElementId;
+use crate::core::{ChangeId, ElementId};
+use crate::evidence::{
+    ChangeFact, EvidenceChange, EvidenceChangeKind, EvidenceElement, EvidenceElementKind,
+    EvidenceSource,
+};
 
 /// Loading or diffing a contract failed: which file, and Vimanam's reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,22 +34,9 @@ impl std::fmt::Display for ContractError {
 
 impl std::error::Error for ContractError {}
 
-/// An entity's native location in the contract's own terms: the HTTP method
-/// and path, the operation ID, and the named type and field. For display and
-/// for the guard's match. Fields that don't apply to an entity are `None`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NativeLocation {
-    /// HTTP method (`GET`), when the entity is operation-scoped.
-    pub method: Option<String>,
-    /// Exact path template (`/patients`), when operation-scoped.
-    pub path: Option<String>,
-    /// Operation ID (`listPatients`), for operations and their children.
-    pub operation_id: Option<String>,
-    /// Named type (`Patient`), for types and their fields.
-    pub type_name: Option<String>,
-    /// Field name within its type, for fields.
-    pub field_name: Option<String>,
-}
+/// An element's native location, shared by every evidence source. Defined in
+/// [`crate::evidence`]; re-exported here so the existing path keeps working.
+pub use crate::evidence::NativeLocation;
 
 /// One contract version, loaded through Vimanam and indexed for queries.
 #[derive(Debug)]
@@ -116,7 +107,12 @@ impl ContractIndex {
     /// The entity's native location for display and the guard. `None` when
     /// the ID is unknown.
     pub fn native_location(&self, id: &ElementId) -> Option<NativeLocation> {
-        let entity = self.entity(id)?;
+        self.entity(id).map(|entity| self.evidence_native(entity))
+    }
+    /// The native location of a known entity. Shared by
+    /// [`ContractIndex::native_location`] and the [`EvidenceSource`] impl:
+    /// one code path serves both.
+    fn evidence_native(&self, entity: &Entity) -> NativeLocation {
         let (method, path) = match &entity.native {
             vimanam::contract::NativeLocation::Openapi { method, path, .. } => {
                 (method.clone(), path.clone())
@@ -140,13 +136,24 @@ impl ContractIndex {
             ),
             _ => (None, None),
         };
-        Some(NativeLocation {
+        NativeLocation {
             method,
             path,
             operation_id,
             type_name,
             field_name,
-        })
+        }
+    }
+
+    /// The seam's view of a known entity.
+    fn to_evidence(&self, entity: &Entity) -> EvidenceElement {
+        EvidenceElement {
+            id: ElementId(entity.id.clone()),
+            kind: EvidenceElementKind::from(&entity.kind),
+            parent: entity.parent.clone().map(ElementId),
+            references: entity.references.iter().cloned().map(ElementId).collect(),
+            native: self.evidence_native(entity),
+        }
     }
 
     /// Diff this index (old) against another (new): Vimanam's change facts,
@@ -175,6 +182,65 @@ impl ContractIndex {
             next = current.parent.as_deref().and_then(|p| self.by_id_str(p));
         }
         chain
+    }
+}
+
+impl EvidenceSource for ContractIndex {
+    /// The element with this ID, if this version holds one.
+    fn element(&self, id: &ElementId) -> Option<EvidenceElement> {
+        self.entity(id).map(|entity| self.to_evidence(entity))
+    }
+
+    /// Every element in this version, in the surface's native order.
+    fn elements(&self) -> Vec<EvidenceElement> {
+        self.contract
+            .entities
+            .iter()
+            .map(|entity| self.to_evidence(entity))
+            .collect()
+    }
+
+    /// The element and its ancestors, nearest first. Empty when the ID is
+    /// unknown.
+    fn parent_chain(&self, id: &ElementId) -> Vec<EvidenceElement> {
+        self.chain(self.entity(id))
+            .into_iter()
+            .map(|entity| self.to_evidence(entity))
+            .collect()
+    }
+
+    /// Every element that references this one, in native order.
+    fn referencers(&self, id: &ElementId) -> Vec<EvidenceElement> {
+        // `referencers` on the concrete type: the same query, Vimanam-typed.
+        // Method resolution prefers the inherent method, so this is not
+        // recursion.
+        self.referencers(id)
+            .into_iter()
+            .map(|entity| self.to_evidence(entity))
+            .collect()
+    }
+
+    /// The element's native location. `None` when the ID is unknown.
+    fn native_location(&self, id: &ElementId) -> Option<NativeLocation> {
+        self.entity(id).map(|entity| self.evidence_native(entity))
+    }
+
+    /// Diff this index (old) against another (new): the change facts a flag
+    /// can cite, in Vimanam's order. Non-breaking facts are never written:
+    /// additive changes flag nothing, so the seam drops them here.
+    fn diff_evidence(&self, new: &Self) -> Result<Vec<EvidenceChange>, ContractError> {
+        Ok(self
+            .diff(new)?
+            .iter()
+            .filter_map(|change| {
+                change.change_severity().map(|severity| EvidenceChange {
+                    id: ChangeId(change.id.clone()),
+                    subject: ElementId(change.subject.clone()),
+                    kind: EvidenceChangeKind::from(&change.kind),
+                    severity,
+                })
+            })
+            .collect())
     }
 }
 

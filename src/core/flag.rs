@@ -1,4 +1,4 @@
-//! Flagging: from citations and Vimanam change facts to flags.
+//! Flagging: from citations and change facts to flags.
 //!
 //! Pure computation, no model involved. For each change, every memory whose
 //! citation touches the change is flagged: one flag per memory per check,
@@ -27,38 +27,39 @@
 //! shared `$ref`. Propagation is upward-only; citing a descendant of S
 //! never flags.
 //!
-//! Severity: Vimanam's `breaking` flags, `review` flags marked for review,
+//! Severity: a source's `breaking` flags, `review` flags marked for review,
 //! `non_breaking` is filtered before it can flag (Doyle's [`Severity`] cannot
 //! represent it). One exception: a type-level `review` for an added field is
 //! treated as additive and flags nothing (see [`is_additive_type_review`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vimanam::contract::{Change, ChangeKind, EntityKind, Severity as VimanamSeverity};
-
 use super::model::{ChangeId, Citation, ElementId, Flag, Severity};
-use crate::contract::ContractIndex;
+use crate::evidence::{ChangeFact, EvidenceSource};
 
 /// Flag the cited memories a set of changes has made stale.
 ///
-/// * `citations` — what each memory rests on (element IDs are Vimanam's
-///   stable `ve2_…` strings, so a citation matches a change subject by
-///   string equality even when the index knows neither).
-/// * `changes` — Vimanam's facts, in Vimanam's order; kept as given.
-/// * `old` — the index of the contract the citations rest on. Subjects
-///   unknown to it still match direct citations; ancestor and referencer
-///   enrichment just finds nothing for them.
+/// * `citations` — what each memory rests on (element IDs are the source's
+///   stable strings, so a citation matches a change subject by string
+///   equality even when the index knows neither).
+/// * `changes` — the source's facts, in the source's order, as [`ChangeFact`];
+///   kept as given. Vimanam's facts and [`EvidenceChange`](crate::evidence::EvidenceChange)
+///   both implement it, so every source flags through this one path.
+/// * `old` — the index of the version the citations rest on, behind
+///   [`EvidenceSource`]. Subjects unknown to it still match direct
+///   citations; ancestor and referencer enrichment just finds nothing for
+///   them.
 /// * `open_flags` — the store's open flags. A memory with an open flag is
 ///   skipped: flagged and not yet decided means not flagged twice.
-/// * `old_version` / `new_version` — the contract versions either side of
-///   the change, recorded on each flag.
+/// * `old_version` / `new_version` — the versions either side of the change,
+///   recorded on each flag.
 ///
 /// Returns one [`Flag`] per newly flagged memory, in first-citation order.
 /// [`Flag::id`] is left empty: the store assigns `flag-N` on write.
-pub fn flag_citations(
+pub fn flag_citations<C: ChangeFact>(
     citations: &[Citation],
-    changes: &[Change],
-    old: &ContractIndex,
+    changes: &[C],
+    old: &impl EvidenceSource,
     open_flags: &[Flag],
     old_version: &str,
     new_version: &str,
@@ -69,10 +70,10 @@ pub fn flag_citations(
         .collect();
 
     // Memory key (adapter, id) -> (first citation order, claim, change ids).
-    let mut hits: BTreeMap<(&str, &str), (usize, &str, Vec<&Change>)> = BTreeMap::new();
+    let mut hits: BTreeMap<(&str, &str), (usize, &str, Vec<&C>)> = BTreeMap::new();
 
     for change in changes {
-        if flag_severity(change).is_none() {
+        if change.change_severity().is_none() {
             continue;
         };
         if is_additive_type_review(change, old) {
@@ -97,7 +98,7 @@ pub fn flag_citations(
     }
 
     let mut flags: Vec<Flag> = Vec::new();
-    let mut by_order: Vec<(usize, &str, &str, &str, Vec<&Change>)> = hits
+    let mut by_order: Vec<(usize, &str, &str, &str, Vec<&C>)> = hits
         .into_iter()
         .map(|((adapter, id), (order, claim, changes))| (order, adapter, id, claim, changes))
         .collect();
@@ -110,10 +111,10 @@ pub fn flag_citations(
         let mut ids: Vec<ChangeId> = Vec::new();
         let mut severity = Severity::Review;
         for change in matched {
-            if !ids.iter().any(|c| c.0 == change.id) {
-                ids.push(ChangeId(change.id.clone()));
+            if !ids.iter().any(|c| c.0.as_str() == change.change_id()) {
+                ids.push(ChangeId(change.change_id().to_string()));
             }
-            if change.severity == VimanamSeverity::Breaking {
+            if change.change_severity() == Some(Severity::Breaking) {
                 severity = Severity::Breaking;
             }
         }
@@ -133,50 +134,39 @@ pub fn flag_citations(
     flags
 }
 
-/// Doyle's severity for a change, or `None` when it flags nothing.
-/// Non-breaking is unrepresentable in [`Severity`], so it never flags.
-fn flag_severity(change: &Change) -> Option<Severity> {
-    match change.severity {
-        VimanamSeverity::Breaking => Some(Severity::Breaking),
-        VimanamSeverity::Review => Some(Severity::Review),
-        // NonBreaking, and any severity Vimanam adds later: flags nothing.
-        _ => None,
-    }
-}
-
-/// A type-level `review` for an added field is the same additive change
-/// Vimanam rates `non_breaking` on the operation response that carries it
+/// A type-level `review` for an added field is the same additive change the
+/// source rates `non_breaking` on the operation response that carries it
 /// (the Quiet Migration's `Stats.generated_at`: type-level `review`, but
 /// `non_breaking` on `GET /stats`' 200), seen through the shared schema.
 /// An optional field breaks no existing reader, so it propagates nowhere:
 /// not to referencers, not even to direct citers of the type. Additive
-/// changes flag nothing. Limitation: should Vimanam ever rate a
+/// changes flag nothing. Limitation: should a source ever rate a
 /// *required* field addition as `review`, this suppresses it too; no such
 /// fact exists in the fixtures, and the response-level fact would still
 /// carry the honest verdict.
-fn is_additive_type_review(change: &Change, old: &ContractIndex) -> bool {
-    change.severity == VimanamSeverity::Review
-        && change.kind == ChangeKind::FieldAdded
+fn is_additive_type_review(change: &impl ChangeFact, old: &impl EvidenceSource) -> bool {
+    change.change_severity() == Some(Severity::Review)
+        && change.is_field_added()
         && old
-            .entity(&ElementId(change.subject.clone()))
-            .is_some_and(|e| e.kind == EntityKind::Type)
+            .element(&ElementId(change.change_subject().to_string()))
+            .is_some_and(|e| e.kind.is_shared_type())
 }
 
-/// Every element ID a change to `change.subject` reaches: the subject, its
+/// Every element ID a change to `change_subject` reaches: the subject, its
 /// ancestors, and — only when the subject is a named type or a member of
 /// one — the referencers of that type and their ancestors.
-fn affected_elements(change: &Change, old: &ContractIndex) -> BTreeSet<String> {
-    let subject = ElementId(change.subject.clone());
+fn affected_elements(change: &impl ChangeFact, old: &impl EvidenceSource) -> BTreeSet<String> {
+    let subject = ElementId(change.change_subject().to_string());
     let mut affected = BTreeSet::new();
-    affected.insert(change.subject.clone());
+    affected.insert(change.change_subject().to_string());
     for ancestor in old.parent_chain(&subject) {
-        affected.insert(ancestor.id.clone());
+        affected.insert(ancestor.id.0.clone());
     }
     if let Some(named) = named_type_of(&subject, old) {
         for referencer in old.referencers(&ElementId(named)) {
-            affected.insert(referencer.id.clone());
-            for ancestor in old.parent_chain(&ElementId(referencer.id.clone())) {
-                affected.insert(ancestor.id.clone());
+            affected.insert(referencer.id.0.clone());
+            for ancestor in old.parent_chain(&referencer.id) {
+                affected.insert(ancestor.id.0.clone());
             }
         }
     }
@@ -188,16 +178,20 @@ fn affected_elements(change: &Change, old: &ContractIndex) -> BTreeSet<String> {
 /// type belongs to that type). Operation-scoped entities — operations,
 /// arguments, results and their inline fields — belong to no shared type,
 /// so changes to them never expand through `$ref`s.
-fn named_type_of(subject: &ElementId, old: &ContractIndex) -> Option<String> {
+fn named_type_of(subject: &ElementId, old: &impl EvidenceSource) -> Option<String> {
     old.parent_chain(subject)
         .into_iter()
-        .find(|e| e.kind == EntityKind::Type)
-        .map(|e| e.id.clone())
+        .find(|e| e.kind.is_shared_type())
+        .map(|e| e.id.0.clone())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Production code now takes `impl EvidenceSource` and no longer names
+    // the Vimanam index; the tests below still load it directly.
+    use crate::contract::ContractIndex;
+    use vimanam::contract::{Change, Severity as VimanamSeverity};
 
     // Entity IDs from testdata/vimanam/README.md, stable across v1 and v2.
     const LIST_PATIENTS: &str =

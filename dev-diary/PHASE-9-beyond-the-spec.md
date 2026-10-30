@@ -154,8 +154,47 @@ requires:   [T9.3]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/contract.rs, src/core/flag.rs, src/evidence.rs, and the one declaration line in src/lib.rs
-status:     claimed:msc-t9.5
+status:     in-review
 ```
+
+Notes (msc-t9.5): seam built, gate green, awaiting orchestrator validation.
+- `src/evidence.rs` (new): `NativeLocation` (moved verbatim from
+  contract.rs), `EvidenceElement(Kind)` (ID, kind, parent, references,
+  native; only `Type` is a shared named type), `EvidenceChange(Kind)` (ID,
+  subject, kind, Doyle severity; non-breaking facts are never written),
+  `ChangeFact` (implemented for Vimanam's `Change` and for
+  `EvidenceChange`), `EvidenceSource` (element(s), parent chain,
+  referencers, native location, `diff_evidence` which drops non-breaking).
+- `src/contract.rs`: re-exports `NativeLocation` so every existing path
+  keeps working; `ContractIndex` implements `EvidenceSource` by delegating
+  to shared private helpers (`evidence_native`, `to_evidence`) — one code
+  path serves the inherent methods and the trait. No signature changed.
+- `src/core/flag.rs`: `flag_citations` is generic over `impl ChangeFact`
+  and `impl EvidenceSource`; the propagation, severity and suppression
+  logic is untouched. Tests module unchanged except the two import lines
+  production code no longer needs at top level (relocated into the module,
+  no test altered).
+- `src/lib.rs`: the one approved line, `pub mod evidence;`.
+- New tests (9, all in `src/evidence.rs`): a fake legacy-flavoured source
+  with real `le2_` IDs from docs/legacy-ids.md flags through the same
+  `flag_citations` (subject, ancestor, shared-type reach, additive
+  suppression, review severity); Vimanam-behind-the-trait flags the demo
+  identically; `diff_evidence` keeps the 4 flaggable facts in order;
+  non-Vimanam natives resolve through the trait with the guard-matchable
+  fields. Full gate passes: 276 lib tests green (267 pre-existing, none
+  altered, plus the 9 new); `testdata/` untouched; `ElementId`/`ChangeId`
+  shape unchanged.
+- Surprise: Vimanam's `EntityKind`/`ChangeKind`/`Severity` are all
+  `#[non_exhaustive]`, so the seam maps them with wildcard arms into
+  `Other(...)`: a Vimanam addition can never break the build, it just
+  rides as a named other.
+- Guard boundary (for T9.6): `src/guard.rs` is untouched (outside owns).
+  All 30 guard tests pass unchanged, and the seam test proves a
+  non-Vimanam source serves the fields the guard matches on. A
+  decide-level test with a non-Vimanam-backed flag needs the guard's
+  version loader to pick a source per flag version — that loader and the
+  legacy version shape are T9.6's design space, so this task invents no
+  file convention for them.
 Today flagging reads Vimanam's index directly. Put an evidence source behind a trait: index a version into elements (ID, kind, parent, references, native location) and diff two versions into change facts (ID, subject, kind, severity). Vimanam becomes the first implementation with no change in behaviour; the legacy and screen sources plug in beside it. Element and change IDs carry their source in a prefix (`ve2_`/`vc2_` stay Vimanam's), so `ElementId` and `ChangeId` keep their shape and nothing in `testdata/` changes.
 
 This touches frozen code, so it is the orchestrator's call, made here. Every existing test passes unchanged; that is the proof.
