@@ -1,0 +1,26 @@
+Source: 'BILLBATCH.cbl'
+Program-Id:  BILLBATCH
+Program-Id:  BILLBATCH            Entry: BILLBATCH                       Line:     44
+Program-Id:  BILLBATCH        Paragraph: MAIN-PARA                       Line:     44
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:     52
+Program-Id:  BILLBATCH        Paragraph: PROCESS-ALL                     Line:     56
+Program-Id:  BILLBATCH        Paragraph: CALC-LATE-FEE                   Line:     66
+Program-Id:  BILLBATCH        Paragraph: WRITE-DETAIL                    Line:     71
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:     52
+Program-Id:  BILLBATCH        Paragraph: PROCESS-ALL                     Line:     56
+Program-Id:  BILLBATCH        Paragraph: CALC-LATE-FEE                   Line:     66
+Program-Id:  BILLBATCH        Paragraph: WRITE-DETAIL                    Line:     71
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:     52
+Program-Id:  BILLBATCH        Paragraph: PROCESS-ALL                     Line:     56
+Program-Id:  BILLBATCH        Paragraph: LOG-EXEMPT                      Line:     69
+Program-Id:  BILLBATCH        Paragraph: WRITE-DETAIL                    Line:     71
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:     52
+Program-Id:  BILLBATCH        Paragraph: PROCESS-ALL                     Line:     56
+Program-Id:  BILLBATCH        Paragraph: CALC-LATE-FEE                   Line:     66
+Program-Id:  BILLBATCH        Paragraph: WRITE-DETAIL                    Line:     71
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:     52
+Program-Id:  BILLBATCH        Paragraph: PROCESS-ALL                     Line:     56
+Program-Id:  BILLBATCH        Paragraph: CALC-LATE-FEE                   Line:     66
+Program-Id:  BILLBATCH        Paragraph: WRITE-DETAIL                    Line:     71
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:     52
+Program-Id:  BILLBATCH        Paragraph: WRITE-TOTALS                    Line:     78

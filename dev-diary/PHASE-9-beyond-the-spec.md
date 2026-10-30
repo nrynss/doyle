@@ -20,8 +20,37 @@ requires:   []
 fixture-ok: no
 size:       S · mid
 owns:       docs/legacy.md, testdata/legacy/runtime/
-status:     claimed:msc-t9.1
+status:     in-review
 ```
+
+Notes (msc-t9.1): done, awaiting orchestrator validation.
+- AUR first, as planned: `gnucobol 3.2-8` PKGBUILD fetched, upstream tarball
+  verified, PGP key imported. System install needs sudo, which this machine
+  does not grant, so the same source was built into
+  `$HOME/.local/gnucobol-3.2` with `--without-db` (Berkeley DB headers
+  absent here); json-c and libxml2 configured as upstream. `make` clean,
+  `cobc (GnuCOBOL) 3.2.0` against GCC 16.2.1.
+- Container second: `debian:stable-slim` +
+  `apt-get install gnucobol` (metapackage v5 pulls `gnucobol3 3.2-3) gives
+  `cobc (GnuCOBOL) 3.2.0` against C 14.2.0. Both compilers build and run
+  the sample identically.
+- Not GnuCOBOL, noted and skipped: `gcc-gcobol` 16.2.1 in the main repos
+  is the GCC COBOL frontend, a different compiler.
+- Sample: `BILLBATCH.cbl` + `patient.cpy` + 5-record `patients.dat`;
+  `ROUNDED` rounds both ways (0.49995 up to 0.50, 14.99985 up to 15.00),
+  exempt record carries 0.00; totals 5 / 1,393.33 / 17.15 in `report.txt`.
+- Trace: `-ftrace` at compile plus `COB_SET_TRACE=1` at run; without the
+  variable the binary is silent. One stderr line per paragraph with source
+  line; `-ftraceall` adds statement lines (OPEN/READ/PERFORM/UNTIL).
+  Recorded in `trace.txt`; the exempt record shows LOG-EXEMPT where the
+  others show CALC-LATE-FEE.
+- Gate: `./tools/check.sh` passes with no `cobc` on PATH, and no file under
+  `src/`, `tests/`, `tools/` or `Cargo.toml` names cobc/gnucobol. All
+  compiler runs were by hand; nothing committed runs the compiler.
+- Surprise: `-ftrace` alone prints nothing — the runtime switch is
+  undocumented in `cobc --help` and only in the runtime configuration;
+  worth one line in T9.8's runner so a silent trace is not mistaken for a
+  clean one.
 Make COBOL run on this machine and in the gate's world. GnuCOBOL is not installed and not in the main package repositories: try the AUR package, then a container, and record which works, with versions. Compile and run a small batch program that reads a fixed-width file through a copybook, writes a report, and uses `ROUNDED` arithmetic and a `PERFORM` of a named paragraph. Find out how to trace which paragraphs ran for a given input (`-ftrace`, `-ftraceall`, or a `DISPLAY` convention) and what the trace looks like.
 
 The gate must not need COBOL: anything that runs the compiler is a live test or a recorded output.
