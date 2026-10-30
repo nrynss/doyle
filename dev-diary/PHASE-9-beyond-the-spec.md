@@ -89,7 +89,7 @@ requires:   [T9.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       docs/legacy-ids.md, testdata/legacy/ids/
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.3): scheme decided and probe recorded, awaiting orchestrator validation.
@@ -242,7 +242,7 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 
 - [x] COBOL runs here and the gate does not need it (T9.1). Two routes, both GnuCOBOL 3.2.0; gate verified COBOL-free.
 - [ ] Wonder's vision is measured, with what Doyle can and cannot build on (T9.2).
-- [ ] A memory can cite legacy code by a stable ID (T9.3).
+- [x] A memory can cite legacy code by a stable ID (T9.3). Six kinds, `le2_`/`lc2_`, name-path-keyed SHA-256 IDs; curator 3/3 on the sample.
 - [ ] The extended story and its traps are signed off by the user (T9.4).
 - [ ] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5).
 - [ ] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8).
