@@ -89,8 +89,32 @@ requires:   [T9.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       docs/legacy-ids.md, testdata/legacy/ids/
-status:     claimed:msc-t9.3
+status:     in-review
 ```
+
+Notes (msc-t9.3): scheme decided and probe recorded, awaiting orchestrator validation.
+- `docs/legacy-ids.md`: six citable kinds (program, paragraph, section,
+  copybook record/field, file); `le2_`/`lc2_` prefixes; ID = SHA-256 hex
+  of a canonical `legacy:<PROGRAM>:<kind>:<path>` key, never line numbers;
+  `PIC`/`ASSIGN`/order are attributes. Change table with severities
+  (statement change, removal, PIC change and record-layout change break;
+  adds are non-breaking; ASSIGN/mode changes review; rename = remove+add).
+  Worked examples with computed IDs for all 15 BILLBATCH elements.
+- Probe: 3 business-rule memories (true L1, false-of-code L2, layout L3)
+  against the 15-element list on Muse Spark Open via Baseten. 3/3 cite
+  the right paragraph/record/field (L1 program+CALC-LATE-FEE+BALANCE 0.93;
+  L2 LOG-EXEMPT+EXEMPT-FLAG plus context 0.88; L3 record+all four fields
+  1.0); no unknown IDs. Recordings in `testdata/legacy/ids/`, no key.
+- Spend: 4 calls (L1 ok; L2 first attempt null content, retry ok; L3 ok).
+  Tokens in/out: 1135/1350, 1125/1694, 1143/1555; no cost_usd returned.
+  L2's null-then-success matches the T4.3 starvation finding; default
+  effort sufficed on retry.
+- Surprise: the model needed no COBOL-specific prompting — the mirrored
+  curator prompt with a program element list cited precisely, including
+  the false memory (citation is not fact-checking).
+- For T9.6: parser subset and the offset-recompute rule are in the doc's
+  closing notes; the sample has no sections, so section IDs are
+  decided-but-unprobed.
 Decide how a memory cites COBOL, before any code. An element is a program, a paragraph or section, a copybook record or field (with its level path and `PIC`), or a file. Its ID must stay the same across versions when the element means the same thing, the way Vimanam's do: derive it from the program ID and the element's name path, never from line numbers. Say what counts as a change to each kind (a field's `PIC` changes, a paragraph's statements change, a paragraph is removed) and its severity.
 
 Then check the curator can cite: give Muse Spark Open three business-rule memories and the sample program's element list, and see whether it names the right paragraph and field. Recorded replies only in the gate.

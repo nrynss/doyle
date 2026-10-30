@@ -1,0 +1,63 @@
+{
+  "case_id": "L1",
+  "memory_text": "BILLBATCH charges a 1.5% late fee on each account's balance, rounded to the cent, computed in CALC-LATE-FEE.",
+  "request": {
+    "model": "meta-models/muse-spark-open-1026",
+    "system": "You curate memory citations for Doyle, which tracks what each agent memory rests on in a legacy COBOL program. For one memory and a list of program elements: return the IDs of the elements the memory's claim rests on (the program, paragraph, section, copybook record or field, or file whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Cite only IDs from the list you were given; any other ID is dropped. If the memory is about nothing in this program, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).",
+    "user": "Memory:\nBILLBATCH charges a 1.5% late fee on each account's balance, rounded to the cent, computed in CALC-LATE-FEE.\n\nProgram elements (cite only these IDs):\n- le2_be3caaf70f3125fa6cc719da40eb9b356e258afe83ba1527943e65867dead079 program BILLBATCH\n- le2_2e1ccc42b46636ec00adf64f718d727d5110dbadf0df5085c98609c09590c488 paragraph MAIN-PARA of BILLBATCH\n- le2_9e88e4bb2b151c9bbd4634a1601dfacc0a0f0f03281b35e0732e3404dbcddcd9 paragraph READ-NEXT of BILLBATCH\n- le2_ed52f2639dd1235812b5dd87ba91b73728636879883ad77f92b3f0b0afad9716 paragraph PROCESS-ALL of BILLBATCH\n- le2_3422f89619e902b31f7fe202a2fc9a05701bbc7ae83f09cf366989f5e95f749e paragraph CALC-LATE-FEE of BILLBATCH\n- le2_af6c903a18d5e82a8429ca3d0b9c2ad6a5bdc11b876f8ae18bb2d926b47d83a3 paragraph LOG-EXEMPT of BILLBATCH\n- le2_3e24136be0c79237bb6fd791ab71a3cb871e1d0e7cbb0c4e4e3a9fc41b6b867b paragraph WRITE-DETAIL of BILLBATCH\n- le2_72951287dc5071d4725e669b23300824422e343209bdadb81e9f61e3174b7d3d paragraph WRITE-TOTALS of BILLBATCH\n- le2_690243c98922cdcded58beed19f46cb8725f9690399b9f1c297cc465c4f21533 record PATIENT-RECORD (copybook patient.cpy)\n- le2_45b9463e291475e0882b9909f0f4e8762e5c39528785f7697b6023433315facc field PATIENT-RECORD.ACCT-NO PIC 9(6)\n- le2_aa156746e052e0c3095b931dceea8aa24c04efdee6b8331d58d5e1801cd82f1e field PATIENT-RECORD.ACCT-NAME PIC X(20)\n- le2_115161c1611668d048b209f67556c356ed639c6a74f05ecd39bf85c515909ce2 field PATIENT-RECORD.BALANCE PIC 9(5)V99\n- le2_72c916279d8685a43a018ce196a4b790b00816441abfd7e4444ace1cc15cc0f9 field PATIENT-RECORD.EXEMPT-FLAG PIC X\n- le2_c49db257411076d0f1b1ce83039459dd83e03476d4cca6ac5eb3f6a8ad5583d0 file ACCT-FILE ASSIGN \"patients.dat\"\n- le2_672f4512a15a7b96608cb6f383cf33ac782d1a4acd2811519f508b57be839a2c file REPORT-FILE ASSIGN \"report.txt\"",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "element_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IDs from the program element list the memory rests on; empty when it rests on nothing."
+        },
+        "claim": {
+          "type": "string",
+          "description": "The memory's claim in one line, short and plain."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "0.0 to 1.0: how confident the citation is."
+        },
+        "rests_on_nothing": {
+          "type": "boolean",
+          "description": "True when the memory is about nothing in this program."
+        }
+      },
+      "required": [
+        "element_ids",
+        "claim",
+        "confidence",
+        "rests_on_nothing"
+      ],
+      "additionalProperties": false
+    },
+    "budget": {
+      "max_output_tokens": 2048,
+      "max_cost_usd": null
+    }
+  },
+  "response": {
+    "value": {
+      "element_ids": [
+        "le2_be3caaf70f3125fa6cc719da40eb9b356e258afe83ba1527943e65867dead079",
+        "le2_3422f89619e902b31f7fe202a2fc9a05701bbc7ae83f09cf366989f5e95f749e",
+        "le2_115161c1611668d048b209f67556c356ed639c6a74f05ecd39bf85c515909ce2"
+      ],
+      "claim": "BILLBATCH charges 1.5% late fee on BALANCE rounded to cent computed in CALC-LATE-FEE",
+      "confidence": 0.93,
+      "rests_on_nothing": false
+    },
+    "usage": {
+      "input_tokens": 1135,
+      "output_tokens": 1350,
+      "cost_usd": null
+    }
+  }
+}
