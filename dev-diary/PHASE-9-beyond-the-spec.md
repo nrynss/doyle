@@ -131,7 +131,9 @@ requires:   [T9.1, T9.2]
 fixture-ok: yes
 size:       M · frontier
 owns:       testdata/legacy/story/
-status:     not-started
+status:     claimed:msc-t9.4-options
+
+**Orchestrator decision (user): the extension goes into the recorded runs and the video, not offline-only.** The story fixtures must support the extended runs (T9.10) and the video (T8.2).
 ```
 Write the extension of the Quiet Migration as fixtures, the way T0.3 wrote the original:
 - the COBOL billing batch (a few hundred lines), its copybook and data for the same 4,812 patients, in a v1 and a v2;
@@ -152,7 +154,7 @@ requires:   [T9.3]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/contract.rs, src/core/flag.rs, src/evidence.rs, and the one declaration line in src/lib.rs
-status:     not-started
+status:     claimed:msc-t9.5
 ```
 Today flagging reads Vimanam's index directly. Put an evidence source behind a trait: index a version into elements (ID, kind, parent, references, native location) and diff two versions into change facts (ID, subject, kind, severity). Vimanam becomes the first implementation with no change in behaviour; the legacy and screen sources plug in beside it. Element and change IDs carry their source in a prefix (`ve2_`/`vc2_` stay Vimanam's), so `ElementId` and `ChangeId` keep their shape and nothing in `testdata/` changes.
 
