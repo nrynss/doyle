@@ -86,6 +86,6 @@ Offline tests replay `testdata/lambo/` through a fake transport.
 ## Exit Criteria
 
 - [x] Muse Code memory is read from both scopes with stable references (T3.1).
-- [ ] Muse Code notes are annotated and superseded safely, and a live Wonder session follows the annotation (T3.2, T3.2b). Offline done; live pending.
+- [x] Muse Code notes are annotated and superseded safely, and a live Wonder session follows the annotation (T3.2, T3.2b). Live: fresh session answered the annotation's name, never the seeded one; scratch and global artifacts restored.
 - [x] Lambo memories are read and corrected through MCP, and recall warns on the corrected memory (T3.3, T3.3b). Live confirmed on `doyle-probe`: retry is a no-op, `*` serves as match-all.
 - [x] Both adapters pass the same conformance test, and nothing outside `src/adapters/` names either.
