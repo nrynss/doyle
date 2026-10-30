@@ -66,5 +66,5 @@ Readable at phone and desktop width, in light and dark. Everything a judge needs
 
 ## Exit Criteria
 
-- [x] The guard denies an action resting on a stale memory and allows the rest, offline (T6.1). Live Wonder session follows in T6.1b.
+- [x] The guard denies an action resting on a stale memory and allows the rest (T6.1 offline; T6.1b live: Wonder session denied with the reason, settings untouched).
 - [x] A person settles a correction from the review page, and it lands in both systems (T6.2).
