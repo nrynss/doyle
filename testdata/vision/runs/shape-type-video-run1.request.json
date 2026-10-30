@@ -1,0 +1,32 @@
+{
+  "case": "shape-type-video",
+  "run": "1",
+  "model": "muse-wonder-1.0",
+  "endpoint": "POST /v1/chat/completions",
+  "prompt": "tiny",
+  "system": "Describe screen recordings briefly. Reply with exactly the JSON asked for.",
+  "user_text": "Describe what happens in this recording in one sentence.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "summary"
+    ]
+  },
+  "max_tokens": 1500,
+  "reasoning_effort": "low",
+  "media": [
+    {
+      "file": "tiny-2s.mp4",
+      "bytes": 20335,
+      "sha256": "803ee4a89206e076837b98f2528d2893b5620aa66412b079ea6aefc5b77cdcea"
+    }
+  ],
+  "part_override": "video",
+  "raw_url": null,
+  "no_format": false
+}

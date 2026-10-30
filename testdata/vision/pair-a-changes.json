@@ -1,0 +1,27 @@
+{
+  "a": "lookup-v1.png",
+  "b": "lookup-v2.png",
+  "changes": [
+    {
+      "id": "C1",
+      "type": "label-changed",
+      "location": "row 12",
+      "before": "PHONE",
+      "after": "MOBILE"
+    },
+    {
+      "id": "C2",
+      "type": "value-changed",
+      "location": "row 16",
+      "before": "$ 42.50",
+      "after": "$ 44.00"
+    },
+    {
+      "id": "C3",
+      "type": "footer-changed",
+      "location": "row 23",
+      "before": "PF5 UPDATE",
+      "after": "PF5 SAVE"
+    }
+  ]
+}

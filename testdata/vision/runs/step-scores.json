@@ -1,0 +1,279 @@
+{
+  "run1": {
+    "reported_count": 9,
+    "gt_count": 7,
+    "steps": {
+      "S1": {
+        "reported": [
+          0,
+          1
+        ],
+        "union": [
+          0.0,
+          7.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 0.0,
+        "within_tol": true
+      },
+      "S2": {
+        "reported": [
+          2
+        ],
+        "union": [
+          7.0,
+          20.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 0.0,
+        "within_tol": true
+      },
+      "S3": {
+        "reported": [
+          3
+        ],
+        "union": [
+          20.0,
+          28.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 4.0,
+        "within_tol": true
+      },
+      "S4": {
+        "reported": [
+          4,
+          5
+        ],
+        "union": [
+          28.0,
+          40.2
+        ],
+        "d_start_s": 4.0,
+        "d_end_s": 0.2,
+        "within_tol": true
+      },
+      "S5": {
+        "reported": [
+          6
+        ],
+        "union": [
+          40.2,
+          47.2
+        ],
+        "d_start_s": 0.2,
+        "d_end_s": 0.2,
+        "within_tol": true
+      },
+      "S6": {
+        "reported": [
+          7
+        ],
+        "union": [
+          47.2,
+          53.2
+        ],
+        "d_start_s": 0.2,
+        "d_end_s": 0.2,
+        "within_tol": true
+      },
+      "S7": {
+        "reported": [
+          8
+        ],
+        "union": [
+          53.2,
+          59.2
+        ],
+        "d_start_s": 0.2,
+        "d_end_s": -0.8,
+        "within_tol": true
+      }
+    }
+  },
+  "run2": {
+    "reported_count": 9,
+    "gt_count": 7,
+    "steps": {
+      "S1": {
+        "reported": [
+          0,
+          1
+        ],
+        "union": [
+          0.0,
+          7.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 0.0,
+        "within_tol": true
+      },
+      "S2": {
+        "reported": [
+          2
+        ],
+        "union": [
+          7.0,
+          19.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": -1.0,
+        "within_tol": true
+      },
+      "S3": {
+        "reported": [
+          3
+        ],
+        "union": [
+          20.0,
+          27.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 3.0,
+        "within_tol": true
+      },
+      "S4": {
+        "reported": [
+          4,
+          5
+        ],
+        "union": [
+          27.0,
+          32.0
+        ],
+        "d_start_s": 3.0,
+        "d_end_s": -8.0,
+        "within_tol": false
+      },
+      "S5": {
+        "reported": [
+          6
+        ],
+        "union": [
+          39.0,
+          40.2
+        ],
+        "d_start_s": -1.0,
+        "d_end_s": -6.8,
+        "within_tol": false
+      },
+      "S6": {
+        "reported": [
+          7
+        ],
+        "union": [
+          46.2,
+          47.2
+        ],
+        "d_start_s": -0.8,
+        "d_end_s": -5.8,
+        "within_tol": false
+      },
+      "S7": {
+        "reported": [
+          8
+        ],
+        "union": [
+          52.2,
+          59.2
+        ],
+        "d_start_s": -0.8,
+        "d_end_s": -0.8,
+        "within_tol": true
+      }
+    }
+  },
+  "run3": {
+    "reported_count": 10,
+    "gt_count": 7,
+    "steps": {
+      "S1": {
+        "reported": [
+          0,
+          1
+        ],
+        "union": [
+          0.0,
+          7.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 0.0,
+        "within_tol": true
+      },
+      "S2": {
+        "reported": [
+          2,
+          3
+        ],
+        "union": [
+          7.0,
+          19.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": -1.0,
+        "within_tol": true
+      },
+      "S3": {
+        "reported": [
+          4
+        ],
+        "union": [
+          20.0,
+          28.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 4.0,
+        "within_tol": true
+      },
+      "S4": {
+        "reported": [
+          5,
+          6
+        ],
+        "union": [
+          28.0,
+          40.2
+        ],
+        "d_start_s": 4.0,
+        "d_end_s": 0.2,
+        "within_tol": true
+      },
+      "S5": {
+        "reported": [
+          7
+        ],
+        "union": [
+          40.2,
+          47.0
+        ],
+        "d_start_s": 0.2,
+        "d_end_s": 0.0,
+        "within_tol": true
+      },
+      "S6": {
+        "reported": [
+          8
+        ],
+        "union": [
+          47.0,
+          53.0
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": 0.0,
+        "within_tol": true
+      },
+      "S7": {
+        "reported": [
+          9
+        ],
+        "union": [
+          53.0,
+          59.2
+        ],
+        "d_start_s": 0.0,
+        "d_end_s": -0.8,
+        "within_tol": true
+      }
+    }
+  }
+}

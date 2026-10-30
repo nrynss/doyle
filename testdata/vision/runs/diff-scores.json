@@ -1,0 +1,89 @@
+{
+  "a-run1": {
+    "reported": 3,
+    "gt": 3,
+    "caught": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "missed": [],
+    "invented": []
+  },
+  "a-run2": {
+    "reported": 3,
+    "gt": 3,
+    "caught": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "missed": [],
+    "invented": []
+  },
+  "a-run3": {
+    "reported": 3,
+    "gt": 3,
+    "caught": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "missed": [],
+    "invented": []
+  },
+  "b-run1": {
+    "reported": 3,
+    "gt": 3,
+    "caught": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "missed": [],
+    "invented": []
+  },
+  "b-run2": {
+    "reported": 3,
+    "gt": 3,
+    "caught": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "missed": [],
+    "invented": []
+  },
+  "b-run3": {
+    "reported": 3,
+    "gt": 3,
+    "caught": [
+      "C1",
+      "C2",
+      "C3"
+    ],
+    "missed": [],
+    "invented": []
+  },
+  "c-run1": {
+    "reported": 0,
+    "gt": 0,
+    "caught": [],
+    "missed": [],
+    "invented": []
+  },
+  "c-run2": {
+    "reported": 0,
+    "gt": 0,
+    "caught": [],
+    "missed": [],
+    "invented": []
+  },
+  "c-run3": {
+    "reported": 0,
+    "gt": 0,
+    "caught": [],
+    "missed": [],
+    "invented": []
+  }
+}

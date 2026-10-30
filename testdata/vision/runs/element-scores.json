@@ -1,0 +1,35 @@
+{
+  "run1": {
+    "reported": 39,
+    "punctuation_only_skipped": 1,
+    "gt_total": 37,
+    "matched": 34,
+    "recall": 0.9189,
+    "precision": 0.8947,
+    "positioned_frac": 1.0,
+    "kind_frac": 1.0,
+    "protected_frac": 1.0
+  },
+  "run3": {
+    "reported": 37,
+    "punctuation_only_skipped": 0,
+    "gt_total": 37,
+    "matched": 35,
+    "recall": 0.9459,
+    "precision": 0.9459,
+    "positioned_frac": 0.8,
+    "kind_frac": 1.0,
+    "protected_frac": 1.0
+  },
+  "run4": {
+    "reported": 37,
+    "punctuation_only_skipped": 0,
+    "gt_total": 37,
+    "matched": 35,
+    "recall": 0.9459,
+    "precision": 0.9459,
+    "positioned_frac": 1.0,
+    "kind_frac": 1.0,
+    "protected_frac": 1.0
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "case": "steps",
+  "run": "1",
+  "model": "muse-wonder-1.0",
+  "endpoint": "POST /v1/chat/completions",
+  "prompt": "steps",
+  "system": "You watch screen recordings of an operator using a 3270 green-screen console. Reply with exactly the JSON the schema asks for.",
+  "user_text": "List the steps the operator performs in this recording, in order, with start and end times in seconds. Describe what is visible (which screen, what is typed, what opens or moves). Times are seconds from the start of the recording and may be fractional.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "start_s": {
+              "type": "number"
+            },
+            "end_s": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "description",
+            "start_s",
+            "end_s"
+          ]
+        }
+      }
+    },
+    "required": [
+      "steps"
+    ]
+  },
+  "max_tokens": 6000,
+  "reasoning_effort": "low",
+  "media": [
+    {
+      "file": "recording-60s.mp4",
+      "bytes": 149057,
+      "sha256": "e72bd19a2becf3f4517f68ad189175f7e1fe8c807e4dedb6553c50dc0d1ae41c"
+    }
+  ],
+  "part_override": null,
+  "raw_url": null,
+  "no_format": false
+}

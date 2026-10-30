@@ -65,7 +65,7 @@ requires:   []
 fixture-ok: no
 size:       M · frontier
 owns:       docs/wonder-vision.md, testdata/vision/
-status:     claimed:msc-t9.2
+status:     in-review
 ```
 The first probe ran each case once, on clean web pages and a 12-second clip of still screens. Measure what Doyle will rely on:
 - a 3270-style green screen (80×24, monospace, field labels and protected fields), rendered as an image: element list against ground truth;
@@ -80,6 +80,8 @@ Reasoning tokens count against `max_tokens` on the Meta API: set `reasoning_effo
 Budget: $3. Run one case first, check its cost, and stop and report if the rest would go over.
 
 **Done when:** `docs/wonder-vision.md` gives each case's score, spread across runs, cost and the shapes that work; the ground truth and recorded replies (no key) are in `testdata/vision/`; it says plainly which of screens, diffs and recordings Doyle can build on and which it cannot.
+
+Notes (msc-t9.2): measured on `muse-wonder-1.0`, `reasoning_effort low`, 22 replies at 200 + 3 at 400, ~127k tokens, estimated under $2 of the $3 budget (no cost field; basis in the doc). Screens: recall 0.92-0.95, kinds/protection perfect, same two texts misread every run. Diffs: 18/18 caught, `[]` x3 on the identical pair. Recording (60 s): all 7 steps found x3, onsets within ~1 s, one run fragments static holds. Limits: 11 MB data URL and 120 s accepted (lower bounds); remote https URLs are fetched server-side; no upload endpoint (`GET /v1/files` 404). Working: `image_url`/`video_url` data URLs, json_schema with vision. Failing with error text: `input_video` and bare `video` part types, tiny caps (reasoning eats `max_tokens`: 3000 truncates a 37-element list). One generator bug along the way (a footer edit leaked into a message row) was caught by the model as a real fourth change; the runs were discarded and re-done clean. Verdict in the doc: screens and diffs buildable; recordings buildable with +-5 s span padding.
 
 ---
 

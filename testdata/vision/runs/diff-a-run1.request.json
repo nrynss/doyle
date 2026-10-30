@@ -1,0 +1,56 @@
+{
+  "case": "diff-a",
+  "run": "1",
+  "model": "muse-wonder-1.0",
+  "endpoint": "POST /v1/chat/completions",
+  "prompt": "diff",
+  "system": "You compare two versions of an IBM 3270 green-screen operator console. Reply with exactly the JSON the schema asks for.",
+  "user_text": "Version A is the first image, version B the second. List every difference between B and A: changed, added or removed text. For each give what it was in A (before, or '(absent)' if added), what it is in B (after, or '(blank)' if removed), and where (row number or screen area). If the two versions are identical, return an empty changes list: do not invent differences.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "changes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "before": {
+              "type": "string"
+            },
+            "after": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "before",
+            "after",
+            "location"
+          ]
+        }
+      }
+    },
+    "required": [
+      "changes"
+    ]
+  },
+  "max_tokens": 4000,
+  "reasoning_effort": "low",
+  "media": [
+    {
+      "file": "lookup-v1.png",
+      "bytes": 43689,
+      "sha256": "2bb8ad8cc075ab5932e21dc84f4b1b43d0fc2110a6ba428835e09ad48d1a4fa4"
+    },
+    {
+      "file": "lookup-v2.png",
+      "bytes": 43395,
+      "sha256": "71e04d8d2ba0409bf05558d3dc6478d27dec70176addd39738e54265de659756"
+    }
+  ],
+  "part_override": null,
+  "raw_url": null,
+  "no_format": false
+}

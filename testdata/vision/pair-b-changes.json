@@ -1,0 +1,27 @@
+{
+  "a": "decomm-v1.png",
+  "b": "decomm-v2.png",
+  "changes": [
+    {
+      "id": "C1",
+      "type": "message-removed",
+      "location": "row 9",
+      "before": "WARNING: DECOMMISSION IS PERMANENT.",
+      "after": "(blank)"
+    },
+    {
+      "id": "C2",
+      "type": "confirmation-removed",
+      "location": "row 10",
+      "before": "TYPE CLINIC NAME TO CONFIRM: ________________",
+      "after": "(blank)"
+    },
+    {
+      "id": "C3",
+      "type": "footer-changed",
+      "location": "row 23",
+      "before": "PF12 CONFIRM",
+      "after": "PF12 DECOMMISSION"
+    }
+  ]
+}

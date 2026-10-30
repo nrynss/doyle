@@ -1,0 +1,59 @@
+{
+  "case": "screen",
+  "run": "3",
+  "model": "muse-wonder-1.0",
+  "endpoint": "POST /v1/chat/completions",
+  "prompt": "screen",
+  "system": "You read IBM 3270 green-screen operator consoles. Reply with exactly the JSON the schema asks for: one entry per text element visible on screen. Positions are 1-indexed: row 1 is the top line, column 1 is the leftmost column. kinds: title, screen-id, heading, datetime, label, value, input, message, status, footer, pfkey.",
+  "user_text": "List every text element on this 80x24 green screen: titles, headings, labels, values, input fields, messages, the status line and function-key hints. For each give its exact text, 1-indexed row and column, kind, and whether the field is protected (true) or an editable input (false).",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "elements": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "row": {
+              "type": "integer"
+            },
+            "col": {
+              "type": "integer"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "protected": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "text",
+            "row",
+            "col",
+            "kind",
+            "protected"
+          ]
+        }
+      }
+    },
+    "required": [
+      "elements"
+    ]
+  },
+  "max_tokens": 5000,
+  "reasoning_effort": "low",
+  "media": [
+    {
+      "file": "lookup-v1.png",
+      "bytes": 43689,
+      "sha256": "2bb8ad8cc075ab5932e21dc84f4b1b43d0fc2110a6ba428835e09ad48d1a4fa4"
+    }
+  ],
+  "part_override": null,
+  "raw_url": null,
+  "no_format": false
+}

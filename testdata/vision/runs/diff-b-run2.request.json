@@ -1,0 +1,56 @@
+{
+  "case": "diff-b",
+  "run": "2",
+  "model": "muse-wonder-1.0",
+  "endpoint": "POST /v1/chat/completions",
+  "prompt": "diff",
+  "system": "You compare two versions of an IBM 3270 green-screen operator console. Reply with exactly the JSON the schema asks for.",
+  "user_text": "Version A is the first image, version B the second. List every difference between B and A: changed, added or removed text. For each give what it was in A (before, or '(absent)' if added), what it is in B (after, or '(blank)' if removed), and where (row number or screen area). If the two versions are identical, return an empty changes list: do not invent differences.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "changes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "before": {
+              "type": "string"
+            },
+            "after": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "before",
+            "after",
+            "location"
+          ]
+        }
+      }
+    },
+    "required": [
+      "changes"
+    ]
+  },
+  "max_tokens": 4000,
+  "reasoning_effort": "low",
+  "media": [
+    {
+      "file": "decomm-v1.png",
+      "bytes": 31535,
+      "sha256": "a761c39d4a288b892c35ff9a35f50f83243e0ca9094ec9db9ba67f6a8deebd0d"
+    },
+    {
+      "file": "decomm-v2.png",
+      "bytes": 26870,
+      "sha256": "bd94c3a3d62d166b120fed29e8c6d085fffc0dbeed84fb47ccbcfabb2c64cd6e"
+    }
+  ],
+  "part_override": null,
+  "raw_url": null,
+  "no_format": false
+}

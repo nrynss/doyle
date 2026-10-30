@@ -1,0 +1,222 @@
+{
+  "screen": "decommission",
+  "rows": 24,
+  "cols": 80,
+  "elements": [
+    {
+      "id": "E01",
+      "row": 1,
+      "col": 27,
+      "len": 28,
+      "text": "FERNWHISTLE VETERINARY GROUP",
+      "kind": "title",
+      "protected": true
+    },
+    {
+      "id": "E02",
+      "row": 1,
+      "col": 74,
+      "len": 6,
+      "text": "FWV-09",
+      "kind": "screen-id",
+      "protected": true
+    },
+    {
+      "id": "E03",
+      "row": 3,
+      "col": 4,
+      "len": 19,
+      "text": "DECOMMISSION CLINIC",
+      "kind": "heading",
+      "protected": true
+    },
+    {
+      "id": "E04",
+      "row": 3,
+      "col": 66,
+      "len": 13,
+      "text": "DATE 06/14/26",
+      "kind": "datetime",
+      "protected": true
+    },
+    {
+      "id": "E05",
+      "row": 5,
+      "col": 4,
+      "len": 6,
+      "text": "CLINIC",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "id": "E06",
+      "row": 5,
+      "col": 16,
+      "len": 15,
+      "text": "MAPLE ST CLINIC",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "id": "E07",
+      "row": 6,
+      "col": 4,
+      "len": 8,
+      "text": "PATIENTS",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "id": "E08",
+      "row": 6,
+      "col": 16,
+      "len": 4,
+      "text": "4812",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "id": "E09",
+      "row": 7,
+      "col": 4,
+      "len": 11,
+      "text": "LAST EXPORT",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "id": "E10",
+      "row": 7,
+      "col": 16,
+      "len": 22,
+      "text": "49 PAGES, 4812 RECORDS",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "id": "E11",
+      "row": 9,
+      "col": 4,
+      "len": 35,
+      "text": "WARNING: DECOMMISSION IS PERMANENT.",
+      "kind": "message",
+      "protected": true
+    },
+    {
+      "id": "E12",
+      "row": 10,
+      "col": 4,
+      "len": 28,
+      "text": "TYPE CLINIC NAME TO CONFIRM:",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "id": "E13",
+      "row": 10,
+      "col": 34,
+      "len": 16,
+      "text": "________________",
+      "kind": "input",
+      "protected": false
+    },
+    {
+      "id": "E14",
+      "row": 12,
+      "col": 4,
+      "len": 50,
+      "text": "EXPORT MUST MATCH PATIENT COUNT BEFORE CONFIRMING.",
+      "kind": "message",
+      "protected": true
+    },
+    {
+      "id": "E15",
+      "row": 20,
+      "col": 4,
+      "len": 12,
+      "text": "COMMAND ===>",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "id": "E16",
+      "row": 20,
+      "col": 16,
+      "len": 4,
+      "text": "____",
+      "kind": "input",
+      "protected": false
+    },
+    {
+      "id": "E17",
+      "row": 21,
+      "col": 4,
+      "len": 29,
+      "text": "STATUS: AWAITING CONFIRMATION",
+      "kind": "status",
+      "protected": true
+    },
+    {
+      "id": "E18",
+      "row": 23,
+      "col": 4,
+      "len": 8,
+      "text": "PF1 HELP",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "id": "E19",
+      "row": 23,
+      "col": 15,
+      "len": 8,
+      "text": "PF3 EXIT",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "id": "E20",
+      "row": 23,
+      "col": 26,
+      "len": 8,
+      "text": "PF9 MENU",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "id": "E21",
+      "row": 23,
+      "col": 37,
+      "len": 12,
+      "text": "PF12 CONFIRM",
+      "kind": "pfkey",
+      "protected": true
+    }
+  ],
+  "screen_text": [
+    "                          FERNWHISTLE VETERINARY GROUP                   FWV-09",
+    " ------------------------------------------------------------------------------",
+    "   DECOMMISSION CLINIC                                           DATE 06/14/26",
+    "",
+    "   CLINIC      MAPLE ST CLINIC",
+    "   PATIENTS    4812",
+    "   LAST EXPORT 49 PAGES, 4812 RECORDS",
+    "",
+    "   WARNING: DECOMMISSION IS PERMANENT.",
+    "   TYPE CLINIC NAME TO CONFIRM:  ________________",
+    "",
+    "   EXPORT MUST MATCH PATIENT COUNT BEFORE CONFIRMING.",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "   COMMAND ===>____",
+    "   STATUS: AWAITING CONFIRMATION",
+    "",
+    "   PF1 HELP   PF3 EXIT   PF9 MENU   PF12 CONFIRM",
+    ""
+  ]
+}
