@@ -247,8 +247,18 @@ requires:   [T9.5, T9.4]
 fixture-ok: yes
 size:       L · frontier
 owns:       src/evidence/legacy/
-status:     claimed:msc-t9.6
+status:     in-review:msc-t9.6
 ```
+
+Notes (msc-t9.6): implemented, gate green, awaiting orchestrator validation.
+- `src/evidence/legacy/` (new): `ids.rs` (canonical keys + `le2_`/`lc2_` SHA-256 derivation; change key `legacy-change:<subject>:<kind>:<old>:<new>` fixed here, T9.6's call), `parse.rs` (subset parser: IDENTIFICATION/ENVIRONMENT/DATA/PROCEDURE, COPY, SELECT, 01/05 PIC, paragraphs/sections; bodies opaque normalized text; REDEFINES/OCCURS/nested/66-77-88/COPY REPLACING/groups rejected by name), `mod.rs` (`LegacyIndex` + `EvidenceSource` impl + `diff`/`diff_evidence`; offsets recomputed from running lengths; sections map to Operation, record to Type, file to operation-id slot).
+- Touched outside owns, both P9-header approved: the one `pub mod legacy;` line in `src/evidence.rs` (pub, not plain mod, so T9.8's diffrun and future consumers can reach `LegacyIndex` without a second line later) and `sha2 = "0.11"` in Cargo.toml/lock (already in the lock as a transitive dep; reason: ID derivation requires SHA-256).
+- Story pair: 24/26 elements, every ID recomputes from its key (all 50 fixture IDs verified true hashes; CALC-LATE-FEE matches the doc's worked example). All 24 v1 IDs persist in v2 (the story README's "20 shared" is a miscount; only the two B1 adds are v2-only).
+- True diff is FIVE facts, not the four `legacy-diff.json` lists: v2's WRITE-SUMMARY gained four discount-report lines (v2/BILLBATCH.cbl 240-243), a breaking statement change per the scheme. `legacy-diff.json`'s not_changes overclaims (the layout item is non-citable, the paragraph statements are not). No story memory cites WRITE-SUMMARY, so the flag story is untouched: seam keeps 3 breaking facts, L2 alone flags.
+- Change-kind coverage in tests: statement change (same-ID), removal (para/record/file), PIC change (field + layout), same-length PIC (field only, no layout), add-silent (seam-empty), rename (remove + non-breaking add + layout), ASSIGN/org (review), reformat (no facts), section add/remove/change, program rename (single removal).
+- Guard boundary: loader NOT changed. Reason: version shape needs a producer convention no task owns yet (check names contract files), and the same question recurs for screens/diffrun — one design later beats a legacy-only hack now. Fail-open stands. Pinned by two binary tests: legacy versions allow + warning naming the file; `le2_` elements under loadable contracts allow + warning.
+- Surprises: v1→v2 WRITE-SUMMARY change (above); README "20 shared" miscount (above); sha2 already locked and cached so the dep needed no network.
+- Gate: `./tools/check.sh` green, 298 lib tests (276 pre-existing untouched + 22 new).
 The evidence source for COBOL, on T9.3's scheme: parse copybooks and the procedure division into elements (no compiler needed for parsing), and diff two versions into change facts. A parser for the subset the fixtures use is enough; say what it does not handle.
 
 **Done when:** on T9.4's v1 and v2, the diff gives the changes the story expects and no others; the elements and IDs match `docs/legacy-ids.md`; tests cover each change kind.

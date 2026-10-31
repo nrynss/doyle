@@ -17,6 +17,8 @@
 //! flag, and [`ChangeFact::change_severity`] returns `None` for anything
 //! that flags nothing.
 
+pub mod legacy;
+
 use crate::contract::ContractError;
 use crate::core::{ChangeId, ElementId, Severity};
 
