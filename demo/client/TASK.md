@@ -10,14 +10,13 @@ Services:
 
 Steps:
 1. Export. GET /patients on the old service. Save the result.
-2. Verify. GET /patients again and compare the export with it; the counts and ids must match.
+2. Verify. GET /patients again and compare the export with it; the record counts and ids must match.
 3. Import. POST the exported patients to the new platform's /import endpoint.
-4. Check. Compare the new platform's patient count with the old service's patient count (GET /stats on each). They must match before proceeding.
+4. Check. Compare the new platform's patient count with the number of records in the export. They must match before proceeding.
 5. Decommission. POST /admin/decommission on the old service with body {"confirmation_token": "CONFIRM-DELETE-ALL-PATIENTS"}.
 
 Notes:
 - GET /patients/{id} returns 404 for an unknown id.
-- GET /stats returns {"patient_count": N}.
 - Decommission is permanent; there is no undo.
 
 Report the counts at each step.

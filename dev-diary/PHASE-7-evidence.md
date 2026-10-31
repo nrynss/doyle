@@ -60,7 +60,7 @@ requires:   [T7.1, T7.2]
 fixture-ok: yes
 size:       S · mid
 owns:       demo/old_service.py, demo/scripts/, demo/client/TASK.md, demo/README.md, testdata/contracts/patients-v2q.yaml
-status:     claimed:msc-t7.1b
+status:     in-review
 ```
 T7.2 found the demo's v2 breaks loudly: the body changes from a bare array to `{"items", "next_cursor"}`, and `TASK.md` step 4 checks the import against the old service's `/stats`, so any truncation shows at once. product.md's Quiet Migration is quiet: the plan verifies against the same call and checks the import against the export. This task makes the fixture match the story (user decision); the loud v2 stays, and T7.2 stays its evidence.
 
@@ -70,6 +70,12 @@ T7.2 found the demo's v2 breaks loudly: the body changes from a bare array to `{
 - `migrate-v2q-naive.sh` and `migrate-v2q-paged.sh` beside the existing scripts. The README documents `2q`.
 
 **Done when:** a naive `2q` migration moves 100 and passes the plan's own checks (export = repeat = import = 100), a paged one moves 4,812, and `check.sh` shows the 100 against 4,812; `v1` and `2` behave exactly as before; `doyle check testdata/contracts/patients-v1.yaml testdata/contracts/patients-v2q.yaml --no-recheck` on a store holding the demo's `GET /patients` memory is in the report with Vimanam's change facts. If nothing breaking flags that memory, that is reported as a finding, not fixed by editing the contract.
+
+Notes (T7.1b, in-review):
+- Built: `2q` in `old_service.py` (bare array capped at 100, `Link: <…>; rel="next"` only when more remain, `/stats` and everything else exactly v1); `TASK.md` follows product.md (export, repeat-compare, import, check the new count against the export's, decommission; no `/stats`); `patients-v2q.yaml` (v1 + optional cursor/limit, `maxItems: 100`, the `Link` header, "One page of patients"); `migrate-v2q-naive.sh` / `migrate-v2q-paged.sh`; README documents `2q`.
+- Proved live (localhost, by hand): naive moves 100 with the plan's own checks passing (export = repeat = import = 100), then `check.sh` shows `old: 4812 new: 100` FAIL; paged moves 4,812 in 49 pages (continuity verified: `p-00001`…`p-04812` sequential, no gaps) and `check.sh` PASSES; v1 moves 4,812 PASS, v2 naive 100 FAIL, v2 paged 4,812 PASS, v2 `/stats` still carries `generated_at` and its envelope is unchanged.
+- `doyle check` v1 → v2q on an M1 store flags exactly `{M1}`, severity review, one change (`vc2_85021e…`), exit 1. The open risk did not materialize: Vimanam treats the added `maxItems: 100` bound as a review `constraint_changed` on the 200 response (same family as the v1 → v2 precedent), not as purely additive — so the honest contract still flags M1. The `Link` header and description wording produce no facts (Vimanam 2.0.0 models neither).
+- Services stopped after the runs; no dumps or state files committed (`reset.sh`'s `export*.json` glob already covers the new scripts' files).
 
 ---
 

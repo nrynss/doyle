@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Old patient records service (Fernwhistle Veterinary Group).
 
-Serves the v1 OR v2 behaviour of testdata/contracts/patients-v*.yaml on a fixed
-local port. Version is selected by --api-version or OLD_SERVICE_VERSION (1 or 2).
+Serves the v1, v2 OR 2q behaviour of testdata/contracts/patients-v*.yaml on a
+fixed local port. Version is selected by --api-version or OLD_SERVICE_VERSION
+(1, 2 or 2q).
 
 Generates 4,812 fixed patients deterministically at startup. Nothing is stored
 on disk; restarting restores the starting state.
@@ -89,32 +90,37 @@ class State:
                     return dict(p)
         return None
 
+    def _slice(self, cursor, limit):
+        # Caller holds self.lock. Returns (items, next_cursor, effective_limit).
+        total = len(self.patients)
+        offset = 0
+        if cursor not in (None, ""):
+            try:
+                offset = int(cursor)
+            except ValueError:
+                raise ValueError("invalid cursor")
+        if offset < 0:
+            offset = 0
+        if offset > total:
+            offset = total
+        if limit is None:
+            limit = DEFAULT_LIMIT
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            raise ValueError("invalid limit")
+        if limit < 1:
+            limit = 1
+        if limit > MAX_LIMIT:
+            limit = MAX_LIMIT
+        end = min(offset + limit, total)
+        items = [dict(p) for p in self.patients[offset:end]]
+        next_cursor = str(end) if end < total else None
+        return items, next_cursor, limit
+
     def page(self, cursor, limit):
         with self.lock:
-            total = len(self.patients)
-            offset = 0
-            if cursor not in (None, ""):
-                try:
-                    offset = int(cursor)
-                except ValueError:
-                    raise ValueError("invalid cursor")
-            if offset < 0:
-                offset = 0
-            if offset > total:
-                offset = total
-            if limit is None:
-                limit = DEFAULT_LIMIT
-            try:
-                limit = int(limit)
-            except (TypeError, ValueError):
-                raise ValueError("invalid limit")
-            if limit < 1:
-                limit = 1
-            if limit > MAX_LIMIT:
-                limit = MAX_LIMIT
-            end = min(offset + limit, total)
-            items = [dict(p) for p in self.patients[offset:end]]
-            next_cursor = str(end) if end < total else None
+            items, next_cursor, _ = self._slice(cursor, limit)
             return {"items": items, "next_cursor": next_cursor}
 
     def decommission(self, token):
@@ -139,10 +145,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def _send_raw(self, status, data, content_type="application/json"):
+    def _send_raw(self, status, data, content_type="application/json", extra_headers=None):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
+        for name, value in (extra_headers or []):
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(data)
 
@@ -156,18 +164,29 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/patients":
-            if STATE.version == 1:
+            if STATE.version == "1":
                 data = json.dumps(STATE.all_patients()).encode("utf-8")
                 self._send_raw(200, data)
                 return
             cursor = qs.get("cursor", [None])[0]
             limit = qs.get("limit", [None])[0]
             try:
-                body = STATE.page(cursor, limit)
+                with STATE.lock:
+                    items, next_cursor, eff_limit = STATE._slice(cursor, limit)
             except ValueError as e:
                 self._send(400, {"error": str(e)})
                 return
-            self._send(200, body)
+            if STATE.version == "2":
+                self._send(200, {"items": items, "next_cursor": next_cursor})
+                return
+            # 2q: a bare JSON array of at most 100 patients, the way GitHub
+            # and GitLab page, with the next page in a Link response header.
+            data = json.dumps(items).encode("utf-8")
+            extra = []
+            if next_cursor is not None:
+                host = self.headers.get("Host", "127.0.0.1:8091")
+                extra.append(("Link", "<http://{}/patients?cursor={}&limit={}>; rel=\"next\"".format(host, next_cursor, eff_limit)))
+            self._send_raw(200, data, extra_headers=extra)
             return
 
         if path.startswith("/patients/"):
@@ -184,7 +203,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/stats":
             body = {"patient_count": STATE.count()}
-            if STATE.version == 2:
+            if STATE.version == "2":
                 import datetime
                 body["generated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
             self._send(200, body)
@@ -221,9 +240,9 @@ def main():
     parser.add_argument("--api-version", "--version", dest="api_version", default=os.environ.get("OLD_SERVICE_VERSION", "1"))
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
-    version = int(args.api_version)
-    if version not in (1, 2):
-        raise SystemExit("version must be 1 or 2")
+    version = str(args.api_version)
+    if version not in ("1", "2", "2q"):
+        raise SystemExit("version must be 1, 2, or 2q")
     STATE = State(version)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     print("old service v{} listening on http://127.0.0.1:{}/ ({} patients)".format(version, args.port, STATE.count()), flush=True)

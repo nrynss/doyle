@@ -12,11 +12,12 @@ Fernwhistle Veterinary Group patient records demo. All paths are relative to `de
 
 ## Start
 
-Old service (v1 by default; pass `1` or `2`, or set `OLD_SERVICE_VERSION`):
+Old service (v1 by default; pass `1`, `2` or `2q`, or set `OLD_SERVICE_VERSION`):
 
     ./scripts/start-old.sh        # v1
     ./scripts/start-old.sh 2      # v2
-    OLD_SERVICE_VERSION=2 ./scripts/start-old.sh
+    ./scripts/start-old.sh 2q     # 2q: the quiet v2
+    OLD_SERVICE_VERSION=2q ./scripts/start-old.sh
 
 New platform:
 
@@ -62,8 +63,11 @@ Old service:
 - v1: `GET /patients` returns a bare JSON array of all patients.
 - v2: `GET /patients?cursor=&limit=` (default 100, max 100) returns
   `{"items": [...], "next_cursor": "..." | null}`.
+- 2q: `GET /patients?cursor=&limit=` (default 100, max 100) returns a bare
+  JSON array of at most 100 patients; the next page, when there is one, is in
+  a `Link: <…>; rel="next"` response header. `/stats` answers exactly as v1.
 - `GET /patients/{id}` returns the patient or 404.
-- `GET /stats` returns `{"patient_count": N}` (v2 also includes `generated_at`).
+- `GET /stats` returns `{"patient_count": N}` (v2 also includes `generated_at`; 2q does not).
 - `POST /admin/decommission` requires the confirmation token and deletes all patients.
 
 New platform:
@@ -76,6 +80,11 @@ New platform:
 - `./scripts/migrate-v1.sh` — v1 migration (single GET, all 4,812; check passes).
 - `./scripts/migrate-v2-naive.sh` — naive v2 migration (single GET, 100; check fails).
 - `./scripts/migrate-v2-paged.sh` — paged v2 migration (all 4,812; check passes).
+- `./scripts/migrate-v2q-naive.sh` — naive 2q migration (single GET, 100; the
+  plan's own checks pass — export = repeat = import = 100 — and check.sh then
+  shows 100 against 4,812).
+- `./scripts/migrate-v2q-paged.sh` — paged 2q migration (follows the `Link`
+  header; all 4,812; check passes).
 
 ## Client repository
 
