@@ -37,13 +37,20 @@ requires:   [T7.1]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/without-doyle/
-status:     claimed:msc-t7.2
+status:     in-review
 ```
 Seed Wonder's memory in the demo workspace with the v1 belief (in its own session, so it writes the memory itself), switch the service to v2, and give a fresh session the migration plan. Record the session (transcript, `muse export`, and screen footage for the video) and the record count. Footage follows the demo-shoot convention: raw takes go to `~/work/demo-shoot/doyle/takes/` as the run happens, named `<date>-<what>.mkv`, never into the repository, and the task's notes name each take.
 
 Run the client from a fresh copy outside the repository, so Wonder never sees Doyle's own documents and starts with an empty memory folder (`demo/scripts/reset.sh` does not clear Muse Code memory). Wonder gets `TASK.md` and nothing else; one seed session and one migration session. If Wonder pages correctly, that is a finding to report, not a run to repeat.
 
 **Done when:** the recorded session shows every step of the plan passing its own check, the old system decommissioned, and 4,712 patients missing, with the counts in the handoff text.
+
+Notes (T7.2, in-review):
+- Ran exactly as specified: fresh scratch copy of `demo/client` outside the repo (`/tmp` scratch dir, git init), memory folder absent at start (verified by FNV-1a hash suffix), 1 seed session + 1 migration session on `muse-wonder-1.0`, no third session.
+- FINDING (per the brief, not re-run): Wonder did not lose records. The migration session's start snapshot contained the seeded stale note verbatim, but it probed `GET /patients` first, found `items` + `next_cursor`, paged all 49 pages twice (counts and content hash), imported 4,812, matched old/new counts, then decommissioned. Final: old 0, new 4,812. The seeded memory was never corrected (MEMORY.md unchanged after the run). Transcripts + `muse export` JSON of both sessions and check.sh counts before/after are under `evidence/without-doyle/`; credential values and the local username scrubbed, both exports still parse.
+- Takes: `takes/2026-10-31-without-doyle-migration.mkv` recorded live (1 s tmux-pane sampling, 6 genuine frames; `muse exec` emits almost nothing incremental). No seed take: fullscreen x11grab on `:0` came back black (empty Xwayland framebuffer under kwin_wayland; reproduced with a test window), so the transcript + export are the seed record; the black file was deleted, not kept.
+- Surprises: (1) the agent created 3 junk test records while probing the import format, then removed them via the new platform's `POST /reset` before the real import — disclosed in its own report, final 4,812 clean; (2) its `env` dump landed live API keys in the session export, so the committed export is redacted (24 values) — worth a caution for T7.3/T8 handling of exports.
+- Sessions spent: 2 of 2. Global Muse settings byte-identical afterwards (md5-compared); scratch memory folder removed; demo services stopped.
 
 ---
 

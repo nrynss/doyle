@@ -1,0 +1,7 @@
+=== T7.2 without-Doyle migration run: AFTER ===
+date: 2026-10-31T06:51:51Z
+old service (v2, decommissioned by Wonder): {"patient_count": 0, "generated_at": "2026-10-31T06:51:51.172891+00:00"}
+new platform: {"patient_count": 4812}
+old: 0 new: 4812
+FAIL
+check rc=1

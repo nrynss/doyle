@@ -1,0 +1,7 @@
+=== T7.2 without-Doyle migration run: BEFORE ===
+date: 2026-10-31T06:36:26Z
+old service (v2): {"patient_count": 4812, "generated_at": "2026-10-31T06:36:26.072090+00:00"}
+new platform: {"patient_count": 0}
+old: 4812 new: 0
+FAIL
+check rc=1

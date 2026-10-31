@@ -1,0 +1,27 @@
+muse: workspace root: /tmp/opencode/t72-scratch (cwd default)
+muse: workspace trust: trusted source=run-flag
+muse: Skills: 73 loaded · 1 warning · 14 details hidden
+muse:   `skills_catalog` was trimmed to fit its size limit (32 KB): 42 descriptions compacted, 0 skill ids omitted
+muse:   Run `muse skills list --source all` for full diagnostics.
+Migration complete. Old service decommissioned only after counts and full content matched.
+
+**Top finding:** `GET /patients` on the old service does **not** return the whole clinic in one call. It returns 100 records plus `next_cursor`. A single-call export would have migrated only 100 of 4,812 patients.
+
+| Step | Count |
+|---|---|
+| Old `/stats` before | 4,812 |
+| Export pass 1 (49 pages via `cursor`) | 4,812 |
+| Verify pass 2 | 4,812 |
+| New `/stats` before import | 0 |
+| Import (49 chunks) | 4,812 |
+| New `/stats` after import | 4,812 |
+| Old `/stats` after decommission | 0 |
+
+Details:
+
+- Export saved to [export.json](/tmp/opencode/t72-scratch/export.json) (4,812 records, `p-00001`–`p-04812`, contiguous, no duplicates).
+- Verify: both passes 4,812, ordered ids identical, content hash identical (`fa68fea9…3935f`).
+- Check before decommission: old `/stats` 4,812 = new `/stats` 4,812. Full new list also hash-identical to the export.
+- Decommission: `POST /admin/decommission` returned `{"deleted": true, "patient_count": 0}`. Afterwards old `/patients` is empty, old `p-00001` returns 404, and new platform still holds all 4,812 records with matching hash.
+
+Disclosure: during import-format probing, 3 junk test records were briefly created on the new platform. They were removed with its `POST /reset` endpoint (count 3 → 0) before the real import started, so the final 4,812 contains only real clinic patients.
