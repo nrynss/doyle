@@ -34,10 +34,18 @@
       "detail": "wiring for the add: IF DISCOUNT-FLAG PERFORM APPLY-PROMPT-DISCOUNT inside the non-exempt branch",
       "severity": "breaking",
       "flags": []
+    },
+    {
+      "subject": "le2_43c50c3c7e9433172a69644c3e08e70cf3a639f9c830968abe566afc99a34c3f",
+      "subject_name": "WRITE-SUMMARY",
+      "kind": "paragraph-statements-changed",
+      "detail": "wiring for the add: MOVE WS-DISCOUNT-COUNT/TOTAL + SUMMARY-LINE-4 + WRITE for the discount report lines",
+      "severity": "breaking",
+      "flags": []
     }
   ],
   "not_changes": [
-    "Header comments, the (V1)/(V2) run labels and the discount summary lines live in report-layout lines, which docs/legacy-ids.md does not cite: no facts.",
+    "Header comments, the (V1)/(V2) run labels and the SUMMARY-LINE-4 working-storage item live in report-layout lines, which docs/legacy-ids.md does not cite: no facts.",
     "CALC-LATE-FEE, LOG-EXEMPT, BALANCE, VISIT-CODE, WRITE-TOTALS, WRITE-DETAIL, TALLY-BAND, VERIFY-TOTALS and both files are identical: no facts."
   ]
 }

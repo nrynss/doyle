@@ -135,8 +135,8 @@ plus the regeneration recipe. Recorded totals:
 | `training-v1.mp4` (45 s, 5 fps, 121 KB) + `training-v1-steps.json` | v1 training video: menu, lookup, type ID, results, scroll, decomm, type name; S1 cites T5-T6, S2 cites T2-T3 |
 | `memories/billing-rules.md`, `memories/console-procedures.md` | L1-L4, S1-S2 in Muse Code format |
 | `memories/lambo.json`, `memories/provenance.json` | Lambo derive shape + who relied on what |
-| `elements-v1.json`, `elements-v2.json` | 24 / 26 elements with `le2_` IDs (all 20 shared IDs stable across versions; CALC-LATE-FEE matches the worked example in `docs/legacy-ids.md`) |
-| `legacy-diff.json` | the 4 expected change facts (1 layout breaking -> L2; wiring breaking with no starring memory; 2 non-breaking adds) |
+| `elements-v1.json`, `elements-v2.json` | 24 / 26 elements with `le2_` IDs (all 24 shared IDs stable across versions; CALC-LATE-FEE matches the worked example in `docs/legacy-ids.md`) |
+| `legacy-diff.json` | the 5 expected change facts (1 layout breaking -> L2; 2 wiring breaking with no starring memory; 2 non-breaking adds) |
 | `rewrite/wonder-bill.rs`, `rewrite/fixed-bill.rs` | Wonder's wrong rewrite (carries L1) + the correct control; `rustc -O`, no crates |
 | `rewrite/mismatches.txt`, `rewrite/evidence.txt` | 535 mismatching V-records with both fees + recorded totals (wrong $72,213.23; fixed byte-identical to the batch) |
 | `generate-data.py`, `generate-screens.py`, `generate-elements.py` | the deterministic generators |
