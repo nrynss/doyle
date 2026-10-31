@@ -301,7 +301,7 @@ requires:   [T9.6, T9.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/evidence/diffrun.rs, testdata/legacy/diffrun/
-status:     not-started
+status:     claimed:msc-t9.8
 ```
 Evidence by execution. Given the COBOL batch, a rewrite and a set of inputs, run both, compare outputs record by record, and for each mismatch read the paragraph trace (T9.1) to find which paragraphs ran. A memory citing a paragraph on a mismatched path is flagged, with the inputs and both outputs as its evidence. Running COBOL is live; the gate runs on recorded traces and outputs.
 
