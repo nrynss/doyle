@@ -111,11 +111,11 @@ The same start, with Doyle: curate, check v1 → v2q, the guard registered. Two 
 
 - **Session one, flag open:** the SessionStart notice, then the guard denying the first action on `GET /patients`, with its reason. The flag is review severity (T7.1b: `maxItems` added). Before the run, confirm on the binary that the guard denies review-severity flags. If it doesn't, stop and report: that is a finding about the guard, not something to work around.
 - **The approval:** the user clicks approve on the review page (user decision). The correction lands in Muse Code memory and Lambo.
-- **Session two, corrected memory:** a fresh session with the same `TASK.md`, model, step cap and 30-minute limit as T7.2b. Wonder pages through every patient and keeps the old system until the counts match.
+- **Session two, corrected memory:** a fresh session with the same `TASK.md`, model, step cap and 30-minute limit as T7.2b. Wonder pages through every patient and keeps the old system until the counts match. Muse Code's automated safety review escalated the decommission for a person's approval in both earlier runs (T7.2 at t+734s; T7.2b at t+353s, then waited unanswered until the limit aborted it). Expect the same here: the user approves that escalation during the run, or, if the user declines, the run stops there and that is recorded.
 
-Record it all as in T7.2, footage included, with the review page in the takes. For session two, also record tool calls, approvals and wall time, for comparison with T7.2b.
+Record it all as in T7.2, footage included, with the review page in the takes. For session two, also record tool calls, approval requests and wall time from session start to the decommission request, the point comparable with T7.2b (t+353s, 300 approval requests over the whole run, all paging and import done by t+346s). Time spent waiting on a person's approval is reported separately and never counted as work.
 
-**Done when:** the recorded sessions show the denial with its reason (or the guard finding), the approval, the corrected memory in both systems where T7.2 and T7.2b left it stale, every patient on the new platform, and session two's tool calls and time beside T7.2b's.
+**Done when:** the recorded sessions show the denial with its reason (or the guard finding), the approval, the corrected memory in both systems where T7.2 and T7.2b left it stale, every patient on the new platform, and session two's tool calls, approval requests and time to the decommission request beside T7.2b's.
 
 ---
 
@@ -133,7 +133,8 @@ The numbers the judges' page states, each with how it was counted and the files 
 - stale memories left behind without Doyle (T7.2 and T7.2b: the memory after each run);
 - records lost without Doyle, stated as measured (0 in both runs), and never claimed as losses averted;
 - guard denials on stale-memory actions, counted as denials, not as damage prevented;
-- the cost of re-checking: tool calls, approvals and wall time, T7.2b against T7.3's session two, with the confounds named (the sandbox proxy retries, the 30-minute limit T7.2b hit);
+- the cost of re-checking: tool calls, approval requests and wall time from session start to the decommission request, T7.2b against T7.3's session two, with approval waits excluded and the confounds named (the sandbox proxy retries; T7.2b's 30-minute limit was spent waiting on the decommission escalation, not on work);
+- Muse Code's safety escalations in each run, with what each one held and why;
 - false alarms;
 - citations the curator got right;
 - proposals accepted unedited.
