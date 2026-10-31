@@ -65,6 +65,7 @@ fn probe_request() -> ModelRequest {
         }),
         // 2048: a smaller cap starves content because the model spends
         // the budget on reasoning first (content comes back null).
+        media: Vec::new(),
         budget: Budget::tokens(2048),
     }
 }

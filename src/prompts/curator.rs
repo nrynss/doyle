@@ -153,6 +153,7 @@ pub fn build_curator_request(
         system: CURATOR_SYSTEM.to_string(),
         user,
         schema: curator_schema(),
+        media: Vec::new(),
         // The reply is small, but the models spend reasoning tokens from
         // the same allowance: 512 starved both models in the probe (their
         // replies came back empty with finish_reason length).
@@ -466,6 +467,7 @@ mod tests {
                     max_output_tokens: budget["max_output_tokens"].as_u64().map(|n| n as u32),
                     max_cost_usd: budget["max_cost_usd"].as_f64(),
                 },
+                media: Vec::new(),
             };
             let response: crate::models::ModelResponse =
                 serde_json::from_value(record["response"].clone()).expect("response parses");

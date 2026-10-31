@@ -206,6 +206,7 @@ pub fn build_request(input: &RecheckInput) -> ModelRequest {
         system: system_prompt().to_string(),
         user: build_user_prompt(input),
         schema: response_schema(),
+        media: Vec::new(),
         budget: Budget::tokens(MAX_OUTPUT_TOKENS),
     }
 }

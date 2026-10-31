@@ -494,6 +494,7 @@ mod tests {
                     max_output_tokens: budget["max_output_tokens"].as_u64().map(|n| n as u32),
                     max_cost_usd: budget["max_cost_usd"].as_f64(),
                 },
+                media: Vec::new(),
             };
             let key = request_key(&request);
             let response: crate::models::ModelResponse =

@@ -351,6 +351,7 @@ mod tests {
             system: "you are a re-checker".to_string(),
             user: "memory text".to_string(),
             schema: serde_json::json!({"type": "object", "properties": {"answer": {"type": "integer"}}}),
+            media: Vec::new(),
             budget: crate::models::Budget::tokens(100),
         }
     }

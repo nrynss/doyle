@@ -96,6 +96,7 @@ fn live_meta_spark_structured_call() {
             "required": ["answer"],
             "additionalProperties": false,
         }),
+        media: Vec::new(),
         budget: Budget::tokens(512),
     };
 

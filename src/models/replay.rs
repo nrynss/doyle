@@ -116,6 +116,7 @@ mod tests {
             system: "you are a curator".to_string(),
             user: "memory text".to_string(),
             schema: serde_json::json!({"type": "object"}),
+            media: Vec::new(),
             budget: Budget::tokens(100),
         }
     }
