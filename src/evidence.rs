@@ -18,6 +18,7 @@
 //! that flags nothing.
 
 pub mod legacy;
+pub mod screens;
 
 use crate::contract::ContractError;
 use crate::core::{ChangeId, ElementId, Severity};
