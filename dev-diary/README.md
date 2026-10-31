@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P6 done. T7.1 done. T7.2 is user-run; then T7.3+. P9 (beyond the spec): T9.1–T9.8 done; T9.9 is ready; T9.7b (live screens) waits for a Meta key and the one-line `meta.rs` send; T9.10 waits for T7.3.
+**Current status:** P0–P6 done. T7.1 done. T7.2 is ready (agent-run). T7.3 waits for T5.4 (live wiring) and T7.2. P9 (beyond the spec): T9.1–T9.8 done; T9.9 is ready; T9.7b (live screens) waits for a Meta key and the one-line `meta.rs` send; T9.10 waits for T7.3.
 
 ---
 
@@ -128,7 +128,7 @@ keys (T0.2) + demo scenario and fixtures (T0.3) + Muse Code probes (T0.4) + Lamb
   -> contract index (T2.1) -> flagging (T2.2)
   -> Muse Code adapter (T3.1, T3.2) + Lambo adapter (T3.3)
   -> Meta client (T4.1) -> curator (T4.3) + re-check (T4.4)
-  -> curate (T5.1) -> check with proposals (T5.2) -> write-back (T5.3)
+  -> curate (T5.1) -> check with proposals (T5.2) -> write-back (T5.3) -> live wiring (T5.4)
   -> guard (T6.1) + review page (T6.2)
   -> demo workspace (T7.1) -> run without Doyle (T7.2) -> run with Doyle (T7.3)
   -> video (T8.2) -> public (T8.3) -> submit (T8.4)
@@ -147,9 +147,9 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
 | P3 | 3 / 3 | Done: locate+read, annotate, Lambo. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
-| P5 | 3 / 3 | Done. P6 review page ready. |
-| P6 | 2 / 2 | Done. P7 evidence next (user runs T7.2). |
-| P7 | 1 / 5 | T7.1 done. T7.2 is user-run. |
+| P5 | 3 / 4 | T5.4 (live wiring) ready: the binary cannot yet run the demo live. |
+| P6 | 2 / 2 | Done. |
+| P7 | 1 / 5 | T7.1 done. T7.2 ready. T7.3 waits for T5.4. |
 | P8 | 0 / 4 | Waits for P7. |
 | P9 | 8 / 10 | T9.1–T9.8 done. T9.9 ready. T9.7b live pending. T9.10 waits for T7.3. |
 
@@ -159,6 +159,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T7.2 and T7.3 made agent-run; T5.4 filed (user decision, orchestrator finding).** Only the screen recording needed the user, and it moves to T8.2. T7.3's approval stays a person's click. Briefing T7.3 found the binary cannot run the demo live: `doyle curate` without `DOYLE_REPLAY_DIR` builds Baseten on a transport that always errors, `doyle check` re-checks only from recorded replies, the ureq transports live only in `tests/live_*.rs`, and curate's cwd-relative contract path clashes with the Muse Code adapter rooting at the cwd. The curate module said so in its docs; the orchestrator closed T5.1/T5.2 on fixture Done-when clauses without asking whether the binary could run live. T5.4 adds the transports, key loading, `--live`, `--project` and `--contract`. Also for T7.2/T7.3: `demo/client` must run from a copy outside the repository (inside it, Wonder's project is Doyle's repo and it can read the trap in `product.md`), and `reset.sh` does not clear Muse Code memory.
 - **T9.8 closed: evidence by execution.** `src/evidence/diffrun.rs` compares batch vs rewrite record by record and blames via the paragraph trace (exclusive branch paragraphs → breaking facts on stable IDs → same flag path), each flag carrying inputs + both outputs. Verified: mini 694¢ overcharge recomputed (375+319), full-run 830,880¢ cross-checked against TOTALS, 4,812 record paths (33,692 events per the header, not the story's drifted 33,895 prose — recorded in the diffrun README, fixture untouched). Wrong rewrite: 535 V-record mismatches, L1 alone flags; fixed: clean. One-line `pub mod diffrun;` exception as briefed. Gate 345 green on `main` after the merge.
 - **Fixture repair closed: the fifth fact.** `legacy-diff.json` gains the WRITE-SUMMARY breaking fact (subject ID recomputed independently to the same hash; valid JSON, 5 changes) and the README counts corrected (24 shared, 5 facts). Verified: no memory cites WRITE-SUMMARY, so the flag story stands (3 breaking, L2 alone flags). Gate passes.
 - **T9.7 closed: screen source on recorded replies.** One Wonder call per console version into content-derived `se2_`/`sc2_` IDs, diff computed positionally (row ±1/col ±2 tolerances from T9.2 scoring — the footer reflow would otherwise invent a removal+addition), lookup v1→v2 cosmetic (no fact), decomm exactly one breaking fact, S1 + span-only citation flag while S2 stays silent. Media-keyed record→replay round trip green; empty media keeps the old key (all existing recordings replay). Orchestrator-approved exceptions (mechanical, T4.4 precedent): 9 empty-`media` initializers across clients/prompts/tests + the `pub mod vision;` line in prompts/mod.rs. Cost figures are ESTIMATED from the T9.2 basis (~$0.30 for both calls), not measured — zero live calls made (no Meta key, no budget; correct stop per the rule). Genuine-model reads + the one-line `meta.rs` send belong to T9.7b; the send line is flagged in the phase notes. Gate 332 green on `main` after the merge.

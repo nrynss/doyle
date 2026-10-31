@@ -69,6 +69,27 @@ Apply a person's decision to a proposal: approve (write the correction), edit th
 - Wording note for the orchestrator (no file touched): `testdata/README.md` says the correction lands in Muse Code "as an annotation on the note", but T5.3's specified routing is supersede-first and Muse Code supports `supersede` — the demo approve yields `[Superseded by MEMORY.md#N]` plus a new correction note, not `[STALE ...]`. The stale-marking asserted is the superseded-by pointer; `[STALE correction: ...]` appears only on the annotate-fallback path (covered through a reduced fake).
 - Verified: 14 tests — each verdict/proposal combination through the full fake, annotate-only and write-only fakes, the real Muse Code adapter on a temp fixture copy (M1 approve asserts the superseded-by pointer and correction content), the real Lambo adapter over a transcript-shaped scripted server (approve asserts the Contradicted warning, correction content, and the against-linked derive naming M1's short id), and the partial failure (failing Lambo + working Muse Code -> decision recorded, Lambo retryable-Failed; healed retry -> exactly one correction; cache, inspect-first and Muse re-apply converge). Offline throughout: temp dirs, temp store, scripted transports; no HOME mutation, no network, no live server. `./tools/check.sh` passes (248 tests).
 
+### T5.4: Live wiring ★
+```yaml
+requires:   [T5.1, T5.2, T6.2]
+fixture-ok: yes
+size:       M · mid
+owns:       src/models/http.rs, src/models/keys.rs, src/curate.rs, src/check.rs, src/serve/mod.rs (adapter construction only), src/cli.rs (the options below only), the `pub mod` lines for the two new files in src/models/mod.rs, tests/live_wiring.rs
+status:     not-started
+```
+Found while briefing T7.3: the binary cannot run the demo live. `doyle curate` builds its Baseten client on a transport that always errors unless `DOYLE_REPLAY_DIR` is set; `doyle check` re-checks only from `testdata/replies/recheck`; the ureq transports exist only inside `tests/live_*.rs`. And curate reads the contract from a cwd-relative path while the Muse Code adapter roots at the cwd, so no single working directory serves both the demo client and the contract.
+
+Build:
+- A ureq-backed `HttpTransport` for the Baseten and Meta clients in `src/models/http.rs`, with finite timeouts like `src/mcp.rs`.
+- Key loading in `src/models/keys.rs`: the environment variable first (`BASETEN_API_KEY`, `MODEL_API_KEY`), then `secret-tool lookup service baseten` / `service meta-model-api`. A missing key is an error naming the variable, never the value.
+- `--live` on `curate` and `check`: live clients instead of replay. Without it, behaviour is unchanged, so the gate still needs no key.
+- `--project <DIR>` as a shared option: the directory the Muse Code adapter roots at (default the cwd), used by curate, check and serve.
+- `--contract <FILE>` on curate (default the demo v1 path it hardcodes today).
+
+`src/cli.rs` changes for these three options only (orchestrator approval, after T1.5). Existing recordings replay unchanged.
+
+**Done when:** the gate passes with no key; tests cover the option parsing, the key order (env, then keyring, then a clear error) without a real key, and the replay default; a `#[ignore]`d `tests/live_wiring.rs` run of `curate --live` and `check --live` on the demo fixtures from a directory other than the repository's is in the report, under a $0.50 budget.
+
 ---
 
 ## Exit Criteria
@@ -77,3 +98,4 @@ Apply a person's decision to a proposal: approve (write the correction), edit th
 - [x] `doyle check` produces flags with proposals (T5.2).
 - [x] A decision lands in every system that holds the memory, and partial failure is visible (T5.3).
 - [ ] The demo runs offline end to end: curate, check, decide, with fixtures and replays only.
+- [ ] The same commands run live against the demo workspace (T5.4).

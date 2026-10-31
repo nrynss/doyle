@@ -28,7 +28,7 @@ size:       M · user
 owns:       evidence/video/
 status:     not-started
 ```
-Three minutes, of what was built during the event: the problem, the run without Doyle, the run with Doyle, the review page, the numbers. The agent drafts the script from the recorded runs; the user records and publishes.
+Three minutes, of what was built during the event: the problem, the run without Doyle, the run with Doyle, the review page, the numbers. The agent drafts the script from the recorded runs; the user records and publishes. The screen footage of both runs is shot here, by re-running T7.2 and T7.3 from their recorded steps while recording.
 
 **Done when:** the user has published the video and its link is in the README and the judges' page.
 
