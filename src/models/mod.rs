@@ -10,6 +10,7 @@ mod replay;
 
 pub mod baseten;
 pub mod meta;
+pub mod vision;
 
 use std::hash::Hash;
 use std::hash::Hasher;
