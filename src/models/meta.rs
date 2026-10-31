@@ -122,7 +122,7 @@ impl MetaModelClient {
             "model": request.model,
             "messages": [
                 { "role": "system", "content": request.system },
-                { "role": "user", "content": request.user },
+                { "role": "user", "content": request.content_blocks() },
             ],
             "response_format": {
                 "type": "json_schema",
