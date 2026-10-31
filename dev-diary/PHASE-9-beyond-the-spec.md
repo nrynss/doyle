@@ -154,7 +154,7 @@ requires:   [T9.3]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/contract.rs, src/core/flag.rs, src/evidence.rs, and the one declaration line in src/lib.rs
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.5): seam built, gate green, awaiting orchestrator validation.
@@ -287,7 +287,7 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 - [x] Wonder's vision is measured, with what Doyle can and cannot build on (T9.2). Screens 0.92–0.95 recall, diffs 18/18 with zero inventions, recordings with ±5 s padding; ~127k tokens, under $2 of $3.
 - [x] A memory can cite legacy code by a stable ID (T9.3). Six kinds, `le2_`/`lc2_`, name-path-keyed SHA-256 IDs; curator 3/3 on the sample.
 - [ ] The extended story and its traps are signed off by the user (T9.4).
-- [ ] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5).
+- [x] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5). 267 existing tests pass unaltered; 9 new trait tests; guard byte-identical.
 - [ ] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8).
 - [ ] A person settles each kind of flag from the review page (T9.9).
 - [ ] The extended runs are recorded, if the user chose them (T9.10).
