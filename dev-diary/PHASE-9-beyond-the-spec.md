@@ -332,7 +332,7 @@ requires:   [T9.7, T9.8]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/serve/evidence.rs, and the routes it adds in src/serve/
-status:     in-review
+status:     done
 ```
 The review page shows each flag's evidence in its own terms: for a screen, the old and new frames side by side with the changed element marked and the cited span playable; for legacy code, the paragraph before and after; for a differential run, the inputs and both outputs. Same approve / edit / retire / keep.
 
@@ -370,5 +370,5 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 - [x] The extended story and its traps are signed off by the user (T9.4). Built to the sign-off (A2, B1-as-only-diff, C1, D1-alone); v1/v2 compile and run, recompiled v1 byte-identical.
 - [x] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5). 267 existing tests pass unaltered; 9 new trait tests; guard byte-identical.
 - [x] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8). L2 on the legacy diff, S1+span on screens (S2 silent), L1 on the diffrun (fixed rewrite clean).
-- [ ] A person settles each kind of flag from the review page (T9.9).
+- [x] A person settles each kind of flag from the review page (T9.9). Screen + legacy settled via the page through untouched T5.3; browser-verified 1280/390 light/dark.
 - [ ] The extended runs are recorded, if the user chose them (T9.10).
