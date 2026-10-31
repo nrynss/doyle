@@ -302,7 +302,7 @@ requires:   [T9.6, T9.1]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/evidence/diffrun.rs, testdata/legacy/diffrun/
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.8): built, gate green (345 lib tests: 332 pre-existing + 13 new), awaiting orchestrator validation.
@@ -355,6 +355,6 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 - [x] A memory can cite legacy code by a stable ID (T9.3). Six kinds, `le2_`/`lc2_`, name-path-keyed SHA-256 IDs; curator 3/3 on the sample.
 - [x] The extended story and its traps are signed off by the user (T9.4). Built to the sign-off (A2, B1-as-only-diff, C1, D1-alone); v1/v2 compile and run, recompiled v1 byte-identical.
 - [x] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5). 267 existing tests pass unaltered; 9 new trait tests; guard byte-identical.
-- [ ] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8). T9.6 done (L2 alone flags); T9.7 done (S1+span flag, S2 silent, on recorded replies — genuine-model read deferred to T9.7b); diffrun pending (T9.8).
+- [x] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8). L2 on the legacy diff, S1+span on screens (S2 silent), L1 on the diffrun (fixed rewrite clean).
 - [ ] A person settles each kind of flag from the review page (T9.9).
 - [ ] The extended runs are recorded, if the user chose them (T9.10).
