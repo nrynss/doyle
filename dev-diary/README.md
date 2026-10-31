@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P6 done. T7.1 done. T7.2 is user-run; then T7.3+. P9 (beyond the spec) is planned: T9.1 and T9.2 are ready now and touch nothing P7 needs.
+**Current status:** P0–P6 done. T7.1 done. T7.2 is user-run; then T7.3+. P9 (beyond the spec): T9.1–T9.8 done; T9.9 is ready; T9.7b (live screens) waits for a Meta key and the one-line `meta.rs` send; T9.10 waits for T7.3.
 
 ---
 
@@ -151,7 +151,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 2 / 2 | Done. P7 evidence next (user runs T7.2). |
 | P7 | 1 / 5 | T7.1 done. T7.2 is user-run. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 0 / 10 | Planned. T9.1 and T9.2 ready. |
+| P9 | 8 / 10 | T9.1–T9.8 done. T9.9 ready. T9.7b live pending. T9.10 waits for T7.3. |
 
 ---
 
