@@ -1,0 +1,329 @@
+{
+  "screen": "lookup",
+  "rows": 24,
+  "cols": 80,
+  "elements": [
+    {
+      "row": 1,
+      "col": 27,
+      "len": 28,
+      "text": "FERNWHISTLE VETERINARY GROUP",
+      "kind": "title",
+      "protected": true
+    },
+    {
+      "row": 1,
+      "col": 74,
+      "len": 6,
+      "text": "FWV-01",
+      "kind": "screen-id",
+      "protected": true
+    },
+    {
+      "row": 3,
+      "col": 4,
+      "len": 14,
+      "text": "PATIENT LOOKUP",
+      "kind": "heading",
+      "protected": true
+    },
+    {
+      "row": 3,
+      "col": 66,
+      "len": 13,
+      "text": "DATE 06/14/26",
+      "kind": "datetime",
+      "protected": true
+    },
+    {
+      "row": 5,
+      "col": 4,
+      "len": 6,
+      "text": "CLINIC",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 5,
+      "col": 16,
+      "len": 15,
+      "text": "MAPLE ST CLINIC",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 6,
+      "col": 4,
+      "len": 10,
+      "text": "PATIENT ID",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 6,
+      "col": 16,
+      "len": 10,
+      "text": "FWV-004812",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 7,
+      "col": 4,
+      "len": 4,
+      "text": "NAME",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 7,
+      "col": 16,
+      "len": 5,
+      "text": "BELLA",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 8,
+      "col": 4,
+      "len": 7,
+      "text": "SPECIES",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 8,
+      "col": 16,
+      "len": 6,
+      "text": "CANINE",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 9,
+      "col": 4,
+      "len": 5,
+      "text": "BREED",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 9,
+      "col": 16,
+      "len": 16,
+      "text": "GOLDEN RETRIEVER",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 10,
+      "col": 4,
+      "len": 3,
+      "text": "DOB",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 10,
+      "col": 16,
+      "len": 10,
+      "text": "03/02/2019",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 11,
+      "col": 4,
+      "len": 5,
+      "text": "OWNER",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 11,
+      "col": 16,
+      "len": 9,
+      "text": "A. RIVERA",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 12,
+      "col": 4,
+      "len": 5,
+      "text": "PHONE",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 12,
+      "col": 16,
+      "len": 8,
+      "text": "555-0142",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 14,
+      "col": 4,
+      "len": 12,
+      "text": "VACCINATIONS",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 14,
+      "col": 18,
+      "len": 30,
+      "text": "RABIES 06/01/26  DHPP 05/12/26",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 15,
+      "col": 4,
+      "len": 9,
+      "text": "ALLERGIES",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 15,
+      "col": 18,
+      "len": 10,
+      "text": "PENICILLIN",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 16,
+      "col": 4,
+      "len": 7,
+      "text": "BALANCE",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 16,
+      "col": 18,
+      "len": 7,
+      "text": "$ 42.50",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 17,
+      "col": 4,
+      "len": 8,
+      "text": "LATE FEE",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 17,
+      "col": 18,
+      "len": 7,
+      "text": "$  0.64",
+      "kind": "value",
+      "protected": true
+    },
+    {
+      "row": 19,
+      "col": 4,
+      "len": 46,
+      "text": "RECORD FOUND. PF5 UPDATES, PF12 DECOMMISSIONS.",
+      "kind": "message",
+      "protected": true
+    },
+    {
+      "row": 20,
+      "col": 4,
+      "len": 12,
+      "text": "COMMAND ===>",
+      "kind": "label",
+      "protected": true
+    },
+    {
+      "row": 20,
+      "col": 16,
+      "len": 4,
+      "text": "____",
+      "kind": "input",
+      "protected": false
+    },
+    {
+      "row": 21,
+      "col": 4,
+      "len": 13,
+      "text": "STATUS: READY",
+      "kind": "status",
+      "protected": true
+    },
+    {
+      "row": 23,
+      "col": 4,
+      "len": 8,
+      "text": "PF1 HELP",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "row": 23,
+      "col": 15,
+      "len": 8,
+      "text": "PF3 EXIT",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "row": 23,
+      "col": 26,
+      "len": 8,
+      "text": "PF5 SAVE",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "row": 23,
+      "col": 37,
+      "len": 8,
+      "text": "PF9 MENU",
+      "kind": "pfkey",
+      "protected": true
+    },
+    {
+      "row": 23,
+      "col": 48,
+      "len": 17,
+      "text": "PF12 DECOMMISSION",
+      "kind": "pfkey",
+      "protected": true
+    }
+  ],
+  "screen_text": [
+    "                          FERNWHISTLE VETERINARY GROUP                   FWV-01",
+    " ------------------------------------------------------------------------------",
+    "   PATIENT LOOKUP                                                DATE 06/14/26",
+    "",
+    "   CLINIC      MAPLE ST CLINIC",
+    "   PATIENT ID  FWV-004812",
+    "   NAME        BELLA",
+    "   SPECIES     CANINE",
+    "   BREED       GOLDEN RETRIEVER",
+    "   DOB         03/02/2019",
+    "   OWNER       A. RIVERA",
+    "   PHONE       555-0142",
+    "",
+    "   VACCINATIONS  RABIES 06/01/26  DHPP 05/12/26",
+    "   ALLERGIES     PENICILLIN",
+    "   BALANCE       $ 42.50",
+    "   LATE FEE      $  0.64",
+    "",
+    "   RECORD FOUND. PF5 UPDATES, PF12 DECOMMISSIONS.",
+    "   COMMAND ===>____",
+    "   STATUS: READY",
+    "",
+    "   PF1 HELP   PF3 EXIT   PF5 SAVE   PF9 MENU   PF12 DECOMMISSION",
+    ""
+  ]
+}

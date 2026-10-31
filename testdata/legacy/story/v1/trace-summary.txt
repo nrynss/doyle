@@ -1,0 +1,33 @@
+Paragraph trace summary for the story batch (v1), 4,812 records.
+Full trace: compile with -ftrace and run with COB_SET_TRACE=1;
+see docs/legacy.md. Counts below are grep -c 'Paragraph: NAME' on it.
+
+   4813 Paragraph: READ-NEXT
+   4812 Paragraph: WRITE-DETAIL
+   4812 Paragraph: VALIDATE-RECORD
+   4812 Paragraph: TALLY-BAND
+   4812 Paragraph: PROCESS-ALL
+   4812 Paragraph: CHARGE-ACCOUNT
+   4277 Paragraph: CALC-LATE-FEE
+    535 Paragraph: LOG-EXEMPT
+      1 Paragraph: WRITE-TOTALS
+      1 Paragraph: WRITE-SUMMARY
+      1 Paragraph: WRITE-HEADER
+      1 Paragraph: VERIFY-TOTALS
+      1 Paragraph: OPEN-FILES
+      1 Paragraph: MAIN-PARA
+      1 Paragraph: CLOSE-FILES
+
+First 12 trace lines:
+Source: 'BILLBATCH.cbl'
+Program-Id:  BILLBATCH
+Program-Id:  BILLBATCH            Entry: BILLBATCH                       Line:     96
+Program-Id:  BILLBATCH        Paragraph: MAIN-PARA                       Line:     96
+Program-Id:  BILLBATCH        Paragraph: OPEN-FILES                      Line:    106
+Program-Id:  BILLBATCH        Paragraph: WRITE-HEADER                    Line:    185
+Program-Id:  BILLBATCH        Paragraph: READ-NEXT                       Line:    111
+Program-Id:  BILLBATCH        Paragraph: PROCESS-ALL                     Line:    115
+Program-Id:  BILLBATCH        Paragraph: VALIDATE-RECORD                 Line:    126
+Program-Id:  BILLBATCH        Paragraph: CHARGE-ACCOUNT                  Line:    136
+Program-Id:  BILLBATCH        Paragraph: CALC-LATE-FEE                   Line:    144
+Program-Id:  BILLBATCH        Paragraph: TALLY-BAND                      Line:    158

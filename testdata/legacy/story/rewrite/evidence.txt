@@ -1,0 +1,22 @@
+# Differential-run evidence, recorded (Trap D).
+#
+# Inputs: ../v1/patients.dat (4,812 records). Reference: the v1 COBOL run
+# (../v1/report.txt, TOTALS below). Both rewrites build with rustc, no crates:
+#   rustc -O wonder-bill.rs -o /tmp/wonder-bill
+#   rustc -O fixed-bill.rs -o /tmp/fixed-bill
+# Run each in a directory holding a copy of ../v1/patients.dat; each writes
+# its own report (detail lines plus a TOTALS line in the COBOL layout).
+#
+# v1 COBOL TOTALS:   TOTALS RECORDS  4812 BALANCE $4814,213.63 FEE $63,904.43
+# Wonder (wrong):    TOTALS RECORDS  4812 BALANCE $4814,213.63 FEE $72,213.23
+#   -> 535 mismatching detail lines, listed in mismatches.txt: every one a
+#      vaccination visit, charged 1.5% where the batch charges 0.00.
+#      Overcharge total: $8,308.80 across 535 statements.
+# Fixed rewrite:     TOTALS RECORDS  4812 BALANCE $4814,213.63 FEE $63,904.43
+#   -> detail lines and TOTALS line byte-identical to the v1 COBOL run
+#      (cmp clean on all 4,812 detail lines). Flags nothing: the D1 control.
+#
+# Blame (from ../v1/trace-summary.txt): the mismatching records are exactly
+# the ones whose COBOL trace shows LOG-EXEMPT instead of CALC-LATE-FEE
+# (535 LOG-EXEMPT against 4,277 CALC-LATE-FEE). Paragraphs on clean paths
+# (WRITE-TOTALS, WRITE-DETAIL, TALLY-BAND) implicate no memory.

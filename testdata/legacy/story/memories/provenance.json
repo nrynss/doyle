@@ -1,0 +1,104 @@
+{
+  "_fixture": "Invented. Who wrote each story memory and which migration steps relied on it, for the review page's 'who relied on it'. Muse Code notes carry no source, so this comes from session logs, not from the notes. Sessions ran in the order listed; M1-M4 are the API memories in testdata/memories/provenance.json.",
+  "repository": "clinic-ops",
+  "sessions": [
+    {
+      "id": "ops-1",
+      "agent": "muse-wonder-ops",
+      "system": "v1",
+      "purpose": "Learn the billing batch and the operator console from the code, the screens and the training video"
+    },
+    {
+      "id": "ops-2",
+      "agent": "muse-wonder-ops",
+      "system": "v2",
+      "purpose": "Learn the v2 prompt-payment discount from the new batch code"
+    },
+    {
+      "id": "migration-1",
+      "agent": "muse-wonder-migration",
+      "system": "v2",
+      "purpose": "Migrate patient records, rewrite the billing batch in Rust, prove the rewrite matches, retire the console"
+    }
+  ],
+  "memories": [
+    {
+      "id": "L1",
+      "text": "BILLBATCH charges a 1.5% late fee on the whole balance, no exceptions; every account pays",
+      "false_of_code": true,
+      "cites": ["CALC-LATE-FEE", "BALANCE", "LOG-EXEMPT", "VISIT-CODE"],
+      "muse_code": {"file": "billing-rules.md"},
+      "lambo": {"node_id": "b1a5c201"},
+      "written_by": "ops-1",
+      "relied_on_by": [
+        {"session": "migration-1", "step": "rewrite",
+         "how": "ported 1.5%-on-everything into the Rust rewrite; no visit-code check"}
+      ]
+    },
+    {
+      "id": "L2",
+      "text": "Each patient account record is 34 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, and a 1-character visit code",
+      "false_of_code": false,
+      "cites": ["PATIENT-RECORD", "ACCT-NO", "ACCT-NAME", "BALANCE", "VISIT-CODE"],
+      "muse_code": {"file": "billing-rules.md"},
+      "lambo": {"node_id": "c2d4e607"},
+      "written_by": "ops-1",
+      "relied_on_by": [
+        {"session": "migration-1", "step": "rewrite",
+         "how": "sized the Rust record image at 34 characters"}
+      ]
+    },
+    {
+      "id": "L3",
+      "text": "CALC-LATE-FEE computes the 1.5% fee from BALANCE, rounded to the cent",
+      "false_of_code": false,
+      "cites": ["CALC-LATE-FEE", "BALANCE"],
+      "muse_code": {"file": "billing-rules.md"},
+      "lambo": {"node_id": "d3f6a809"},
+      "written_by": "ops-1",
+      "relied_on_by": [
+        {"session": "migration-1", "step": "prove",
+         "how": "checked the rewrite's fee math against this rule on a non-exempt sample"}
+      ]
+    },
+    {
+      "id": "L4",
+      "text": "V2 prompt-payment accounts (DISCOUNT-FLAG Y) keep 10% of the fee, rounded; APPLY-PROMPT-DISCOUNT applies it after CALC-LATE-FEE",
+      "false_of_code": false,
+      "cites": ["APPLY-PROMPT-DISCOUNT", "DISCOUNT-FLAG"],
+      "muse_code": {"file": "billing-rules.md"},
+      "lambo": {"node_id": "e4b8c102"},
+      "written_by": "ops-2",
+      "relied_on_by": [
+        {"session": "migration-1", "step": "rewrite",
+         "how": "ported the 10% discount correctly into the Rust rewrite"}
+      ]
+    },
+    {
+      "id": "S1",
+      "text": "To retire the console: open DECOMMISSION, type the clinic name in the confirmation prompt, press PF12 CONFIRM. The warning means it is permanent",
+      "false_of_code": false,
+      "cites": ["decomm-v1 screen", "training-v1 T5-T6 (28-45 s)"],
+      "muse_code": {"file": "console-procedures.md"},
+      "lambo": {"node_id": "f5d0a314"},
+      "written_by": "ops-1",
+      "relied_on_by": [
+        {"session": "migration-1", "step": "retire",
+         "how": "followed the remembered confirmation on the v2 console"}
+      ]
+    },
+    {
+      "id": "S2",
+      "text": "Look up a patient: enter the ID on the lookup screen; the results list the matches; PF5 edits the record",
+      "false_of_code": false,
+      "cites": ["lookup screen", "training-v1 T2-T3 (6-20 s)"],
+      "muse_code": {"file": "console-procedures.md"},
+      "lambo": {"node_id": "a6c2e516"},
+      "written_by": "ops-1",
+      "relied_on_by": [
+        {"session": "migration-1", "step": "verify",
+         "how": "looked up sample patients on the v2 console during the count check"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "note": "The add is the only legacy diff in v2 (Trap B1 as signed off). No rate, exemption, band or file change.",
+  "changes": [
+    {
+      "subject": "le2_77dc1a5746292b086130da01afc7a6b673061fc79598d038df26e0ee77e61858",
+      "subject_name": "APPLY-PROMPT-DISCOUNT",
+      "kind": "paragraph-added",
+      "severity": "non-breaking",
+      "flags": []
+    },
+    {
+      "subject": "le2_f680dd9d76ec1d1a3080dfb5ff38ff90d19b82c781a7ae457ea8cf458b807e38",
+      "subject_name": "PATIENT-RECORD.DISCOUNT-FLAG",
+      "kind": "field-added",
+      "severity": "non-breaking",
+      "flags": []
+    },
+    {
+      "subject": "le2_690243c98922cdcded58beed19f46cb8725f9690399b9f1c297cc465c4f21533",
+      "subject_name": "PATIENT-RECORD",
+      "kind": "record-layout-changed",
+      "detail": "record length 34 -> 35; VISIT-CODE offset unchanged, one field added at the end",
+      "severity": "breaking",
+      "flags": [
+        "L2"
+      ]
+    },
+    {
+      "subject": "le2_f8aa5a6eccd403285026aa49a504f6633a8fa4c6e724cff84fa33a9bd8589d82",
+      "subject_name": "CHARGE-ACCOUNT",
+      "kind": "paragraph-statements-changed",
+      "detail": "wiring for the add: IF DISCOUNT-FLAG PERFORM APPLY-PROMPT-DISCOUNT inside the non-exempt branch",
+      "severity": "breaking",
+      "flags": []
+    }
+  ],
+  "not_changes": [
+    "Header comments, the (V1)/(V2) run labels and the discount summary lines live in report-layout lines, which docs/legacy-ids.md does not cite: no facts.",
+    "CALC-LATE-FEE, LOG-EXEMPT, BALANCE, VISIT-CODE, WRITE-TOTALS, WRITE-DETAIL, TALLY-BAND, VERIFY-TOTALS and both files are identical: no facts."
+  ]
+}

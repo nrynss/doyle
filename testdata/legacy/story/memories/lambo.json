@@ -1,0 +1,44 @@
+{
+  "_fixture": "Invented. The story's legacy memories in Lambo shape (docs/lambo.md). Node ids and scores are invented. L1 is false of the code from the start (Trap A2); L4 is true of v2 (Trap B1's untouched memory).",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "tools/call",
+    "params": {
+      "name": "lambo_derive",
+      "arguments": {
+        "agent_id": "muse-wonder-ops",
+        "concepts": [
+          {
+            "content": "BILLBATCH charges a 1.5% late fee on the whole balance, no exceptions; every account pays",
+            "concept_type": "logic"
+          },
+          {
+            "content": "Each patient account record is 34 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, and a 1-character visit code",
+            "concept_type": "logic"
+          },
+          {
+            "content": "CALC-LATE-FEE computes the 1.5% fee from BALANCE, rounded to the cent",
+            "concept_type": "logic"
+          },
+          {
+            "content": "V2 prompt-payment accounts (DISCOUNT-FLAG Y) keep 10% of the fee, rounded; APPLY-PROMPT-DISCOUNT applies it after CALC-LATE-FEE",
+            "concept_type": "logic"
+          },
+          {
+            "content": "To retire the console: open DECOMMISSION, type the clinic name in the confirmation prompt, press PF12 CONFIRM. The warning means it is permanent",
+            "concept_type": "procedure"
+          },
+          {
+            "content": "Look up a patient: enter the ID on the lookup screen; the results list the matches; PF5 edits the record",
+            "concept_type": "procedure"
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "node_ids": ["b1a5c201", "c2d4e607", "d3f6a809", "e4b8c102", "f5d0a314", "a6c2e516"],
+    "scores": [0.91, 0.88, 0.93, 0.9, 0.89, 0.92]
+  }
+}

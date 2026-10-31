@@ -1,0 +1,14 @@
+{
+  "a": "lookup-v1.png",
+  "b": "lookup-v2.png",
+  "changes": [
+    {
+      "id": "C1",
+      "type": "footer-changed",
+      "location": "row 23",
+      "before": "PF5 UPDATE",
+      "after": "PF5 SAVE",
+      "cited_by": []
+    }
+  ]
+}

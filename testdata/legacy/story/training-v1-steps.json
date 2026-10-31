@@ -1,0 +1,43 @@
+{
+  "video": "training-v1.mp4",
+  "duration_s": 45.0,
+  "fps": 5,
+  "steps": [
+    {
+      "id": "T1",
+      "description": "Show the main menu",
+      "start_s": 0.0,
+      "end_s": 6.0
+    },
+    {
+      "id": "T2",
+      "description": "Type the patient ID FWV-004812 on the lookup screen",
+      "start_s": 6.0,
+      "end_s": 16.0
+    },
+    {
+      "id": "T3",
+      "description": "Submit the lookup; results list appears",
+      "start_s": 16.0,
+      "end_s": 20.0
+    },
+    {
+      "id": "T4",
+      "description": "Scroll down through the results list",
+      "start_s": 20.0,
+      "end_s": 28.0
+    },
+    {
+      "id": "T5",
+      "description": "Open the decommission confirmation screen",
+      "start_s": 28.0,
+      "end_s": 33.0
+    },
+    {
+      "id": "T6",
+      "description": "Type the clinic name MAPLE ST CLINIC to confirm",
+      "start_s": 33.0,
+      "end_s": 45.0
+    }
+  ]
+}
