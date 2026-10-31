@@ -1,0 +1,7 @@
+=== T7.2b without-Doyle quiet-v2 migration run: AFTER ===
+date: 2026-10-31T08:19:11Z
+old service (2q, NOT decommissioned - session hit timeout first): {"patient_count": 4812}
+new platform: {"patient_count": 4812}
+old: 4812 new: 4812
+PASS
+check rc=0

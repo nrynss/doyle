@@ -85,11 +85,17 @@ requires:   [T7.1b]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/without-doyle-quiet/
-status:     claimed:msc-t7.2b
+status:     in-review
 ```
 T7.2 again, against `2q` and the revised `TASK.md`, with the same rules: a fresh client copy outside the repository, one seed session and one migration session, no steering, takes into demo-shoot. Muse Code runs without Doyle's keys in its environment (T7.2's `env` dump put them in a session export). If Wonder still catches the change (for instance through `/stats` or the `Link` header), that is the result and the story falls back to the careful-agent framing (user decision).
 
 **Done when:** the recorded session shows what happened at each step with the service's counts; either 4,712 patients missing after every check passed, or the step at which Wonder caught the change.
+
+Notes (T7.2b, in-review):
+- Ran exactly as specified: fresh scratch copy of `demo/client` outside the repo (`/tmp/opencode/t72b-scratch`, git init), memory folder absent at start, 1 seed + 1 migration session on `muse-wonder-1.0`, no third session. Both sessions spawned with all credential-looking env vars unset (verified zero remaining); ambient login auth worked, so the committed exports hold 0 credential values (48 `ls` owner/group username fields read `<user>`); both exports parse as JSON.
+- CATCH at step 1 (no re-run per the brief): the migration snapshot held the stale v1 note verbatim, but the first tool call probed `GET /patients`, got a 100-record array, read the `Link rel="next"` header, and paged cursor by cursor to all 4,812; re-fetched pages to verify; POSTed `/import` (new 4,812, ids `p-00001`–`p-04812` identical to the old 49-page export, no junk). The pre-set 30 min timeout ended the run during post-import re-checks (`EXIT=124`); no decommission attempted, old still 4,812. Before old 4,812/new 0, after old 4,812/new 4,812, zero lost. Transcripts + `muse export` JSON of both sessions and check.sh counts before/after under `evidence/without-doyle-quiet/`.
+- Takes: `takes/2026-10-31-without-doyle-quiet-seed.mkv` + `takes/2026-10-31-without-doyle-quiet-migration.mkv`, terminal pane sampled live (1 frame each; `muse exec` emits nothing incremental, same cause as T7.2).
+- Surprises: (1) the agent never consulted `/stats` (TASK.md no longer names it) and probed headers before trusting the memory — the quiet fixture still did not go quiet; (2) ~600 tool approvals in 30 min, mostly manual cursor batches with retries, suggesting the sandboxed proxy path is flaky or output limits forced small steps. Sessions spent: 2 of 2. Global Muse settings byte-identical afterwards (md5-compared); scratch memory folder removed; demo services stopped. Gate passes.
 
 ---
 

@@ -1,0 +1,7 @@
+=== T7.2b without-Doyle quiet-v2 run: BEFORE ===
+date: 2026-10-31T07:43:43Z
+old service (2q): {"patient_count": 4812}
+new platform: {"patient_count": 0}
+old: 4812 new: 0
+FAIL
+check rc=1
