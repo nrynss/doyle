@@ -358,6 +358,8 @@ status:     not-started
 ```
 If the user put the extension into the runs (T9.4): the extended migration without and with Doyle, recorded as in T7.2 and T7.3. Without Doyle, Wonder's rewrite carries the wrong rule and the console decommission goes through unconfirmed. With Doyle, the differential run and the re-watched console flag both, the guard stops the step, and the corrections land in Muse Code and Lambo.
 
+The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T9.4's fixtures, not observed from Wonder. The recordings, their README and the judges' page say so. What these runs show is detection, by execution and by Wonder's eyes, traced to stable IDs.
+
 **Done when:** both recordings show what the story in `testdata/legacy/story/` says, with the counts and mismatches in the handoff text.
 
 ---
