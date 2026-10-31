@@ -85,7 +85,7 @@ requires:   [T7.1b]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/without-doyle-quiet/
-status:     in-review
+status:     done
 ```
 T7.2 again, against `2q` and the revised `TASK.md`, with the same rules: a fresh client copy outside the repository, one seed session and one migration session, no steering, takes into demo-shoot. Muse Code runs without Doyle's keys in its environment (T7.2's `env` dump put them in a session export). If Wonder still catches the change (for instance through `/stats` or the `Link` header), that is the result and the story falls back to the careful-agent framing (user decision).
 
