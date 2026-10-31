@@ -75,7 +75,7 @@ requires:   [T5.1, T5.2, T6.2]
 fixture-ok: yes
 size:       M · mid
 owns:       src/models/http.rs, src/models/keys.rs, src/curate.rs, src/check.rs, src/serve/mod.rs (adapter construction only), src/cli.rs (the options below only), the `pub mod` lines for the two new files in src/models/mod.rs, tests/live_wiring.rs
-status:     not-started
+status:     claimed:msc-t5.4
 ```
 Found while briefing T7.3: the binary cannot run the demo live. `doyle curate` builds its Baseten client on a transport that always errors unless `DOYLE_REPLAY_DIR` is set; `doyle check` re-checks only from `testdata/replies/recheck`; the ureq transports exist only inside `tests/live_*.rs`. And curate reads the contract from a cwd-relative path while the Muse Code adapter roots at the cwd, so no single working directory serves both the demo client and the contract.
 

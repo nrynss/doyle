@@ -326,7 +326,7 @@ requires:   [T9.7, T9.8]
 fixture-ok: yes
 size:       M · frontier
 owns:       src/serve/evidence.rs, and the routes it adds in src/serve/
-status:     not-started
+status:     claimed:wonder-t9.9
 ```
 The review page shows each flag's evidence in its own terms: for a screen, the old and new frames side by side with the changed element marked and the cited span playable; for legacy code, the paragraph before and after; for a differential run, the inputs and both outputs. Same approve / edit / retire / keep.
 
