@@ -247,7 +247,7 @@ requires:   [T9.5, T9.4]
 fixture-ok: yes
 size:       L · frontier
 owns:       src/evidence/legacy/
-status:     not-started
+status:     claimed:msc-t9.6
 ```
 The evidence source for COBOL, on T9.3's scheme: parse copybooks and the procedure division into elements (no compiler needed for parsing), and diff two versions into change facts. A parser for the subset the fixtures use is enough; say what it does not handle.
 
@@ -261,7 +261,7 @@ requires:   [T9.5, T9.2, T9.4]
 fixture-ok: yes
 size:       L · frontier
 owns:       src/evidence/screens/, src/models/vision.rs, src/prompts/vision/, and the media parts of ModelRequest in src/models/mod.rs
-status:     not-started
+status:     claimed:msc-t9.7
 ```
 Adding image and video parts to `ModelRequest` changes a frozen contract. It is approved here, on one condition: every existing recording still replays with the same key.
 
