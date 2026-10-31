@@ -75,7 +75,7 @@ requires:   [T5.1, T5.2, T6.2]
 fixture-ok: yes
 size:       M · mid
 owns:       src/models/http.rs, src/models/keys.rs, src/curate.rs, src/check.rs, src/serve/mod.rs (adapter construction only), src/cli.rs (the options below only), the `pub mod` lines for the two new files in src/models/mod.rs, tests/live_wiring.rs
-status:     in-review
+status:     done
 ```
 
 Found while briefing T7.3: the binary cannot run the demo live. `doyle curate` builds its Baseten client on a transport that always errors unless `DOYLE_REPLAY_DIR` is set; `doyle check` re-checks only from `testdata/replies/recheck`; the ureq transports exist only inside `tests/live_*.rs`. And curate reads the contract from a cwd-relative path while the Muse Code adapter roots at the cwd, so no single working directory serves both the demo client and the contract.
@@ -105,4 +105,4 @@ Build:
 - [x] `doyle check` produces flags with proposals (T5.2).
 - [x] A decision lands in every system that holds the memory, and partial failure is visible (T5.3).
 - [ ] The demo runs offline end to end: curate, check, decide, with fixtures and replays only.
-- [ ] The same commands run live against the demo workspace (T5.4).
+- [x] The same commands run live against the demo workspace (T5.4). Live curate+check from another directory; ~$0.01 of $0.50. Follow-up filed: live curator budget marginal (null-content ~1/3, needs bigger budget/retry in prompts/curator.rs).
