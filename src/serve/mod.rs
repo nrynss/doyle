@@ -39,6 +39,7 @@
 //! adapter roots at `--project` (default: serve's cwd), so serve from the
 //! cwd that holds the memories or point `--project` at it.
 
+mod evidence;
 pub mod logo;
 mod render;
 
@@ -170,6 +171,9 @@ pub struct Response {
     pub status: u16,
     pub body: String,
     pub location: Option<String>,
+    /// Binary payload (a content type and its bytes) for the evidence
+    /// routes that stream a recording; `body` stays the HTML path.
+    pub media: Option<(String, Vec<u8>)>,
 }
 
 impl Response {
@@ -178,6 +182,7 @@ impl Response {
             status,
             body,
             location: None,
+            media: None,
         }
     }
     fn redirect(location: String) -> Self {
@@ -185,6 +190,15 @@ impl Response {
             status: 303,
             body: String::new(),
             location: Some(location),
+            media: None,
+        }
+    }
+    fn media(content_type: String, bytes: Vec<u8>) -> Self {
+        Self {
+            status: 200,
+            body: String::new(),
+            location: None,
+            media: Some((content_type, bytes)),
         }
     }
 }
@@ -279,6 +293,7 @@ impl ReviewServer {
             }
             ("POST", ["flag", id, "decide"]) => self.decide(&url_decode(id), body),
             ("POST", ["flag", id, "retry"]) => self.retry(&url_decode(id)),
+            ("GET", ["flag", id, "evidence", "video"]) => self.evidence_video(&url_decode(id)),
             ("GET", ["flag", ..]) | ("POST", ["flag", ..]) => Response::html(
                 404,
                 page(
@@ -815,7 +830,7 @@ impl ReviewServer {
         }
 
         body.push_str("<div class=\"grid\">");
-        body.push_str(&self.change_section(flag, citation.as_ref()));
+        body.push_str(&self.evidence_or_change_section(flag, citation.as_ref()));
         body.push_str(&self.memory_section(flag, copies, settled.is_some(), &resolved.notes));
         body.push_str(&self.provenance_section(flag, copies));
         body.push_str(&self.proposal_section(flag));
@@ -1534,18 +1549,23 @@ fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Resul
         409 => "Conflict",
         _ => "Internal Server Error",
     };
+    let (content_type, payload): (&str, &[u8]) = match &response.media {
+        Some((content_type, bytes)) => (content_type.as_str(), bytes.as_slice()),
+        None => ("text/html; charset=utf-8", response.body.as_bytes()),
+    };
     let mut head = format!(
-        "HTTP/1.1 {} {}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n",
+        "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n",
         response.status,
         reason,
-        response.body.len()
+        content_type,
+        payload.len()
     );
     if let Some(location) = &response.location {
         head.push_str(&format!("Location: {location}\r\n"));
     }
     head.push_str("\r\n");
     writer.write_all(head.as_bytes())?;
-    writer.write_all(response.body.as_bytes())?;
+    writer.write_all(payload)?;
     writer.flush()
 }
 
