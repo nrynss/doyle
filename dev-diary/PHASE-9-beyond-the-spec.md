@@ -271,7 +271,7 @@ requires:   [T9.5, T9.2, T9.4]
 fixture-ok: yes
 size:       L · frontier
 owns:       src/evidence/screens/, src/models/vision.rs, src/prompts/vision/, and the media parts of ModelRequest in src/models/mod.rs
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.7): built and gate-green (310 lib tests, all pre-existing green), awaiting orchestrator validation.
@@ -346,6 +346,6 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 - [x] A memory can cite legacy code by a stable ID (T9.3). Six kinds, `le2_`/`lc2_`, name-path-keyed SHA-256 IDs; curator 3/3 on the sample.
 - [x] The extended story and its traps are signed off by the user (T9.4). Built to the sign-off (A2, B1-as-only-diff, C1, D1-alone); v1/v2 compile and run, recompiled v1 byte-identical.
 - [x] Flagging runs over evidence sources, with Vimanam's behaviour unchanged (T9.5). 267 existing tests pass unaltered; 9 new trait tests; guard byte-identical.
-- [ ] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8). T9.6 done (L2 alone flags on the true 5-fact diff); screens/diffrun pending.
+- [ ] Legacy code, screens and differential runs each flag the planted memory and nothing else (T9.6, T9.7, T9.8). T9.6 done (L2 alone flags); T9.7 done (S1+span flag, S2 silent, on recorded replies — genuine-model read deferred to T9.7b); diffrun pending (T9.8).
 - [ ] A person settles each kind of flag from the review page (T9.9).
 - [ ] The extended runs are recorded, if the user chose them (T9.10).
