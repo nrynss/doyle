@@ -9,6 +9,8 @@
 mod replay;
 
 pub mod baseten;
+pub mod http;
+pub mod keys;
 pub mod meta;
 pub mod vision;
 

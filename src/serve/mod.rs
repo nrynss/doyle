@@ -36,8 +36,8 @@
 //! nothing was recorded. Contract paths are used exactly as recorded (the
 //! same way `check` resolves them), so cite/check with absolute contract
 //! paths — or serve from the same cwd for relative ones. The muse-code
-//! adapter resolves from serve's cwd, so serve from the cwd that holds the
-//! memories.
+//! adapter roots at `--project` (default: serve's cwd), so serve from the
+//! cwd that holds the memories or point `--project` at it.
 
 pub mod logo;
 mod render;
@@ -1411,9 +1411,14 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
 }
 
 fn build_adapters(cli: &cli::Cli) -> Result<Vec<Box<dyn MemoryAdapter>>, String> {
-    // The muse-code adapter resolves from serve's cwd: run serve from the
-    // cwd that holds the memories (same cwd as cite/check for relative
-    // contract paths).
+    // The muse-code adapter roots at --project (default: serve's cwd): run
+    // serve from the cwd that holds the memories, or point --project at it
+    // (same cwd as cite/check for relative contract paths).
+    let project = cli
+        .common
+        .project
+        .clone()
+        .unwrap_or_else(|| String::from("."));
     let names: Vec<String> = if cli.common.adapters.is_empty() {
         vec!["muse-code".to_string(), "lambo".to_string()]
     } else {
@@ -1423,7 +1428,7 @@ fn build_adapters(cli: &cli::Cli) -> Result<Vec<Box<dyn MemoryAdapter>>, String>
     for name in &names {
         match name.as_str() {
             "muse-code" | "muse_code" | "musecode" => {
-                adapters.push(Box::new(MuseCodeAdapter::new(Path::new("."))));
+                adapters.push(Box::new(MuseCodeAdapter::new(Path::new(&project))));
             }
             "lambo" => {
                 let url = std::env::var("LAMBO_URL")
@@ -2863,5 +2868,36 @@ mod tests {
             response.body
         );
         let _ = fs::remove_dir_all(&root);
+    }
+
+    // T5.4: --project roots the muse-code adapter at another directory, so
+    // serve/curate/check can run from anywhere while reading that checkout's
+    // notes. The fixture note is unique to the project dir: rooted at "."
+    // (the repo checkout, which holds no MEMORY.md) it would not resolve.
+    #[test]
+    fn project_roots_the_muse_code_adapter() {
+        let project = temp_dir("project-root");
+        fs::copy(
+            fixture("testdata/memories/muse-code/MEMORY.md"),
+            project.join("MEMORY.md"),
+        )
+        .unwrap();
+        let cli = crate::cli::Cli {
+            command: crate::cli::Command::Serve,
+            common: crate::cli::CommonOpts {
+                project: Some(project.to_string_lossy().to_string()),
+                adapters: vec!["muse-code".to_string()],
+                ..Default::default()
+            },
+        };
+        let adapters = build_adapters(&cli).expect("adapters build");
+        assert_eq!(adapters.len(), 1);
+        let memories = adapters[0].list("").expect("list works");
+        assert!(
+            memories.iter().any(|m| m.text.contains("one call exports")),
+            "must read the project dir's notes, got {}",
+            memories.len()
+        );
+        let _ = fs::remove_dir_all(&project);
     }
 }

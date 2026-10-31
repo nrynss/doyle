@@ -47,6 +47,12 @@ pub struct CommonOpts {
     pub verbose: bool,
     /// Dry run: print what would be cited, write nothing (curate).
     pub dry_run: bool,
+    /// Use live model clients instead of replay (curate, check).
+    pub live: bool,
+    /// Muse Code project root (curate, check, serve; default: the cwd).
+    pub project: Option<String>,
+    /// Contract file to curate against (curate; default: the demo v1 path).
+    pub contract: Option<String>,
 }
 
 /// The result of parsing the command line.
@@ -88,20 +94,30 @@ pub fn parse_from(args: &[String]) -> ParseResult {
         return ParseResult::Help(Some(command_name));
     }
 
+    // curate/check-specific: --live (curate, check), --contract <FILE>
+    // (curate). Other commands leave these in place and the shared parser
+    // rejects them as unknown options.
+    let (live, contract, command_rest) = match extract_command_flags(&command_name, rest) {
+        Ok(v) => v,
+        Err(e) => return ParseResult::Error(format!("doyle: {e}")),
+    };
+
     // check-specific: -f/--format <markdown|json>, --no-recheck
     let (format, no_recheck, parse_rest) = if command_name == "check" {
-        match extract_check_format(rest) {
+        match extract_check_format(&command_rest) {
             Ok(v) => v,
             Err(e) => return ParseResult::Error(format!("doyle: {e}")),
         }
     } else {
-        (String::from("markdown"), false, rest.to_vec())
+        (String::from("markdown"), false, command_rest)
     };
 
-    let (common, positionals) = match parse_common_and_positionals(&parse_rest) {
+    let (mut common, positionals) = match parse_common_and_positionals(&parse_rest) {
         Ok(v) => v,
         Err(e) => return ParseResult::Error(format!("doyle: {e}")),
     };
+    common.live = live;
+    common.contract = contract;
 
     let command = match command_name.as_str() {
         "curate" => {
@@ -153,6 +169,39 @@ pub fn parse_from(args: &[String]) -> ParseResult {
     };
 
     ParseResult::Run(Cli { command, common })
+}
+
+fn extract_command_flags(
+    command_name: &str,
+    args: &[String],
+) -> Result<(bool, Option<String>, Vec<String>), String> {
+    let allow_live = command_name == "curate" || command_name == "check";
+    let allow_contract = command_name == "curate";
+    let mut live = false;
+    let mut contract: Option<String> = None;
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        let a = &args[i];
+        if a == "--live" && allow_live {
+            live = true;
+        } else if (a == "--contract" || a.starts_with("--contract=")) && allow_contract {
+            let value = if let Some(v) = a.strip_prefix("--contract=") {
+                v.to_string()
+            } else {
+                i += 1;
+                if i >= args.len() {
+                    return Err(String::from("missing value for --contract"));
+                }
+                args[i].clone()
+            };
+            contract = Some(value);
+        } else {
+            out.push(a.clone());
+        }
+        i += 1;
+    }
+    Ok((live, contract, out))
 }
 
 fn extract_check_format(args: &[String]) -> Result<(String, bool, Vec<String>), String> {
@@ -226,6 +275,14 @@ fn parse_common_and_positionals(args: &[String]) -> Result<(CommonOpts, Vec<Stri
             }
         } else if a == "--verbose" || a == "-v" {
             common.verbose = true;
+        } else if a == "--project" {
+            i += 1;
+            if i >= args.len() {
+                return Err(String::from("missing value for --project"));
+            }
+            common.project = Some(args[i].clone());
+        } else if let Some(value) = a.strip_prefix("--project=") {
+            common.project = Some(value.to_string());
         } else if a == "--dry-run" {
             common.dry_run = true;
         } else if a.starts_with('-') {
@@ -255,6 +312,7 @@ Commands:
 Shared options:
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
   -v, --verbose           Verbose output
   -h, --help              Print help
   -V, --version           Print version
@@ -267,9 +325,14 @@ doyle curate: read memories through the adapters, cite each against the current 
 Usage:
   doyle curate [OPTIONS]
 
+Options:
+      --live                Use live model clients (needs keys) instead of replay
+      --contract <FILE>     Contract to curate against (default: testdata/contracts/patients-v1.yaml)
+
 Shared options:
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
   -v, --verbose           Verbose output
   --dry-run               Print what would be cited, write nothing
   -h, --help              Print help
@@ -285,6 +348,7 @@ Usage:
 Shared options:
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
   -v, --verbose           Verbose output
   -h, --help              Print help
 ";
@@ -299,8 +363,10 @@ Usage:
 Options:
   -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
       --no-recheck         Skip the re-check (no model calls)
+      --live                Run the re-check with live clients (needs keys) instead of replay
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
   -v, --verbose           Verbose output
   -h, --help              Print help
 ";
@@ -315,6 +381,7 @@ Usage:
 Shared options:
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
   -v, --verbose           Verbose output
   -h, --help              Print help
 ";
@@ -329,6 +396,7 @@ Usage:
 Shared options:
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
   -v, --verbose           Verbose output
   -h, --help              Print help
 ";

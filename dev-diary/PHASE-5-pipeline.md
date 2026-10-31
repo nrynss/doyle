@@ -75,8 +75,9 @@ requires:   [T5.1, T5.2, T6.2]
 fixture-ok: yes
 size:       M · mid
 owns:       src/models/http.rs, src/models/keys.rs, src/curate.rs, src/check.rs, src/serve/mod.rs (adapter construction only), src/cli.rs (the options below only), the `pub mod` lines for the two new files in src/models/mod.rs, tests/live_wiring.rs
-status:     claimed:msc-t5.4
+status:     in-review
 ```
+
 Found while briefing T7.3: the binary cannot run the demo live. `doyle curate` builds its Baseten client on a transport that always errors unless `DOYLE_REPLAY_DIR` is set; `doyle check` re-checks only from `testdata/replies/recheck`; the ureq transports exist only inside `tests/live_*.rs`. And curate reads the contract from a cwd-relative path while the Muse Code adapter roots at the cwd, so no single working directory serves both the demo client and the contract.
 
 Build:
@@ -89,6 +90,12 @@ Build:
 `src/cli.rs` changes for these three options only (orchestrator approval, after T1.5). Existing recordings replay unchanged.
 
 **Done when:** the gate passes with no key; tests cover the option parsing, the key order (env, then keyring, then a clear error) without a real key, and the replay default; a `#[ignore]`d `tests/live_wiring.rs` run of `curate --live` and `check --live` on the demo fixtures from a directory other than the repository's is in the report, under a $0.50 budget.
+
+**Notes (T5.4)**
+- Built: `src/models/http.rs` holds one `UreqTransport` implementing both client seams (identical signatures), 60 s global timeout, `http_status_as_error(false)` so each client's own 429/5xx retry sees the real wire shape, errors carry URL + status only. `src/models/keys.rs` holds `load_key` (env, then `secret-tool lookup service <service>`) with an injectable `load_key_with` for tests; `KeyError` names the variable/service, never the value. `curate --live` builds the Baseten client over `UreqTransport` (key planted in the process env only when it came from the keyring — the clients read env at call time and those files are frozen); `check --live` the Meta client the same way. All three options live in `CommonOpts`: `--live` parsed on curate/check (other commands reject it as unknown), `--contract` on curate, `--project` shared; `Command` variants untouched because `main.rs` matches them by value and is frozen. Defaults preserve old behaviour exactly (replay dirs, failing transport, cwd root, v1 path).
+- Verified: gate 362 green with no key in the environment; new unit tests cover parsing (incl. scoping rejections), key order via stub lookup, and the replay default (ReplayMiss proves the replay client); serve test roots the adapter at a temp project. Live: probe 162/291 + 1810/1214 tokens, then curate --live (4 citations, element counts 2/2/4/3) and check --live (M1 flagged, proposal `correct` with paging text) from a scratch project outside the repo. No cost figures returned by either provider (as in T4.2b/T4.3); ~25k tokens over ~11 calls bounds spend near $0.01, under the $0.50 budget.
+- Surprise: the live curator budget (2048 tokens, T4.3) is marginal — reasoning fills it and the reply comes back content-null in roughly a third of calls (M1/M2/M3/M4 all nulled at least once across runs). The wiring and error surfacing are correct; single-attempt live curate aborts the whole run on one null. The live test retries bounded at 3 (curate skips already-cited, so retries cost ~1 call each). Finding for the orchestrator: live curate wants a follow-up task owning `prompts/curator.rs` — a bigger budget and/or null-content retry in the product path, not just the test.
+- Handoff-log text (live spend: ~11 calls, ~25k tokens, ~$0.01 of $0.50; both providers returned no cost figures): T5.4 live wiring landed — `doyle curate --live` and `doyle check --live` run the demo from any directory via `--project`, keys resolve env-then-keyring, replay default unchanged, gate green keyless.
 
 ---
 

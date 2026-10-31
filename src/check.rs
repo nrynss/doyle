@@ -19,7 +19,15 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         } => (format.clone(), *no_recheck),
         _ => (String::from("markdown"), false),
     };
-    let client: Box<dyn ModelClient> = default_recheck_client();
+    // --live swaps the replay client for the Meta re-check client over ureq;
+    // without it the client (and the key requirement) is exactly what it was.
+    let client: Box<dyn ModelClient> = match model_for_run(cli.common.live) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("doyle check: {e}");
+            return ExitCode::from(2);
+        }
+    };
     match execute_with_model(cli, &format, no_recheck, client.as_ref()) {
         Ok((code, out)) => {
             print!("{}", out);
@@ -40,7 +48,11 @@ pub fn execute(cli: &cli::Cli, format: &str) -> Result<(ExitCode, String), Strin
         cli::Command::Check { no_recheck, .. } => *no_recheck,
         _ => false,
     };
-    let client = default_recheck_client();
+    let client: Box<dyn ModelClient> = if cli.common.live {
+        live_recheck_client()?
+    } else {
+        default_recheck_client()
+    };
     execute_with_model(cli, format, no_recheck, client.as_ref())
 }
 
@@ -191,6 +203,34 @@ pub fn execute_with_model(
         ExitCode::from(1)
     };
     Ok((code, report))
+}
+
+fn model_for_run(live: bool) -> Result<Box<dyn ModelClient>, String> {
+    if live {
+        live_recheck_client()
+    } else {
+        Ok(default_recheck_client())
+    }
+}
+
+/// A live Meta re-check client over ureq. The key resolves through
+/// [`crate::models::keys`] (environment, then keyring); the client seam
+/// reads its key from the environment at call time, so a keyring-resolved
+/// key is planted in the process environment here — the only bridge that
+/// leaves `meta.rs`/`baseten.rs` untouched.
+fn live_recheck_client() -> Result<Box<dyn ModelClient>, String> {
+    use crate::models::meta::MetaModelClient;
+    if std::env::var(MetaModelClient::DEFAULT_ENV_VAR).is_err() {
+        let key = crate::models::keys::meta_key().map_err(|e| e.to_string())?;
+        // SAFETY: the CLI's live path runs before any thread spawns, and the
+        // client reads the process environment at call time.
+        unsafe {
+            std::env::set_var(MetaModelClient::DEFAULT_ENV_VAR, key);
+        }
+    }
+    Ok(Box::new(MetaModelClient::new(Box::new(
+        crate::models::http::UreqTransport::new(),
+    ))))
 }
 
 fn default_recheck_client() -> Box<dyn ModelClient> {
@@ -1072,5 +1112,54 @@ mod tests {
             "no-recheck must make zero model calls"
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // T5.4: --live parses on check, and the default stays on replay.
+    #[test]
+    fn live_parses_on_check_and_defaults_off() {
+        for (argv, live) in [
+            (
+                vec![
+                    "check".to_string(),
+                    "a".to_string(),
+                    "b".to_string(),
+                    "--live".to_string(),
+                ],
+                true,
+            ),
+            (
+                vec!["check".to_string(), "a".to_string(), "b".to_string()],
+                false,
+            ),
+        ] {
+            match crate::cli::parse_from(&argv) {
+                crate::cli::ParseResult::Run(cli) => {
+                    assert_eq!(cli.common.live, live, "argv: {argv:?}");
+                }
+                other => panic!("expected Run for {argv:?}, got {other:?}"),
+            }
+        }
+    }
+
+    // T5.4: without --live the check path builds the replay client, never a
+    // live one: it needs no key.
+    #[test]
+    fn replay_default_needs_no_key() {
+        let client = model_for_run(false).expect("no-live must build");
+        let request = crate::models::ModelRequest {
+            model: "probe".to_string(),
+            system: "s".to_string(),
+            user: "u".to_string(),
+            schema: serde_json::json!({"action": "string"}),
+            media: Vec::new(),
+            budget: crate::models::Budget::tokens(8),
+        };
+        // The default replay dir holds no recording for this probe request,
+        // so a miss proves the client is the replay client.
+        let err = client.complete(&request).expect_err("must miss");
+        match err {
+            crate::models::ModelError::ReplayMiss { .. } => {}
+            other => panic!("expected ReplayMiss, got {other:?}"),
+        }
     }
 }

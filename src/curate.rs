@@ -14,10 +14,14 @@
 //! a session holding more than 50 concepts can miss candidates; see the
 //! adapter docs (`docs/lambo.md`).
 //!
-//! Fixture runs are harness-only: the binary hardcodes the demo contract
-//! path, Muse root, Lambo session/URL and replay dir, so `doyle curate` cannot
-//! be re-pointed at alternate fixtures from the CLI; the `--dry-run` write
-//! guarantee is pinned by the unit tests in this module.
+//! Fixture runs are harness-only by default: without `--contract` the binary
+//! reads the demo v1 contract, without `--project` the Muse Code adapter
+//! roots at the cwd, and without `--live` the model client replays from
+//! `DOYLE_REPLAY_DIR` (or fails closed with no transport configured). `--live`
+//! swaps in the Baseten curator client over
+//! [`crate::models::http::UreqTransport`], resolving the key through
+//! [`crate::models::keys`] (environment, then keyring); `--dry-run` still
+//! writes nothing either way.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -57,12 +61,21 @@ pub type CurateOutcome = CurateItem;
 /// Alias kept for callers that prefer the `Result` spelling.
 pub type CurateResult = CurateItem;
 
+/// The demo v1 contract `run` curates against unless `--contract` says
+/// otherwise.
+pub const DEFAULT_CONTRACT: &str = "testdata/contracts/patients-v1.yaml";
+
 /// Run the `curate` command.
 pub fn run(cli: &cli::Cli) -> ExitCode {
     let dry_run = cli.common.dry_run;
+    let live = cli.common.live;
 
-    let contract_path = "testdata/contracts/patients-v1.yaml";
-    let index = match ContractIndex::load(contract_path) {
+    let contract_path = cli
+        .common
+        .contract
+        .clone()
+        .unwrap_or_else(|| DEFAULT_CONTRACT.to_string());
+    let index = match ContractIndex::load(&contract_path) {
         Ok(i) => i,
         Err(e) => {
             eprintln!("doyle curate: {e}");
@@ -89,10 +102,17 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         cli.common.adapters.clone()
     };
     let mut adapters: Vec<Box<dyn MemoryAdapter>> = Vec::new();
+    // The Muse Code adapter roots at --project (default: the cwd), so the
+    // binary can run from anywhere while curating another checkout's notes.
+    let project = cli
+        .common
+        .project
+        .clone()
+        .unwrap_or_else(|| String::from("."));
     for name in &names {
         match name.as_str() {
             "muse-code" | "muse_code" | "musecode" => {
-                adapters.push(Box::new(MuseCodeAdapter::new(Path::new("."))));
+                adapters.push(Box::new(MuseCodeAdapter::new(Path::new(&project))));
             }
             "lambo" => {
                 adapters.push(Box::new(LamboAdapter::http(
@@ -110,30 +130,16 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         }
     }
 
-    // Model client: replay from DOYLE_REPLAY_DIR when given, otherwise a
-    // Baseten client that will fail without a key (CLI runs are not the
-    // offline gate's concern).
-    let model: Box<dyn ModelClient> = if let Ok(dir) = std::env::var("DOYLE_REPLAY_DIR") {
-        Box::new(ReplayClient::new(dir))
-    } else {
-        // A transport that always errors; keeps the binary key-free at rest.
-        struct FailingTransport;
-        impl crate::models::baseten::HttpTransport for FailingTransport {
-            fn post(
-                &self,
-                _url: &str,
-                _headers: &[(&str, &str)],
-                _body: &str,
-            ) -> Result<
-                crate::models::baseten::HttpResponse,
-                crate::models::baseten::HttpTransportError,
-            > {
-                Err(crate::models::baseten::HttpTransportError {
-                    message: String::from("no transport configured"),
-                })
-            }
+    // Model client: live Baseten over ureq with --live, otherwise replay
+    // from DOYLE_REPLAY_DIR when given, otherwise a Baseten client that
+    // will fail without a key (CLI runs are not the offline gate's concern).
+    // Without --live the behaviour is exactly what it was: no key needed.
+    let model: Box<dyn ModelClient> = match model_for_run(live) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("doyle curate: {e}");
+            return ExitCode::from(2);
         }
-        Box::new(BasetenModelClient::new(Box::new(FailingTransport)))
     };
 
     let items = match curate(&adapters, model.as_ref(), &index, &mut store, dry_run) {
@@ -165,6 +171,56 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+/// Build the model client for a `run`: live Baseten over ureq with `--live`,
+/// otherwise the replay/failing transports exactly as before (no key needed,
+/// no behaviour change).
+fn model_for_run(live: bool) -> Result<Box<dyn ModelClient>, String> {
+    if live {
+        return live_client();
+    }
+    if let Ok(dir) = std::env::var("DOYLE_REPLAY_DIR") {
+        return Ok(Box::new(ReplayClient::new(dir)));
+    }
+    // A transport that always errors; keeps the binary key-free at rest.
+    struct FailingTransport;
+    impl crate::models::baseten::HttpTransport for FailingTransport {
+        fn post(
+            &self,
+            _url: &str,
+            _headers: &[(&str, &str)],
+            _body: &str,
+        ) -> Result<crate::models::baseten::HttpResponse, crate::models::baseten::HttpTransportError>
+        {
+            Err(crate::models::baseten::HttpTransportError {
+                message: String::from("no transport configured"),
+            })
+        }
+    }
+    Ok(Box::new(BasetenModelClient::new(Box::new(
+        FailingTransport,
+    ))))
+}
+
+/// A live Baseten curator client. The key resolves through
+/// [`crate::models::keys`] (environment, then keyring); the client seam
+/// reads its key from the environment at call time, so a keyring-resolved
+/// key is planted in the process environment here — the only bridge that
+/// leaves `meta.rs`/`baseten.rs` untouched. Planting a key that already came
+/// from the environment is a no-op value-wise.
+fn live_client() -> Result<Box<dyn ModelClient>, String> {
+    if std::env::var(BasetenModelClient::DEFAULT_ENV_VAR).is_err() {
+        let key = crate::models::keys::baseten_key().map_err(|e| e.to_string())?;
+        // SAFETY: the CLI's live path runs before any thread spawns, and the
+        // client reads the process environment at call time.
+        unsafe {
+            std::env::set_var(BasetenModelClient::DEFAULT_ENV_VAR, key);
+        }
+    }
+    Ok(Box::new(BasetenModelClient::new(Box::new(
+        crate::models::http::UreqTransport::new(),
+    ))))
 }
 
 /// Curate through a slice of boxed adapters.
@@ -931,5 +987,163 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
         let _ = fs::remove_dir_all(&store_dir);
         let _ = fs::remove_dir_all(&rdir);
+    }
+
+    #[test]
+    fn cli_curate_live_contract_project_parse() {
+        let args = vec![
+            "curate".to_string(),
+            "--live".to_string(),
+            "--contract".to_string(),
+            "x.yaml".to_string(),
+            "--project".to_string(),
+            "/tmp/p".to_string(),
+        ];
+        match crate::cli::parse_from(&args) {
+            crate::cli::ParseResult::Run(cli) => {
+                assert!(cli.common.live, "live must be set");
+                assert_eq!(cli.common.contract.as_deref(), Some("x.yaml"));
+                assert_eq!(cli.common.project.as_deref(), Some("/tmp/p"));
+            }
+            other => panic!("expected Run, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cli_curate_contract_equals_form_and_defaults_are_replay() {
+        let args = vec!["curate".to_string(), "--contract=x.yaml".to_string()];
+        match crate::cli::parse_from(&args) {
+            crate::cli::ParseResult::Run(cli) => {
+                assert!(!cli.common.live, "live defaults off");
+                assert_eq!(cli.common.contract.as_deref(), Some("x.yaml"));
+                assert_eq!(cli.common.project, None);
+            }
+            other => panic!("expected Run, got {other:?}"),
+        }
+        let args = vec!["curate".to_string()];
+        match crate::cli::parse_from(&args) {
+            crate::cli::ParseResult::Run(cli) => {
+                assert!(!cli.common.live, "live defaults off");
+                assert_eq!(cli.common.contract, None);
+                assert_eq!(cli.common.project, None);
+            }
+            other => panic!("expected Run, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cli_live_and_contract_are_scoped_to_their_commands() {
+        for args in [
+            vec!["serve".to_string(), "--live".to_string()],
+            vec![
+                "check".to_string(),
+                "a".to_string(),
+                "b".to_string(),
+                "--contract".to_string(),
+                "x".to_string(),
+            ],
+            vec![
+                "serve".to_string(),
+                "--contract".to_string(),
+                "x".to_string(),
+            ],
+            vec!["curate".to_string(), "--contract".to_string()],
+            vec![
+                "check".to_string(),
+                "a".to_string(),
+                "b".to_string(),
+                "--project".to_string(),
+            ],
+        ] {
+            match crate::cli::parse_from(&args) {
+                crate::cli::ParseResult::Error(_) => {}
+                other => panic!("expected Error for {args:?}, got {other:?}"),
+            }
+        }
+        // --project is shared: serve and check accept it.
+        for args in [
+            vec![
+                "serve".to_string(),
+                "--project".to_string(),
+                "/tmp/p".to_string(),
+            ],
+            vec![
+                "check".to_string(),
+                "a".to_string(),
+                "b".to_string(),
+                "--project=/tmp/p".to_string(),
+            ],
+        ] {
+            match crate::cli::parse_from(&args) {
+                crate::cli::ParseResult::Run(cli) => {
+                    assert_eq!(cli.common.project.as_deref(), Some("/tmp/p"));
+                }
+                other => panic!("expected Run for {args:?}, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn replay_default_needs_no_key_and_serves_replay() {
+        // Without --live, model_for_run builds the replay client when the
+        // replay dir is set (a miss proves it is ReplayClient, not a live
+        // client and not the failing transport), and the failing transport
+        // otherwise — all with no key in the environment.
+        let saved = std::env::var("DOYLE_REPLAY_DIR").ok();
+        // SAFETY: no other test reads DOYLE_REPLAY_DIR in-process.
+        unsafe {
+            std::env::remove_var("DOYLE_REPLAY_DIR");
+        }
+        let failing = model_for_run(false).expect("no-live without dir must build");
+        let request = crate::models::ModelRequest {
+            model: "probe".to_string(),
+            system: "s".to_string(),
+            user: "u".to_string(),
+            schema: serde_json::json!({}),
+            media: Vec::new(),
+            budget: crate::models::Budget::tokens(8),
+        };
+        // The pre-existing offline failure, unchanged by --live: with no key
+        // the env-reading client refuses before touching the transport; with
+        // a key in the environment the failing transport errors. Either way
+        // no network, no keyring, no replay.
+        let err = failing.complete(&request).expect_err("must fail");
+        match err {
+            crate::models::ModelError::InvalidRequest { message } => {
+                assert!(
+                    message.contains("BASETEN_API_KEY"),
+                    "must name the variable: {message}"
+                );
+            }
+            crate::models::ModelError::Backend { message } => {
+                assert!(
+                    message.contains("no transport configured"),
+                    "unexpected: {message}"
+                );
+            }
+            other => panic!("unexpected error kind: {other:?}"),
+        }
+
+        let dir = temp_store_dir("replay-default");
+        // SAFETY: no other test reads DOYLE_REPLAY_DIR in-process.
+        unsafe {
+            std::env::set_var("DOYLE_REPLAY_DIR", &dir);
+        }
+        let replay = model_for_run(false).expect("no-live with dir must build");
+        let err = replay.complete(&request).expect_err("empty dir must miss");
+        match err {
+            crate::models::ModelError::ReplayMiss { .. } => {}
+            other => panic!("expected ReplayMiss, got {other:?}"),
+        }
+
+        // Restore.
+        // SAFETY: restoring the variable this test owns for its duration.
+        unsafe {
+            match saved {
+                Some(v) => std::env::set_var("DOYLE_REPLAY_DIR", v),
+                None => std::env::remove_var("DOYLE_REPLAY_DIR"),
+            }
+        }
+        let _ = fs::remove_dir_all(&dir);
     }
 }
