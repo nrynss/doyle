@@ -60,7 +60,7 @@ requires:   [T7.1, T7.2]
 fixture-ok: yes
 size:       S · mid
 owns:       demo/old_service.py, demo/scripts/, demo/client/TASK.md, demo/README.md, testdata/contracts/patients-v2q.yaml
-status:     in-review
+status:     done
 ```
 T7.2 found the demo's v2 breaks loudly: the body changes from a bare array to `{"items", "next_cursor"}`, and `TASK.md` step 4 checks the import against the old service's `/stats`, so any truncation shows at once. product.md's Quiet Migration is quiet: the plan verifies against the same call and checks the import against the export. This task makes the fixture match the story (user decision); the loud v2 stays, and T7.2 stays its evidence.
 
