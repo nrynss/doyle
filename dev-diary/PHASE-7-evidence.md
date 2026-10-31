@@ -37,7 +37,7 @@ requires:   [T7.1]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/without-doyle/
-status:     in-review
+status:     done
 ```
 Seed Wonder's memory in the demo workspace with the v1 belief (in its own session, so it writes the memory itself), switch the service to v2, and give a fresh session the migration plan. Record the session (transcript, `muse export`, and screen footage for the video) and the record count. Footage follows the demo-shoot convention: raw takes go to `~/work/demo-shoot/doyle/takes/` as the run happens, named `<date>-<what>.mkv`, never into the repository, and the task's notes name each take.
 
