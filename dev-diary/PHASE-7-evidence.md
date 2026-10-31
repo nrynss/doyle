@@ -39,7 +39,7 @@ size:       S · mid
 owns:       evidence/without-doyle/
 status:     not-started
 ```
-Seed Wonder's memory in the demo workspace with the v1 belief (in its own session, so it writes the memory itself), switch the service to v2, and give a fresh session the migration plan. Record the session (transcript, `muse export`) and the record count. The screen footage for the video is shot in T8.2.
+Seed Wonder's memory in the demo workspace with the v1 belief (in its own session, so it writes the memory itself), switch the service to v2, and give a fresh session the migration plan. Record the session (transcript, `muse export`, and screen footage for the video) and the record count. Footage follows the demo-shoot convention: raw takes go to `~/work/demo-shoot/doyle/takes/` as the run happens, named `<date>-<what>.mkv`, never into the repository, and the task's notes name each take.
 
 Run the client from a fresh copy outside the repository, so Wonder never sees Doyle's own documents and starts with an empty memory folder (`demo/scripts/reset.sh` does not clear Muse Code memory). Wonder gets `TASK.md` and nothing else; one seed session and one migration session. If Wonder pages correctly, that is a finding to report, not a run to repeat.
 
@@ -55,7 +55,7 @@ size:       S · mid
 owns:       evidence/with-doyle/
 status:     not-started
 ```
-The same start, with Doyle: curate, check v1 → v2, the guard registered. Wonder is stopped, the correction is approved on the review page, it lands in Muse Code memory and Lambo, and Wonder pages through every patient and keeps the old system until the counts match. Record it all as in T7.2.
+The same start, with Doyle: curate, check v1 → v2, the guard registered. Wonder is stopped, the correction is approved on the review page, it lands in Muse Code memory and Lambo, and Wonder pages through every patient and keeps the old system until the counts match. Record it all as in T7.2, footage included, with the review page in the takes.
 
 The user clicks approve on the review page (user decision): the agent runs up to the denial, reports, and resumes after the approval.
 
