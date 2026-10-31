@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P6 done. P9 9/10 (T9.10 waits on T7.3). P7: T7.1/T7.2 done (T7.2 found no data loss — product-story decision open), T7.3 next. Open user decisions: product-story framing; screen-differ tolerance task; live-curator-budget task; push.
+**Current status:** P0–P6 done. P9 9/10 (T9.10 waits on T7.3). P7: T7.1/T7.2 done; T7.1b (quiet v2) ready, then T7.2b, then T7.3. Open user decisions: screen-differ tolerance task; live-curator-budget task; push.
 
 ---
 
@@ -130,7 +130,7 @@ keys (T0.2) + demo scenario and fixtures (T0.3) + Muse Code probes (T0.4) + Lamb
   -> Meta client (T4.1) -> curator (T4.3) + re-check (T4.4)
   -> curate (T5.1) -> check with proposals (T5.2) -> write-back (T5.3) -> live wiring (T5.4)
   -> guard (T6.1) + review page (T6.2)
-  -> demo workspace (T7.1) -> run without Doyle (T7.2) -> run with Doyle (T7.3)
+  -> demo workspace (T7.1) -> run without Doyle (T7.2) -> quiet v2 (T7.1b) -> rerun without Doyle (T7.2b) -> run with Doyle (T7.3)
   -> video (T8.2) -> public (T8.3) -> submit (T8.4)
 ```
 
@@ -147,9 +147,9 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
 | P3 | 3 / 3 | Done: locate+read, annotate, Lambo. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
-| P5 | 3 / 4 | T5.4 (live wiring) ready: the binary cannot yet run the demo live. |
+| P5 | 4 / 4 | Done. T5.4 wired the binary for live runs. |
 | P6 | 2 / 2 | Done. |
-| P7 | 2 / 5 | T7.1/T7.2 done (T7.2: no data loss, stands as finding). T7.3 next (needs your approval click). |
+| P7 | 2 / 7 | T7.1/T7.2 done (T7.2: loud v2 caught). T7.1b quiet v2 ready, then T7.2b, then T7.3. |
 | P8 | 0 / 4 | Waits for P7. |
 | P9 | 8 / 10 | T9.1–T9.8 done. T9.9 ready. T9.7b live pending. T9.10 waits for T7.3. |
 
@@ -159,6 +159,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **Story decision: quiet v2 first (user decision).** T7.2's no-loss result traced to the fixture, not luck: Wonder's first `curl /patients | head -c 2000` showed `{"items", "next_cursor"}` where v1 had a bare array, and `TASK.md` step 4 checked against the old `/stats`, which no truncated import passes. product.md's story is quiet (verify against the same call, check the import against the export). T7.1b adds a `2q` service (bare array capped at 100, `Link` header paging, `/stats` honest), a matching honest contract, and a `TASK.md` that follows product.md; T7.2b reruns. T7.2 stays as the loud-break evidence. If Wonder catches `2q` too, the story falls back to the careful-agent framing, with the T9.10 differential run carrying the deterministic failure. Open risk T7.1b must report: an honest `2q` spec may diff as additive in Vimanam (optional params, `maxItems`, a header), in which case Doyle would not flag it either. Key check on the committed T7.2 exports: no Baseten or Meta key value anywhere on `main`.
 - **T7.2 and T7.3 made agent-run; T5.4 filed (user decision, orchestrator finding).** Only the screen recording seemed to need the user, and agents already record takes into the demo-shoot folder (T9.4), so T7.2/T7.3 record their own. T7.3's approval stays a person's click. Briefing T7.3 found the binary cannot run the demo live: `doyle curate` without `DOYLE_REPLAY_DIR` builds Baseten on a transport that always errors, `doyle check` re-checks only from recorded replies, the ureq transports live only in `tests/live_*.rs`, and curate's cwd-relative contract path clashes with the Muse Code adapter rooting at the cwd. The curate module said so in its docs; the orchestrator closed T5.1/T5.2 on fixture Done-when clauses without asking whether the binary could run live. T5.4 adds the transports, key loading, `--live`, `--project` and `--contract`. Also for T7.2/T7.3: `demo/client` must run from a copy outside the repository (inside it, Wonder's project is Doyle's repo and it can read the trap in `product.md`), and `reset.sh` does not clear Muse Code memory.
 - **T7.2 closed as a finding: Wonder pages correctly without Doyle.** Seed + migration sessions from a scratch client copy; stale v1 memory confirmed in the migration snapshot, yet Wonder probed, found `next_cursor`, moved all 49 pages with hash verification, matched counts, and decommissioned only after. Before 4,812→0, after 0→4,812, zero lost. Verified: transcripts, both exports as JSON (24 credential values `<redacted>`, no username, no key patterns — only UUID/meter/telemetry IDs), stale note in the export, take in demo-shoot (6 frames; no seed take, black Xwayland capture). 2 of 2 sessions. Product implication (user decision): the runs do NOT differ the way product.md says — the tragedy didn't reproduce. T7.3 (guard path) matters more now, not less. Gate passes.
 - **T7.2 closed as a finding: Wonder pages correctly without Doyle.** Seed + migration sessions from a scratch client copy; stale v1 memory confirmed in the migration snapshot, yet Wonder probed, found `next_cursor`, moved all 49 pages with hash verification, matched counts, and decommissioned only after. Before 4,812→0, after 0→4,812, zero lost. Verified: transcripts, both exports as JSON (24 credential values `<redacted>`, no username, no key patterns — only UUID/meter/telemetry IDs), stale note in the export, take in demo-shoot (6 frames; no seed take, black Xwayland capture). 2 of 2 sessions. Product implication (user decision): the runs do NOT differ the way product.md says — the tragedy didn't reproduce. T7.3 (guard path) matters more now, not less. Gate passes.

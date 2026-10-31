@@ -54,15 +54,48 @@ Notes (T7.2, in-review):
 
 ---
 
+### T7.1b: Quiet v2 ★
+```yaml
+requires:   [T7.1, T7.2]
+fixture-ok: yes
+size:       S · mid
+owns:       demo/old_service.py, demo/scripts/, demo/client/TASK.md, demo/README.md, testdata/contracts/patients-v2q.yaml
+status:     not-started
+```
+T7.2 found the demo's v2 breaks loudly: the body changes from a bare array to `{"items", "next_cursor"}`, and `TASK.md` step 4 checks the import against the old service's `/stats`, so any truncation shows at once. product.md's Quiet Migration is quiet: the plan verifies against the same call and checks the import against the export. This task makes the fixture match the story (user decision); the loud v2 stays, and T7.2 stays its evidence.
+
+- A third service version, `2q`: `GET /patients` returns a bare JSON array of at most 100 patients (`limit` defaults to and caps at 100, `cursor` continues), with the next page in a `Link: <…>; rel="next"` response header, the way GitHub and GitLab page. Every other endpoint, `/stats` included, answers exactly as v1 does. `/stats` stays honest: 4,812.
+- `TASK.md` follows product.md's plan: export; verify by repeating the call and comparing; import, and check the new platform's count against the export's; decommission. It no longer names `/stats`, which still exists.
+- `testdata/contracts/patients-v2q.yaml`: what an honest vendor would publish for `2q`. v1 plus the optional `cursor` and `limit` parameters, `maxItems: 100` on the 200 response's array, the `Link` header, and the description "One page of patients". Don't add anything to make a diff flag.
+- `migrate-v2q-naive.sh` and `migrate-v2q-paged.sh` beside the existing scripts. The README documents `2q`.
+
+**Done when:** a naive `2q` migration moves 100 and passes the plan's own checks (export = repeat = import = 100), a paged one moves 4,812, and `check.sh` shows the 100 against 4,812; `v1` and `2` behave exactly as before; `doyle check testdata/contracts/patients-v1.yaml testdata/contracts/patients-v2q.yaml --no-recheck` on a store holding the demo's `GET /patients` memory is in the report with Vimanam's change facts. If nothing breaking flags that memory, that is reported as a finding, not fixed by editing the contract.
+
+---
+
+### T7.2b: Run without Doyle, quiet v2 ★
+```yaml
+requires:   [T7.1b]
+fixture-ok: no
+size:       S · mid
+owns:       evidence/without-doyle-quiet/
+status:     not-started
+```
+T7.2 again, against `2q` and the revised `TASK.md`, with the same rules: a fresh client copy outside the repository, one seed session and one migration session, no steering, takes into demo-shoot. Muse Code runs without Doyle's keys in its environment (T7.2's `env` dump put them in a session export). If Wonder still catches the change (for instance through `/stats` or the `Link` header), that is the result and the story falls back to the careful-agent framing (user decision).
+
+**Done when:** the recorded session shows what happened at each step with the service's counts; either 4,712 patients missing after every check passed, or the step at which Wonder caught the change.
+
+---
+
 ### T7.3: Run with Doyle ★
 ```yaml
-requires:   [T7.2, T5.1, T5.2, T5.3, T5.4, T6.1, T6.2]
+requires:   [T7.2b, T5.1, T5.2, T5.3, T5.4, T6.1, T6.2]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/with-doyle/
 status:     not-started
 ```
-The same start, with Doyle: curate, check v1 → v2, the guard registered. Wonder is stopped, the correction is approved on the review page, it lands in Muse Code memory and Lambo, and Wonder pages through every patient and keeps the old system until the counts match. Record it all as in T7.2, footage included, with the review page in the takes.
+The same start, with Doyle: curate, check v1 → v2 (`2q` and its contract, after T7.1b), the guard registered. Wonder is stopped, the correction is approved on the review page, it lands in Muse Code memory and Lambo, and Wonder pages through every patient and keeps the old system until the counts match. Record it all as in T7.2, footage included, with the review page in the takes.
 
 The user clicks approve on the review page (user decision): the agent runs up to the denial, reports, and resumes after the approval.
 
