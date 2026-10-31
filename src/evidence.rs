@@ -17,6 +17,7 @@
 //! flag, and [`ChangeFact::change_severity`] returns `None` for anything
 //! that flags nothing.
 
+pub mod diffrun;
 pub mod legacy;
 pub mod screens;
 
