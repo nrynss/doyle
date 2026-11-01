@@ -151,7 +151,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 6 / 8 | T7.1/T7.2/T7.1b/T7.2b/T7.3a/T7.3 done. T7.4 next. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 9 / 10 | T9.1–T9.9 + T9.7b done. T9.10 waits for T7.3. |
+| P9 | 9 / 10 | T9.1–T9.9 + T9.7b done. T9.10 unblocked (all requires met). |
 
 ---
 

@@ -248,10 +248,10 @@ requires:   [T9.5, T9.4]
 fixture-ok: yes
 size:       L · frontier
 owns:       src/evidence/legacy/
-status:     done:msc-t9.6
+status:     done
 ```
 
-Notes (msc-t9.6): implemented, gate green, awaiting orchestrator validation.
+Notes (msc-t9.6): implemented, gate green, validated at close (T9.8 landed on it; board counts P9 9/10).
 - `src/evidence/legacy/` (new): `ids.rs` (canonical keys + `le2_`/`lc2_` SHA-256 derivation; change key `legacy-change:<subject>:<kind>:<old>:<new>` fixed here, T9.6's call), `parse.rs` (subset parser: IDENTIFICATION/ENVIRONMENT/DATA/PROCEDURE, COPY, SELECT, 01/05 PIC, paragraphs/sections; bodies opaque normalized text; REDEFINES/OCCURS/nested/66-77-88/COPY REPLACING/groups rejected by name), `mod.rs` (`LegacyIndex` + `EvidenceSource` impl + `diff`/`diff_evidence`; offsets recomputed from running lengths; sections map to Operation, record to Type, file to operation-id slot).
 - Touched outside owns, both P9-header approved: the one `pub mod legacy;` line in `src/evidence.rs` (pub, not plain mod, so T9.8's diffrun and future consumers can reach `LegacyIndex` without a second line later) and `sha2 = "0.11"` in Cargo.toml/lock (already in the lock as a transitive dep; reason: ID derivation requires SHA-256).
 - Story pair: 24/26 elements, every ID recomputes from its key (all 50 fixture IDs verified true hashes; CALC-LATE-FEE matches the doc's worked example). All 24 v1 IDs persist in v2 (the story README's "20 shared" is a miscount; only the two B1 adds are v2-only).
