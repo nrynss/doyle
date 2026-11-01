@@ -136,7 +136,7 @@ requires:   [T3.3, T3.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/lambo.rs (supersede and its tests), testdata/lambo/ (new recordings only, from the doyle-probe session)
-status:     claimed:sonnet-t3.6
+status:     in-review
 ```
 
 Found by the T7.3 re-run. After T6.4, the person retried both flags' Lambo write-backs. flag-2's landed: its correction is recorded `against` the stale concept and recall warns. flag-1's failed with `lambo_stats returned no created node id`, yet its correction text is in Lambo (`df979a15`) and is not recorded against the stale concept. Serve logged two `os error 11` request failures, so the retry was likely sent twice: the first derive created the node, the second was matched to it by Lambo's de-duplication and the receipt listed nothing as created. The adapter treats an empty `created` as failure, so every later retry fails the same way.
@@ -148,6 +148,8 @@ Build:
 
 **Done when:** the gate passes with no key and no server; replay tests from new `doyle-probe` recordings show a supersede whose derive matches an existing concept returns that concept's id and leaves the correction `against` the stale concept, and a repeated supersede is a no-op; existing recordings replay unchanged; the probe transcript is in the report.
 
+
+**Notes (T3.6).** Probe on `doyle-probe` (recordings 16-31). A derive with `against` on a correction that already exists creates nothing and lists the existing concept in the receipt's `matched`. If that concept was not yet linked, the same receipt reads `1 contradiction(s) recorded`, so the contradiction is recorded by the matched re-derive itself. If it was already linked it reads `0 created, 1 matched existing` with no contradiction and no duplicate edge. So `supersede` now takes `created[0]`, else `matched[0]`, and no extra call is needed; the receipt names the id, so no recall fallback was built. Surprise: `lambo_inspect` on the stale concept carries no `Contradicted` line, only a `Contradicts` edge from the correction in `focus.levels`, so the old early check never fired live. It now reads that edge too (matching its label to the correction text), which makes a repeated supersede a true no-op with no derive. Errors and the other paths are unchanged. No README in `testdata/lambo/`, so the recordings are listed in the report only.
 ---
 
 ## Exit Criteria

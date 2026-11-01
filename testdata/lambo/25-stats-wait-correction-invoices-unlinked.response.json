@@ -1,0 +1,110 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "session 'doyle-probe' (owner agent 'http-shared-writer')\nnodes=17 edges=20 concepts=8 canonical=0\nembedded=8/8\nflush_lag=53.671348ms log_depth=9 flush_depth=3 dead_lettered=0 degraded=false\nepoch=40 daemon_cycles=6628 canonization_cycles=110 canonization_failures=0\npromotion_policy=Swarm\ngc: last_gc_at=2026-10-29T15:07:00.446+00:00 last_gc_epoch=0 last_sweep=none (this process)\nembedding: kind=candle model=BAAI/bge-m3@5617a9f61b028005a4858fdac845db406aefb181 model.safetensors sha256:68440cc1b73b dim=1024 modalities=text\nreceipt lwr1.78a42153e26a01c2.1a195f008f5.5: applied \u2014 derived 1 concept(s): 1 created (1 embedded), 0 matched existing; 1 similarity merge(s) refused (1 for differing identifiers, 0 for `against`); 1 replacement candidate(s): existing concepts this write may replace (nothing recorded; cite one in against on a later call only if it really is replaced)\n  - fe162aa7 \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (cosine 0.8583, for de5c37d7)"
+        }
+      ],
+      "structuredContent": {
+        "agent": "http-shared-writer",
+        "canonical_count": 0,
+        "canonization_cycles": 110,
+        "canonization_failures": 0,
+        "concept_count": 8,
+        "daemon_cycles": 6628,
+        "dead_lettered": 0,
+        "degraded": false,
+        "edge_count": 20,
+        "embedded_concepts": 8,
+        "embedding_contract": {
+          "dim": 1024,
+          "kind": "candle",
+          "model": "BAAI/bge-m3@5617a9f61b028005a4858fdac845db406aefb181 model.safetensors sha256:68440cc1b73b"
+        },
+        "embedding_modalities": [
+          "text"
+        ],
+        "epoch": 40,
+        "flush_depth": 3,
+        "flush_lag_ms": 53,
+        "gc": {
+          "last_gc_at": "2026-10-29T15:07:00.446+00:00",
+          "last_gc_epoch": 0,
+          "last_sweep": null
+        },
+        "ledger_dropped_channel_full": 0,
+        "ledger_dropped_lines": 0,
+        "ledger_dropped_write_failed": 0,
+        "ledger_path": "~/lambo-dogfood/calls.jsonl",
+        "ledger_queued_lines": 1,
+        "ledger_written_lines": 36,
+        "log_depth": 9,
+        "node_count": 17,
+        "promotion_policy": "Swarm",
+        "receipt": {
+          "created": [
+            "de5c37d7-a2ba-4835-9a17-b2c4c3b16040"
+          ],
+          "created_count": 1,
+          "detail": "applied \u2014 derived 1 concept(s): 1 created (1 embedded), 0 matched existing; 1 similarity merge(s) refused (1 for differing identifiers, 0 for `against`); 1 replacement candidate(s): existing concepts this write may replace (nothing recorded; cite one in against on a later call only if it really is replaced)\n  - fe162aa7 \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (cosine 0.8583, for de5c37d7)",
+          "embedded": 1,
+          "id": "lwr1.78a42153e26a01c2.1a195f008f5.5",
+          "kind": "lambo_derive",
+          "matched": [],
+          "matched_count": 0,
+          "reinforced": 0,
+          "replacement_candidates": {
+            "candidates": [
+              {
+                "cosine": 0.8583,
+                "excerpt": "Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026",
+                "id": "fe162aa7",
+                "new_id": "de5c37d7",
+                "node_id": "fe162aa7-e59e-483e-9708-462541bb07cc"
+              }
+            ],
+            "total": 1
+          },
+          "semantic_merged": 0,
+          "state": "applied"
+        },
+        "receipts_retained": 5,
+        "session": "doyle-probe",
+        "summary": "session 'doyle-probe' (owner agent 'http-shared-writer')\nnodes=17 edges=20 concepts=8 canonical=0\nembedded=8/8\nflush_lag=53.671348ms log_depth=9 flush_depth=3 dead_lettered=0 degraded=false\nepoch=40 daemon_cycles=6628 canonization_cycles=110 canonization_failures=0\npromotion_policy=Swarm\ngc: last_gc_at=2026-10-29T15:07:00.446+00:00 last_gc_epoch=0 last_sweep=none (this process)\nembedding: kind=candle model=BAAI/bge-m3@5617a9f61b028005a4858fdac845db406aefb181 model.safetensors sha256:68440cc1b73b dim=1024 modalities=text\nreceipt lwr1.78a42153e26a01c2.1a195f008f5.5: applied \u2014 derived 1 concept(s): 1 created (1 embedded), 0 matched existing; 1 similarity merge(s) refused (1 for differing identifiers, 0 for `against`); 1 replacement candidate(s): existing concepts this write may replace (nothing recorded; cite one in against on a later call only if it really is replaced)\n  - fe162aa7 \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (cosine 0.8583, for de5c37d7)",
+        "total_concepts": 8,
+        "warnings": [],
+        "write_queue_abandoned": 0,
+        "write_queue_accepted": 5,
+        "write_queue_applied": 5,
+        "write_queue_apply_ms_max": 34,
+        "write_queue_apply_ms_p50": 17,
+        "write_queue_apply_ms_p90": 34,
+        "write_queue_apply_samples": 5,
+        "write_queue_bound": 1024,
+        "write_queue_bound_source": "observed",
+        "write_queue_deferred": 0,
+        "write_queue_dropped": 0,
+        "write_queue_dropped_closed": 0,
+        "write_queue_failed": 0,
+        "write_queue_items_per_sec": 20.478967938655128,
+        "write_queue_lane_bound": 64,
+        "write_queue_measured": true,
+        "write_queue_outstanding": 0,
+        "write_queue_probe_optimism": 0.21211734365802276,
+        "write_queue_probe_serial_items_per_sec": 10.865393024571967,
+        "write_queue_replay_blocked": null,
+        "write_queue_replay_owed": 0,
+        "write_queue_replayed": 0,
+        "write_queue_serial_items_per_sec": 51.22350128091948
+      },
+      "isError": false
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 8,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_cursor [Logic] (score 1.86, id de5c37d7)\n\u26a0 Contradicts \"Probe T3.6 B: the invoices endpoint returns every invoice in one unpaged respons\u2026\" (id 215afe30)\n\nProbe T3.6 B: the invoices endpoint returns every invoice in one unpaged response [Logic] (score 1.53, id 215afe30)\n\u26a0 Contradicted at 2026-11-01T07:08:18Z by doyle-probe: \"Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_\u2026\" (id de5c37d7)\n\nProbe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor [Logic] (score 1.23, id fe162aa7)\n\u26a0 Contradicts \"Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged\u2026\" (id 5421710c)\n\nProbe T3.6 A: the appointments endpoint returns every appointment in one unpaged response [Logic] (score 0.64, id 5421710c)\n\u26a0 Contradicted at 2026-11-01T07:08:15Z by doyle-probe: \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (id fe162aa7)\n\nGET /patients returns 100 patients per page and a next_cursor; follow next_cursor until it is null to export every patient [Logic] (score 0.64, id 1be4e4a6)"
+        },
+        {
+          "type": "text",
+          "text": "warnings:\n- \u26a0 Contradicts \"Probe T3.6 B: the invoices endpoint returns every invoice in one unpaged respons\u2026\" (id 215afe30)\n- \u26a0 Contradicted at 2026-11-01T07:08:18Z by doyle-probe: \"Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_\u2026\" (id de5c37d7)\n- \u26a0 Contradicts \"Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged\u2026\" (id 5421710c)\n- \u26a0 Contradicted at 2026-11-01T07:08:15Z by doyle-probe: \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (id fe162aa7)"
+        }
+      ],
+      "structuredContent": {
+        "context": "Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_cursor [Logic] (score 1.86, id de5c37d7)\n\u26a0 Contradicts \"Probe T3.6 B: the invoices endpoint returns every invoice in one unpaged respons\u2026\" (id 215afe30)\n\nProbe T3.6 B: the invoices endpoint returns every invoice in one unpaged response [Logic] (score 1.53, id 215afe30)\n\u26a0 Contradicted at 2026-11-01T07:08:18Z by doyle-probe: \"Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_\u2026\" (id de5c37d7)\n\nProbe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor [Logic] (score 1.23, id fe162aa7)\n\u26a0 Contradicts \"Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged\u2026\" (id 5421710c)\n\nProbe T3.6 A: the appointments endpoint returns every appointment in one unpaged response [Logic] (score 0.64, id 5421710c)\n\u26a0 Contradicted at 2026-11-01T07:08:15Z by doyle-probe: \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (id fe162aa7)\n\nGET /patients returns 100 patients per page and a next_cursor; follow next_cursor until it is null to export every patient [Logic] (score 0.64, id 1be4e4a6)",
+        "hits": [
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_cursor",
+            "is_canonical": false,
+            "node_id": "de5c37d7-a2ba-4835-9a17-b2c4c3b16040",
+            "score": 1.8587694652594675
+          },
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "Probe T3.6 B: the invoices endpoint returns every invoice in one unpaged response",
+            "is_canonical": false,
+            "node_id": "215afe30-c52c-4e1d-b369-2f53cd1704cd",
+            "score": 1.5318935815646022
+          },
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor",
+            "is_canonical": false,
+            "node_id": "fe162aa7-e59e-483e-9708-462541bb07cc",
+            "score": 1.229493362135958
+          },
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged response",
+            "is_canonical": false,
+            "node_id": "5421710c-ae88-43be-9e37-abaf40a21235",
+            "score": 0.6403477271351318
+          },
+          {
+            "blast_radius": null,
+            "concept_type": "Logic",
+            "content": "GET /patients returns 100 patients per page and a next_cursor; follow next_cursor until it is null to export every patient",
+            "is_canonical": false,
+            "node_id": "1be4e4a6-47c5-4f5e-9311-556452637b94",
+            "score": 0.6378649655653412
+          }
+        ],
+        "warnings": [
+          "\u26a0 Contradicts \"Probe T3.6 B: the invoices endpoint returns every invoice in one unpaged respons\u2026\" (id 215afe30)",
+          "\u26a0 Contradicted at 2026-11-01T07:08:18Z by doyle-probe: \"Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_\u2026\" (id de5c37d7)",
+          "\u26a0 Contradicts \"Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged\u2026\" (id 5421710c)",
+          "\u26a0 Contradicted at 2026-11-01T07:08:15Z by doyle-probe: \"Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a n\u2026\" (id fe162aa7)"
+        ]
+      },
+      "isError": false
+    }
+  }
+}

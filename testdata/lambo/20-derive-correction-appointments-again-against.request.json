@@ -1,0 +1,29 @@
+{
+  "method": "POST",
+  "url": "http://127.0.0.1:7700/mcp/s/doyle-probe",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream",
+    "Mcp-Session-Id": "<mcp-session-id>"
+  },
+  "body": {
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "id": 6,
+    "params": {
+      "name": "lambo_derive",
+      "arguments": {
+        "agent_id": "doyle-probe",
+        "concepts": [
+          {
+            "content": "Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor",
+            "concept_type": "logic",
+            "against": [
+              "5421710c"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

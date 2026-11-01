@@ -176,6 +176,29 @@ fn strip_type_suffix(label: &str) -> String {
     label.to_string()
 }
 
+/// The (node id, label) of every neighbour that has a `Contradicts` edge into the
+/// inspected concept, from an `lambo_inspect` result (`<-` on the stale concept).
+fn contradicting_neighbours(structured: &serde_json::Value) -> Vec<(String, String)> {
+    let mut found = Vec::new();
+    let levels = structured
+        .get("focus")
+        .and_then(|f| f.get("levels"))
+        .and_then(|l| l.as_array());
+    for level in levels.into_iter().flatten() {
+        let neighbours = level.get("neighbours").and_then(|n| n.as_array());
+        for n in neighbours.into_iter().flatten() {
+            let text = |k: &str| n.get(k).and_then(|v| v.as_str()).unwrap_or("");
+            if text("edge_type") == "Contradicts"
+                && text("direction") == "<-"
+                && !text("node_id").is_empty()
+            {
+                found.push((text("node_id").to_string(), text("label").to_string()));
+            }
+        }
+    }
+    found
+}
+
 fn parse_contradicted_id(warning: &str) -> Option<String> {
     let marker = "(id ";
     let start = warning.find(marker)? + marker.len();
@@ -495,6 +518,7 @@ impl MemoryAdapter for LamboAdapter {
         }
 
         let mut existing_corr: Option<String> = None;
+        let mut linked_by_edge: Vec<(String, String)> = Vec::new();
         {
             let mut client = self.client.borrow_mut();
             if let Ok(res) = client.call_tool(
@@ -520,6 +544,10 @@ impl MemoryAdapter for LamboAdapter {
                         warnings.push(line.to_string());
                     }
                 }
+                // Recorded (testdata/lambo/29): inspecting the stale concept carries
+                // no "Contradicted" line, only a `Contradicts` edge from the
+                // correction in the neighbourhood. Read that edge too.
+                linked_by_edge = contradicting_neighbours(&structured);
                 for w in &warnings {
                     if let Some(short) = parse_contradicted_id(w) {
                         existing_corr = Some(short);
@@ -527,6 +555,13 @@ impl MemoryAdapter for LamboAdapter {
                     }
                 }
             }
+        }
+
+        if let Some((full, _)) = linked_by_edge
+            .iter()
+            .find(|(_, label)| strip_type_suffix(label) == correction_text)
+        {
+            return Ok(self.remember_correction(stale_id, full, correction_text));
         }
 
         if let Some(short) = existing_corr {
@@ -558,24 +593,7 @@ impl MemoryAdapter for LamboAdapter {
 
             let corr_text = self.inspect_content(&full);
             if corr_text.as_deref() == Some(correction_text) {
-                self.content_cache
-                    .borrow_mut()
-                    .insert(full.clone(), correction_text.to_string());
-                let scope = self
-                    .scope_cache
-                    .borrow()
-                    .get(stale_id)
-                    .cloned()
-                    .unwrap_or_else(|| self.session.clone());
-                self.scope_cache.borrow_mut().insert(full.clone(), scope);
-                self.supersede_cache.borrow_mut().insert(
-                    stale_id.to_string(),
-                    (full.clone(), correction_text.to_string()),
-                );
-                return Ok(MemoryRef {
-                    adapter: self.name.clone(),
-                    id: full,
-                });
+                return Ok(self.remember_correction(stale_id, &full, correction_text));
             }
         }
 
@@ -626,37 +644,31 @@ impl MemoryAdapter for LamboAdapter {
             .get("receipt")
             .cloned()
             .unwrap_or(serde_json::Value::Null);
-        let created = receipt_obj
-            .get("created")
-            .and_then(|v| v.as_array())
-            .and_then(|a| a.first())
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        if created.is_empty() {
+        // A derive that creates nothing but matches an existing concept (Lambo's
+        // de-duplication of a repeated or earlier write, testdata/lambo/26-27)
+        // names that concept in `matched`. Re-deriving it with `against` records
+        // the contradiction when it was missing (27) and adds nothing when it was
+        // already there (21), so the matched concept ends linked either way.
+        let first_id = |key: &str| {
+            receipt_obj
+                .get(key)
+                .and_then(|v| v.as_array())
+                .and_then(|a| a.first())
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string()
+        };
+        let mut corr = first_id("created");
+        if corr.is_empty() {
+            corr = first_id("matched");
+        }
+        if corr.is_empty() {
             return Err(self.backend_error(
                 Some(stale_id.to_string()),
                 "lambo_stats returned no created node id".to_string(),
             ));
         }
-        self.content_cache
-            .borrow_mut()
-            .insert(created.clone(), correction_text.to_string());
-        let scope = self
-            .scope_cache
-            .borrow()
-            .get(stale_id)
-            .cloned()
-            .unwrap_or_else(|| self.session.clone());
-        self.scope_cache.borrow_mut().insert(created.clone(), scope);
-        self.supersede_cache.borrow_mut().insert(
-            stale_id.to_string(),
-            (created.clone(), correction_text.to_string()),
-        );
-        Ok(MemoryRef {
-            adapter: self.name.clone(),
-            id: created,
-        })
+        Ok(self.remember_correction(stale_id, &corr, correction_text))
     }
 
     fn watch(&self) -> Result<Vec<Memory>, AdapterError> {
@@ -699,6 +711,30 @@ impl MemoryAdapter for LamboAdapter {
 }
 
 impl LamboAdapter {
+    /// Cache a correction found or made for a stale concept and return its reference.
+    fn remember_correction(&self, stale_id: &str, corr_id: &str, text: &str) -> MemoryRef {
+        self.content_cache
+            .borrow_mut()
+            .insert(corr_id.to_string(), text.to_string());
+        let scope = self
+            .scope_cache
+            .borrow()
+            .get(stale_id)
+            .cloned()
+            .unwrap_or_else(|| self.session.clone());
+        self.scope_cache
+            .borrow_mut()
+            .insert(corr_id.to_string(), scope);
+        self.supersede_cache.borrow_mut().insert(
+            stale_id.to_string(),
+            (corr_id.to_string(), text.to_string()),
+        );
+        MemoryRef {
+            adapter: self.name.clone(),
+            id: corr_id.to_string(),
+        }
+    }
+
     fn inspect_content(&self, id: &str) -> Option<String> {
         let mut client = self.client.borrow_mut();
         let res = client
@@ -1336,5 +1372,134 @@ mod tests {
             "correction must not self-attach warning, got: {}",
             rc.text
         );
+    }
+
+    // ---- T3.6: a correction Lambo already holds (recordings 16-31, doyle-probe) ----
+
+    const INV_STALE: &str = "215afe30-c52c-4e1d-b369-2f53cd1704cd";
+    const INV_CORR: &str = "de5c37d7-a2ba-4835-9a17-b2c4c3b16040";
+    const INV_TEXT: &str =
+        "Probe T3.6 B: the invoices endpoint pages at 25 per response and returns a next_cursor";
+    const APPT_STALE: &str = "5421710c-ae88-43be-9e37-abaf40a21235";
+    const APPT_CORR: &str = "fe162aa7-e59e-483e-9708-462541bb07cc";
+    const APPT_TEXT: &str = "Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor";
+
+    fn replay_adapter(prefixes: &[&str]) -> LamboAdapter {
+        let mut q = vec!["01-initialize", "02-notifications-initialized"];
+        q.extend_from_slice(prefixes);
+        let resps = q
+            .iter()
+            .map(|n| crate::mcp::recorded_to_http(&load_recorded(n)))
+            .collect();
+        LamboAdapter::new(
+            "http://127.0.0.1:7700/mcp/s/doyle-probe".to_string(),
+            "doyle-probe".to_string(),
+            Box::new(FakeTransport::new(resps)),
+        )
+    }
+
+    fn derive_bodies(adapter: &LamboAdapter) -> Vec<String> {
+        adapter
+            .recorded_requests()
+            .into_iter()
+            .filter(|c| c.body.contains("lambo_derive"))
+            .map(|c| c.body)
+            .collect()
+    }
+
+    // The recordings show what Lambo does: the matched receipt names the concept.
+    #[test]
+    fn recorded_matched_receipts_name_the_concept() {
+        let matched = load_recorded("27-stats-wait-matched-contradiction");
+        let r = &matched["message"]["result"]["structuredContent"]["receipt"];
+        assert_eq!(r["created"].as_array().unwrap().len(), 0);
+        assert_eq!(r["matched"][0], INV_CORR);
+        assert!(
+            r["detail"]
+                .as_str()
+                .unwrap()
+                .contains("1 contradiction(s) recorded")
+        );
+        let again = load_recorded("21-stats-wait-matched-no-contradiction");
+        let r = &again["message"]["result"]["structuredContent"]["receipt"];
+        assert_eq!(r["matched"][0], APPT_CORR);
+        assert!(!r["detail"].as_str().unwrap().contains("contradiction"));
+    }
+
+    #[test]
+    fn supersede_matched_derive_returns_existing_and_links() {
+        let adapter = replay_adapter(&[
+            "10-inspect-memory",
+            "26-derive-correction-invoices-matched-against",
+            "27-stats-wait-matched-contradiction",
+            "28-recall-invoices-linked",
+        ]);
+        let r = adapter.supersede(INV_STALE, INV_TEXT).unwrap();
+        assert_eq!(r.id, INV_CORR);
+        let derives = derive_bodies(&adapter);
+        assert_eq!(derives.len(), 1);
+        assert!(derives[0].contains("against"));
+        assert!(
+            derives[0].contains("215afe30"),
+            "against names the stale concept"
+        );
+        // Lambo now shows the stale concept contradicted by exactly that correction.
+        adapter.list("invoices endpoint pages").unwrap();
+        let stale = adapter.read(INV_STALE).unwrap();
+        assert!(
+            stale.text.contains("de5c37d7"),
+            "stale text: {}",
+            stale.text
+        );
+    }
+
+    // flag-1's shape: the correction was created plain, nothing links it.
+    #[test]
+    fn supersede_unlinked_existing_correction_ends_linked() {
+        let adapter = replay_adapter(&[
+            "24-derive-correction-invoices-unlinked",
+            "25-stats-wait-correction-invoices-unlinked",
+            "10-inspect-memory",
+            "26-derive-correction-invoices-matched-against",
+            "27-stats-wait-matched-contradiction",
+            "28-recall-invoices-linked",
+        ]);
+        let plain = adapter.write(INV_TEXT, "doyle-probe").unwrap();
+        assert_eq!(plain.id, INV_CORR);
+        let r = adapter.supersede(INV_STALE, INV_TEXT).unwrap();
+        assert_eq!(r.id, plain.id);
+        let derives = derive_bodies(&adapter);
+        assert_eq!(derives.len(), 2);
+        assert!(!derives[0].contains("against"));
+        assert!(derives[1].contains("against") && derives[1].contains("215afe30"));
+        adapter.list("invoices endpoint pages").unwrap();
+        assert!(adapter.read(INV_STALE).unwrap().text.contains("de5c37d7"));
+    }
+
+    // Already linked: the stale concept's `Contradicts` edge finds the correction;
+    // a fresh adapter sends no derive, and a second call sends nothing at all.
+    #[test]
+    fn repeated_supersede_is_a_no_op() {
+        let adapter = replay_adapter(&["29-inspect-stale-appointments-linked"]);
+        let first = adapter.supersede(APPT_STALE, APPT_TEXT).unwrap();
+        assert_eq!(first.id, APPT_CORR);
+        assert!(derive_bodies(&adapter).is_empty());
+        let sent = adapter.recorded_requests().len();
+        let second = adapter.supersede(APPT_STALE, APPT_TEXT).unwrap();
+        assert_eq!(second.id, APPT_CORR);
+        assert_eq!(adapter.recorded_requests().len(), sent, "no request at all");
+    }
+
+    // The same retry when the edge is not in the inspect result: the derive is
+    // matched and, with no new contradiction, still returns the linked concept.
+    #[test]
+    fn matched_derive_of_linked_correction_is_still_the_correction() {
+        let adapter = replay_adapter(&[
+            "10-inspect-memory",
+            "20-derive-correction-appointments-again-against",
+            "21-stats-wait-matched-no-contradiction",
+        ]);
+        let r = adapter.supersede(APPT_STALE, APPT_TEXT).unwrap();
+        assert_eq!(r.id, APPT_CORR);
     }
 }

@@ -1,0 +1,102 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "session 'doyle-probe' (owner agent 'http-shared-writer')\nnodes=18 edges=23 concepts=8 canonical=0\nembedded=8/8\nflush_lag=71.453564ms log_depth=16 flush_depth=3 dead_lettered=0 degraded=false\nepoch=45 daemon_cycles=6629 canonization_cycles=110 canonization_failures=0\npromotion_policy=Swarm\ngc: last_gc_at=2026-10-29T15:07:00.446+00:00 last_gc_epoch=0 last_sweep=none (this process)\nembedding: kind=candle model=BAAI/bge-m3@5617a9f61b028005a4858fdac845db406aefb181 model.safetensors sha256:68440cc1b73b dim=1024 modalities=text\nreceipt lwr1.78a42153e26a01c2.1a195f00920.6: applied \u2014 derived 1 concept(s): 0 created (0 embedded), 1 matched existing; 1 contradiction(s) recorded; 0 stale direct dependenc(ies)"
+        }
+      ],
+      "structuredContent": {
+        "agent": "http-shared-writer",
+        "canonical_count": 0,
+        "canonization_cycles": 110,
+        "canonization_failures": 0,
+        "concept_count": 8,
+        "daemon_cycles": 6629,
+        "dead_lettered": 0,
+        "degraded": false,
+        "edge_count": 23,
+        "embedded_concepts": 8,
+        "embedding_contract": {
+          "dim": 1024,
+          "kind": "candle",
+          "model": "BAAI/bge-m3@5617a9f61b028005a4858fdac845db406aefb181 model.safetensors sha256:68440cc1b73b"
+        },
+        "embedding_modalities": [
+          "text"
+        ],
+        "epoch": 45,
+        "flush_depth": 3,
+        "flush_lag_ms": 71,
+        "gc": {
+          "last_gc_at": "2026-10-29T15:07:00.446+00:00",
+          "last_gc_epoch": 0,
+          "last_sweep": null
+        },
+        "ledger_dropped_channel_full": 0,
+        "ledger_dropped_lines": 0,
+        "ledger_dropped_write_failed": 0,
+        "ledger_path": "~/lambo-dogfood/calls.jsonl",
+        "ledger_queued_lines": 0,
+        "ledger_written_lines": 40,
+        "log_depth": 16,
+        "node_count": 18,
+        "promotion_policy": "Swarm",
+        "receipt": {
+          "created": [],
+          "created_count": 0,
+          "detail": "applied \u2014 derived 1 concept(s): 0 created (0 embedded), 1 matched existing; 1 contradiction(s) recorded; 0 stale direct dependenc(ies)",
+          "embedded": 0,
+          "id": "lwr1.78a42153e26a01c2.1a195f00920.6",
+          "kind": "lambo_derive",
+          "matched": [
+            "de5c37d7-a2ba-4835-9a17-b2c4c3b16040"
+          ],
+          "matched_count": 1,
+          "reinforced": 0,
+          "semantic_merged": 0,
+          "stale_report": {
+            "dependents": [],
+            "total": 0
+          },
+          "state": "applied"
+        },
+        "receipts_retained": 6,
+        "session": "doyle-probe",
+        "summary": "session 'doyle-probe' (owner agent 'http-shared-writer')\nnodes=18 edges=23 concepts=8 canonical=0\nembedded=8/8\nflush_lag=71.453564ms log_depth=16 flush_depth=3 dead_lettered=0 degraded=false\nepoch=45 daemon_cycles=6629 canonization_cycles=110 canonization_failures=0\npromotion_policy=Swarm\ngc: last_gc_at=2026-10-29T15:07:00.446+00:00 last_gc_epoch=0 last_sweep=none (this process)\nembedding: kind=candle model=BAAI/bge-m3@5617a9f61b028005a4858fdac845db406aefb181 model.safetensors sha256:68440cc1b73b dim=1024 modalities=text\nreceipt lwr1.78a42153e26a01c2.1a195f00920.6: applied \u2014 derived 1 concept(s): 0 created (0 embedded), 1 matched existing; 1 contradiction(s) recorded; 0 stale direct dependenc(ies)",
+        "total_concepts": 8,
+        "warnings": [],
+        "write_queue_abandoned": 0,
+        "write_queue_accepted": 6,
+        "write_queue_applied": 6,
+        "write_queue_apply_ms_max": 34,
+        "write_queue_apply_ms_p50": 17,
+        "write_queue_apply_ms_p90": 34,
+        "write_queue_apply_samples": 6,
+        "write_queue_bound": 1024,
+        "write_queue_bound_source": "observed",
+        "write_queue_deferred": 0,
+        "write_queue_dropped": 0,
+        "write_queue_dropped_closed": 0,
+        "write_queue_failed": 0,
+        "write_queue_items_per_sec": 20.478967938655128,
+        "write_queue_lane_bound": 64,
+        "write_queue_measured": true,
+        "write_queue_outstanding": 0,
+        "write_queue_probe_optimism": 0.15939269781106036,
+        "write_queue_probe_serial_items_per_sec": 10.865393024571967,
+        "write_queue_replay_blocked": null,
+        "write_queue_replay_owed": 0,
+        "write_queue_replayed": 0,
+        "write_queue_serial_items_per_sec": 68.1674453960965
+      },
+      "isError": false
+    }
+  }
+}

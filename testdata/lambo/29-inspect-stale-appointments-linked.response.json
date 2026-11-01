@@ -1,0 +1,105 @@
+{
+  "http_status": 200,
+  "content_type": "text/event-stream",
+  "transport": "sse",
+  "message": {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "focus: Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged response [Logic]\ncanonization (Swarm): None -> Candidate refused\n  - survived 0 GC sweeps, needs at least 3\n  - dependents from 0 other interactions, needs at least 2\n\nhop 1:\n  Contradicts\n    <- Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor [Logic]\n  Derives\n    <- <interaction 77dd85a3-aa4a-4a7e-ba40-a3ae74b565c1>\n\nhop 2:\n  Derives\n    <- <interaction 59da1b70-bc88-43cd-b2b6-658c59ce5775>\n    <- <interaction 957cb441-670d-43ad-97b1-cf07fe15c2ae>\n  Temporal\n    -> <interaction 9a63d572-a939-413f-a0b0-44ca3a7aad6d>\n"
+        }
+      ],
+      "structuredContent": {
+        "admission": {
+          "checks": [
+            {
+              "bar": 3.0,
+              "comparison": "at_least",
+              "current": 0.0,
+              "gate": "gc_survived",
+              "met": false,
+              "stage": 1
+            },
+            {
+              "bar": 2.0,
+              "comparison": "at_least",
+              "current": 0.0,
+              "gate": "dependent_interactions",
+              "met": false,
+              "stage": 1
+            }
+          ],
+          "eligible": false,
+          "next": "Candidate",
+          "policy": "Swarm",
+          "reasons": [
+            "survived 0 GC sweeps, needs at least 3",
+            "dependents from 0 other interactions, needs at least 2"
+          ],
+          "status": "None"
+        },
+        "focus": {
+          "blast_radius": 0,
+          "dependents": [],
+          "dependents_truncated": false,
+          "label": "Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged response [Logic]",
+          "levels": [
+            {
+              "hop": 1,
+              "neighbours": [
+                {
+                  "direction": "<-",
+                  "edge_type": "Contradicts",
+                  "label": "Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor [Logic]",
+                  "node_id": "fe162aa7-e59e-483e-9708-462541bb07cc",
+                  "weight": 2.0
+                },
+                {
+                  "direction": "<-",
+                  "edge_type": "Derives",
+                  "label": "<interaction 77dd85a3-aa4a-4a7e-ba40-a3ae74b565c1>",
+                  "node_id": "77dd85a3-aa4a-4a7e-ba40-a3ae74b565c1",
+                  "weight": 0.9
+                }
+              ]
+            },
+            {
+              "hop": 2,
+              "neighbours": [
+                {
+                  "direction": "<-",
+                  "edge_type": "Derives",
+                  "label": "<interaction 957cb441-670d-43ad-97b1-cf07fe15c2ae>",
+                  "node_id": "957cb441-670d-43ad-97b1-cf07fe15c2ae",
+                  "weight": 0.9
+                },
+                {
+                  "direction": "<-",
+                  "edge_type": "Derives",
+                  "label": "<interaction 59da1b70-bc88-43cd-b2b6-658c59ce5775>",
+                  "node_id": "59da1b70-bc88-43cd-b2b6-658c59ce5775",
+                  "weight": 0.9
+                },
+                {
+                  "direction": "->",
+                  "edge_type": "Temporal",
+                  "label": "<interaction 9a63d572-a939-413f-a0b0-44ca3a7aad6d>",
+                  "node_id": "9a63d572-a939-413f-a0b0-44ca3a7aad6d",
+                  "weight": 1.0
+                }
+              ]
+            }
+          ],
+          "node_id": "5421710c-ae88-43be-9e37-abaf40a21235"
+        },
+        "resolution": null,
+        "view": "focus: Probe T3.6 A: the appointments endpoint returns every appointment in one unpaged response [Logic]\ncanonization (Swarm): None -> Candidate refused\n  - survived 0 GC sweeps, needs at least 3\n  - dependents from 0 other interactions, needs at least 2\n\nhop 1:\n  Contradicts\n    <- Probe T3.6 A: the appointments endpoint pages at 50 per response and returns a next_cursor [Logic]\n  Derives\n    <- <interaction 77dd85a3-aa4a-4a7e-ba40-a3ae74b565c1>\n\nhop 2:\n  Derives\n    <- <interaction 59da1b70-bc88-43cd-b2b6-658c59ce5775>\n    <- <interaction 957cb441-670d-43ad-97b1-cf07fe15c2ae>\n  Temporal\n    -> <interaction 9a63d572-a939-413f-a0b0-44ca3a7aad6d>\n",
+        "warnings": []
+      },
+      "isError": false
+    }
+  }
+}
