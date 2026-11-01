@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/work/doyle/.claude/worktrees/agent-a93abf3a80a51927d/target/debug/doyle guard --state-dir ~/doyle-runs/t7.3/state"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/work/doyle/.claude/worktrees/agent-a93abf3a80a51927d/target/debug/doyle guard --state-dir ~/doyle-runs/t7.3/state"
+          }
+        ]
+      }
+    ]
+  }
+}

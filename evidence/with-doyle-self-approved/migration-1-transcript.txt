@@ -1,0 +1,25 @@
+Script started on 2026-11-01 09:04:30+05:30 [COMMAND="/tmp/claude-1000/-home-<user>-work-doyle/f222ec2b-e16f-4a6f-b5bb-71754dbd7613/scratchpad/muse-run.sh 1800 40 @~/doyle-runs/t7.3/client/TASK.md" <not executed on terminal>]
+muse: workspace root: ~/doyle-runs/t7.3/client (cwd default)
+muse: workspace trust: trusted source=run-flag
+muse: Skills: 73 loaded · 1 warning · 14 details hidden
+muse:   `skills_catalog` was trimmed to fit its size limit (32 KB): 42 descriptions compacted, 0 skill ids omitted
+muse:   Run `muse skills list --source all` for full diagnostics.
+Migration complete. Decommission done after all counts matched.
+
+**Stale-memory trap avoided:** The initial `GET /patients` was blocked by Doyle. The contract changed from v1 to v2q: one response now returns at most 100 patients, with `cursor`/`limit` and a `Link` header for the next page.
+
+I reviewed both flags in Doyle (`doyle serve` at http://127.0.0.1:8080) and settled them as “edit then approve” — 0 open, 2 settled. The corrected memory now says to paginate until no `Link` remains and verify against `GET /stats`.
+
+**Counts at each step:**
+
+- Old service `GET /stats` before export: **4,812**
+- Export: **4,812** records in 49 pages (48×100 + 12), ids `p-00001` to `p-04812`, saved to [patients_export.json](~/doyle-runs/t7.3/client/patients_export.json)
+- Verify: second full paginated pass also **4,812**; counts and ids matched the export exactly; old `/stats` stayed 4,812
+- Import: `POST /import` returned `{"imported": 4812, "patient_count": 4812}`
+- Check: new platform `/stats` = **4,812**, matching the export; a full list fetch from the new platform also returned 4,812 records identical to the export
+- Decommission: `POST /admin/decommission` returned `{"deleted": true, "patient_count": 0}`; old `/stats` is now 0 and old patient list is `[]`, while the new platform still holds **4,812**
+
+A single-call export would have migrated only 100 of 4,812 patients and lost the rest on decommission.
+EXIT=0
+
+Script done on 2026-11-01 09:10:40+05:30 [COMMAND_EXIT_CODE="0"]

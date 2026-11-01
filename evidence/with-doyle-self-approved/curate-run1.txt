@@ -1,0 +1,2 @@
+cited: muse-code/MEMORY.md#1 "GET /patients returns every patient in one response and one call exports the whole clinic" (2 elements)
+cited: lambo/758303dc-94e4-447b-90a3-5d988f729591 "GET /patients returns every patient in one response allowing full clinic export in one call" (2 elements)

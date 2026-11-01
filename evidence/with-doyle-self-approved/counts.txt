@@ -1,0 +1,5 @@
+old: 0 new: 4812
+FAIL
+check_exit=1
+{"patient_count": 0}
+{"patient_count": 4812}
