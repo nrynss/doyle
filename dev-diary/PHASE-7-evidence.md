@@ -101,7 +101,7 @@ Notes (T7.2b, in-review):
 
 ### T7.3: Run with Doyle ★
 ```yaml
-requires:   [T7.2b, T7.3a, T5.1, T5.2, T5.3, T5.4, T5.5, T6.1, T6.2, T6.3, T3.4]
+requires:   [T7.2b, T7.3a, T5.1, T5.2, T5.3, T5.4, T5.5, T6.1, T6.2, T6.3, T6.4, T3.4, T3.5]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/with-doyle/

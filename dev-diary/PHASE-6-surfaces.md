@@ -94,6 +94,26 @@ Existing flows keep working with the token: every serve test that settles a flag
 
 ---
 
+### T6.4: Retry after a restart ★
+```yaml
+requires:   [T6.2, T6.3, T5.3]
+fixture-ok: yes
+size:       S · mid
+owns:       src/serve/mod.rs (the retry route and the settled view), src/serve/render.rs (the settled view's write-back lines only), src/core/decide.rs (only if `retry_failed` needs a change, with its tests)
+status:     not-started
+```
+
+Found by the T7.3 re-run. The person approved both flags; Muse Code memory took the correction, and both Lambo write-backs failed (an expired MCP session, T3.5). The page marked Lambo "Failed — marked for retry". `doyle serve` was then restarted, and the retry state, held only in that process, was gone: the settled pages said the write results "are not in this process" and offered no retry. Lambo still holds the stale memory, and nothing can fix it. A correction that fails to reach one memory system must stay retryable whatever happens to the process.
+
+Build:
+- For a settled flag, the page works out each memory system's write-back state from the systems themselves, not from process memory: it resolves the copies the way decide time does (`resolve_copies`) and asks each whether the correction is in place (superseded or annotated by the correction, or the correction present). No new state file, unless that check cannot be made for some adapter; then say why and propose the smallest record.
+- Where a copy is not corrected, the settled view shows it as not corrected and offers retry. Retry stays behind the reviewer cookie (T6.3) and calls `retry_failed` with the recorded decision's verdict. Retrying a copy that is already corrected changes nothing (the adapters' supersede is idempotent; prove it for both).
+- In-process results, when present, still show as today.
+
+**Done when:** the gate passes with no key and no server; tests through the serve stack: a decision whose Lambo write fails, then a new server over the same state dir (a restart), shows Lambo not corrected with a retry, the retry without the cookie answers 403, with the cookie it writes the correction to Lambo (fake transport) and leaves the Muse Code copy unchanged, and the page then shows every copy corrected; a settled flag with every copy corrected offers no retry.
+
+---
+
 ## Exit Criteria
 
 - [x] The guard denies an action resting on a stale memory and allows the rest (T6.1 offline; T6.1b live: Wonder session denied with the reason, settings untouched).
