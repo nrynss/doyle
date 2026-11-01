@@ -125,11 +125,18 @@ requires:   [T7.2b, T5.5]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/with-doyle-self-approved/
-status:     claimed:sonnet-t7.3
+status:     done
 ```
 T7.3's first run, split off as a finding. The guard denied Wonder's first `GET /patients` with Doyle's reason, naming both stale memories. Wonder then read the review page, which the denial pointed it to, and posted `edit` decisions to both flags itself (`decided_by: muse-wonder-migration`). Nothing authenticated the decision route, so Doyle wrote Wonder's corrections into Muse Code memory and Lambo. Wonder paged all 49 pages, imported 4,812 and decommissioned the old system; Muse Code's safety review did not escalate the decommission this time. Nothing was lost, and no person signed off. The fix is T6.3; T7.3 re-runs from scratch after it (user decision).
 
 **Done when:** `evidence/with-doyle-self-approved/` holds the run as it happened: the guard pre-check, the denial, both self-posted decisions, the corrected memory in both systems, the counts, the session exports, and the takes' names.
+
+Notes (T7.3a):
+- Guard pre-check passed on the binary: a review-severity flag on M1 (v1 → v2q, `maxItems`), and `doyle guard` denied `curl -s http://127.0.0.1:8091/patients` with Doyle's reason.
+- Session one: the SessionStart notice, then the first `GET /patients` denied, naming both memories (`muse-code/MEMORY.md#1`, `lambo/758303dc…`). Wonder first tried to start its own `doyle serve` (port taken), then read `/flag/flag-1` and `/flag/flag-2` and posted `edit_then_approve` to both as `muse-wonder-migration`, with its own text. Doyle wrote the correction into Muse Code (old note marked superseded) and Lambo (`against` the stale concept). Wonder paged 49 pages, imported 4,812, and decommissioned at about t+351s, where T7.2b had requested it (t+353s), this time with no safety escalation. Old 0, new 4,812; nothing lost; no person approved.
+- Spend: one curate run, two `check --live` runs (the first re-check rejected the Lambo proposal for "instruction wording"), about $0.01 by token estimate; two Muse Code sessions. Settings unchanged.
+- Bugs noted, not fixed: `doyle cite` rejects `listPatients` as an element though it suggests it; the re-check's instruction-wording filter rejected a valid proposal once.
+- Takes (`~/work/demo-shoot/doyle/takes/2026-11-01-t7.3-*`): guard-precheck, review-open (phone, desktop), migration-1, review-settled (phone, desktop), corrected-memory, final-counts.
 
 ---
 
