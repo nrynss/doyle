@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P2, P4–P6 done. P3: T3.5b (MCP transport: a 404 is a response) claimed. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; the T7.3 re-run is held after the person's retry: Muse Code memory corrected, Lambo corrected through flag-2, flag-1's Lambo retry failed again on a 404 the transport hides (T3.5b, then a retry). P9 9/10 (T9.10 waits on T7.3). Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
+**Current status:** P0–P6 done. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; the T7.3 re-run is held after the person's retry: Muse Code memory corrected, Lambo corrected through flag-2, flag-1's Lambo retry to be made again now that T3.5b has landed. P9 9/10 (T9.10 waits on T7.3). Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
 
 ---
 
@@ -145,7 +145,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P0 | 7 / 7 | Done. T0.7 (second real upgrade) closed on the user's pick of Stripe Charges → PaymentIntents. |
 | P1 | 5 / 5 | Done. Contracts frozen at T1.5. |
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
-| P3 | 6 / 7 | T3.5b (a 404 is a response) claimed. |
+| P3 | 7 / 7 | Done: locate+read, annotate, Lambo, topic files, MCP re-initialize (T3.5, T3.5b), a correction Lambo already holds. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
 | P5 | 5 / 5 | Done. T5.4 wired the binary for live runs; T5.5 keeps Lambo on Doyle's own session. |
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
@@ -159,6 +159,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T3.5b closed: a 404 is a response (orchestrator miss).** The person's flag-1 retry after T3.6 failed with `http status: 404`: `UreqTransport` in `src/mcp.rs` lacked `http_status_as_error(false)`, so ureq turned Lambo's expired-session 404 into a transport error and T3.5's re-initialize never ran live. T3.5's tests used the fake transport, which returns 404 as a response, and the orchestrator closed T3.5 on them alone. Fix: the agent returns every status; `notifications/initialized` now errors on any non-2xx. Four tests run the real transport against a local listener (404 as a response, re-initialize and retry with the new session id, 500 not retried, non-success on initialize). Validated: diff, the eight `mcp::` tests, gate green on `main` after the merge. Lesson: a transport fix is validated over the real transport.
 - **T3.6 closed: a correction Lambo already holds.** Probed in `doyle-probe` only (recordings `testdata/lambo/16`–`31`): a derive with `against` on a correction Lambo already holds is matched, not created, and names the concept in the receipt's `matched`; if the link was missing, that same derive records the contradiction. `supersede` now takes `created[0]` else `matched[0]`, and its no-op check reads the `Contradicts` edge on the stale concept (live `lambo_inspect` never shows a `Contradicted` line, so the old check could not see an existing link). Separate finding, not fixed: `doyle serve`'s `os error 11` is its 10 s read timeout on an idle browser connection, and the single-threaded accept loop stalls behind it, which can make a person click twice. Validated: scope, recordings clean, gate green on `main` after the merge.
 - **T6.4 closed: a missed write-back stays retryable after a restart.** Settled pages now read each system live (`resolve_copies` + `read`/`list`, list-before-read for Lambo warnings; no new state file — uncheckable reads count as not corrected). `retry_after_restart` retries only uncorrected copies with the recorded verdict (stateless; 409 names unsearchable adapters, 502 names failed ones). Review (9 findings) + re-review (6 nits) + verify pass all remediated in `src/serve/mod.rs` only: retryable-only in-process retry, exact-equality + marker + boundary matching, read-back rendering, Keep/zero-configured disclosures, cold-cache Lambo no-op proven in-test. 40 serve tests green, gate passes. Next: re-run T7.3's held Lambo write-back from the settled page.
 - **T3.5 closed: the MCP client starts a new session when Lambo forgets the old one.** `McpClient::call_tool` now answers a 404 to a request that carried `Mcp-Session-Id` by clearing the id, re-running `initialize` and `notifications/initialized`, and re-sending the request once; a second 404, a 404 without a session id, and every other status error as before. Four fake-transport tests (the first tests in `src/mcp.rs`); no adapter change. Validated: the diff, gate green on `main` after the merge. The running T7.3 serve still has the old binary; T6.4 is still needed for a retry after the restart.

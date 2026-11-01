@@ -158,7 +158,7 @@ requires:   [T3.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/mcp.rs
-status:     in-review
+status:     done
 ```
 
 Found by the T7.3 re-run, after T3.5 and T3.6 landed: the person's retry of flag-1 failed again with `lambo: backend error: http://127.0.0.1:7700/mcp/s/doyle-t73: http status: 404`. Lambo answered 404 for serve's expired session, as the MCP transport prescribes, but `UreqTransport::with_timeout` builds its agent without `http_status_as_error(false)`, so ureq returns the 404 as a transport error and T3.5's re-initialize (which checks `resp.status`) never runs. T3.5's tests used the fake transport, which returns 404 as a response, so they could not see it; the orchestrator validated on them alone. The model clients' transport (`src/models/http.rs`) already sets the option.
