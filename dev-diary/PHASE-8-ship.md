@@ -26,11 +26,17 @@ requires:   [T7.3]
 fixture-ok: no
 size:       M · user
 owns:       evidence/video/
-status:     claimed:t82
+status:     in-review
 ```
 Three minutes, of what was built during the event: the problem, the run without Doyle, the run with Doyle, the review page, the numbers. The agent drafts the script from the recorded runs; the user records and publishes. The cut assembles from the takes T7.2 and T7.3 left in the demo-shoot `takes/`.
 
 **Done when:** the user has published the video and its link is in the README and the judges' page.
+
+Notes (T8.2, in-review):
+- Built in `evidence/video/` only: `SCRIPT.md` (about 430 words, five beats plus close, every number indexed to its `evidence/measures.md` line, every claim inside the at-most list), `ASSEMBLY.md` (takes inventory with ffprobe durations, gaps, shot order, recipe), `assemble.sh` (story-order ffmpeg concat into a reel outside the repo; verified here: 10 takes, 92 s, stream copy, no re-encode needed).
+- Takes existing: all 12 T7.3-rerun takes (the real run), all 8 T7.3a takes, `2026-10-31-without-doyle-migration.mkv` (3 s, 6 frames), the two T7.2b takes. Takes missing or unusable: no T7.2 seed take (black Xwayland capture, deleted per T7.2 notes); both T7.2b takes are 1 s near-empty frames, so beat 2 needs user-recorded screen time; no approval-click or decommission footage exists in any run. T7.3a takes must not be cut in (self-approved finding, excluded from every claim). Console/training takes are P9 material, out of scope.
+- Deliberately no video binary is committed: takes never enter the repo by convention, and the reel builds outside it.
+- Recording, publishing, and the README/judges-page link updates remain the user's. Gate passes (video-only files cannot break it; still run).
 
 ---
 
