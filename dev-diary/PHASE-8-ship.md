@@ -12,11 +12,13 @@ requires:   [T7.5]
 fixture-ok: yes
 size:       S · mid
 owns:       README.md
-status:     claimed:t81
+status:     in-review
 ```
 What Doyle is, how to run the demo from a fresh clone, and a clear line between what was built during the event (Doyle) and what are existing dependencies (Vimanam, Lambo, Muse Code), as the rules require. Usage replaces "planned". The status note goes.
 
 **Done when:** a fresh clone, following only the README, runs the offline demo; the user has read it.
+
+Notes (t81): README rewritten on branch t81 (commit 4c6266f): what Doyle is, fresh-clone offline demo (gate, cite + replay-backed check v1→v2 with exit 1, serve review + /judges, guard deny), new-vs-existing table, at-most numbers quoted from evidence/measures.md, live paths separated. Verified by a real fresh `git clone` of the worktree to /tmp: check.sh green from scratch, cite/check output as documented, all 34 /judges links plus /flag/flag-1 resolve 200, guard denies with the documented reason (exit 0). No README divergence found; no claim beyond the at-most list. Second Done-when clause (user read) is the user's. Surprise: `pkill -f 'doyle serve'` matches the invoking shell itself — kill serve by port instead.
 
 ---
 
