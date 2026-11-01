@@ -174,6 +174,8 @@ pub struct Response {
     /// Binary payload (a content type and its bytes) for the evidence
     /// routes that stream a recording; `body` stays the HTML path.
     pub media: Option<(String, Vec<u8>)>,
+    /// A `Set-Cookie` header value (the reviewer cookie), when one is set.
+    pub set_cookie: Option<String>,
 }
 
 impl Response {
@@ -183,6 +185,7 @@ impl Response {
             body,
             location: None,
             media: None,
+            set_cookie: None,
         }
     }
     fn redirect(location: String) -> Self {
@@ -191,6 +194,7 @@ impl Response {
             body: String::new(),
             location: Some(location),
             media: None,
+            set_cookie: None,
         }
     }
     fn media(content_type: String, bytes: Vec<u8>) -> Self {
@@ -199,6 +203,7 @@ impl Response {
             body: String::new(),
             location: None,
             media: Some((content_type, bytes)),
+            set_cookie: None,
         }
     }
 }
@@ -243,6 +248,12 @@ pub struct ReviewServer {
     provenance: Option<Provenance>,
     provenance_missing_at: Option<PathBuf>,
     reports: HashMap<String, DecisionReport>,
+    /// The reviewer token: random at start, in memory only. Empty means no
+    /// randomness was available, and then nobody is a reviewer.
+    reviewer_token: String,
+    /// Whether the request being routed carried the reviewer cookie; the
+    /// page builders read it to decide whether to render a decision form.
+    reviewer_request: bool,
 }
 
 impl ReviewServer {
@@ -253,7 +264,38 @@ impl ReviewServer {
             provenance: None,
             provenance_missing_at: None,
             reports: HashMap::new(),
+            reviewer_token: random_token().unwrap_or_default(),
+            reviewer_request: false,
         }
+    }
+
+    /// The reviewer token, for the start-up banner (and tests). Never
+    /// written anywhere else.
+    pub fn reviewer_token(&self) -> &str {
+        &self.reviewer_token
+    }
+
+    /// The `Cookie` header value a reviewer's browser sends. Tests use it to
+    /// act as the person.
+    #[cfg(test)]
+    pub fn reviewer_cookie(&self) -> String {
+        format!("{REVIEWER_COOKIE}={}", self.reviewer_token)
+    }
+
+    fn is_reviewer(&self, cookie_header: Option<&str>) -> bool {
+        let Some(header) = cookie_header else {
+            return false;
+        };
+        header.split(';').any(|pair| {
+            pair.trim()
+                .split_once('=')
+                .is_some_and(|(name, value)| name == REVIEWER_COOKIE && self.token_matches(value))
+        })
+    }
+
+    fn token_matches(&self, candidate: &str) -> bool {
+        !self.reviewer_token.is_empty()
+            && constant_time_eq(candidate.as_bytes(), self.reviewer_token.as_bytes())
     }
 
     pub fn with_provenance(mut self, provenance: Option<Provenance>) -> Self {
@@ -270,9 +312,49 @@ impl ReviewServer {
 
     /// Route one request. `path` may carry a query string; `body` is the
     /// request body (form fields on the POST routes).
+    /// As the person: the request carries the reviewer cookie. Tests that
+    /// settle a flag use this; the refusal tests call `handle_request`.
+    #[cfg(test)]
     pub fn handle(&mut self, method: &str, path: &str, body: &str) -> Response {
+        let cookie = self.reviewer_cookie();
+        self.handle_request(method, path, body, Some(&cookie))
+    }
+
+    /// Route one request with the `Cookie` header it carried, if any.
+    pub fn handle_request(
+        &mut self,
+        method: &str,
+        path: &str,
+        body: &str,
+        cookie: Option<&str>,
+    ) -> Response {
+        self.reviewer_request = self.is_reviewer(cookie);
+        if method == "GET"
+            && let Some(query) = path.strip_prefix("/?")
+        {
+            let presented = query
+                .split('&')
+                .find_map(|pair| pair.strip_prefix("reviewer="))
+                .map(url_decode);
+            if let Some(token) = presented
+                && self.token_matches(&token)
+            {
+                let mut response = Response::redirect("/".to_string());
+                response.set_cookie = Some(format!(
+                    "{REVIEWER_COOKIE}={}; HttpOnly; SameSite=Strict; Path=/",
+                    self.reviewer_token
+                ));
+                return response;
+            }
+        }
         let path = path.split(['?', '#']).next().unwrap_or("/");
         let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        if method == "POST"
+            && matches!(segments.as_slice(), ["flag", _, "decide" | "retry"])
+            && !self.reviewer_request
+        {
+            return Response::html(403, render::reviewer_only_page());
+        }
         match (method, segments.as_slice()) {
             ("GET", []) => Response::html(200, self.list_page()),
             ("GET", ["flag", id]) => {
@@ -838,6 +920,8 @@ impl ReviewServer {
 
         if let Some((proposal, decision)) = &settled {
             body.push_str(&self.settled_section(flag, proposal, decision, copies));
+        } else if !self.reviewer_request {
+            body.push_str(&render::reviewer_only_section());
         } else if let Some(proposal) = self.actionable_proposal(flag) {
             body.push_str(&self.decide_section(flag, &proposal));
         } else {
@@ -1170,10 +1254,14 @@ impl ReviewServer {
                         .iter()
                         .any(|r| matches!(r.outcome, AdapterOutcome::Failed { .. }))
                 {
-                    out.push_str(&format!(
+                    if !self.reviewer_request {
+                        out.push_str(&render::reviewer_only_section());
+                    } else {
+                        out.push_str(&format!(
                         "<form method=\"post\" action=\"/flag/{}/retry\"><p><button type=\"submit\" class=\"secondary\">Retry the failed write-back</button> <span class=\"small muted\">Retries re-issue the identical text, so a write that already landed is not duplicated.</span></p></form>",
                         esc(&flag.id)
                     ));
+                    }
                 }
             }
             None => {
@@ -1412,9 +1500,17 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if server.reviewer_token().is_empty() {
+        eprintln!("doyle serve: cannot make a reviewer token (no /dev/urandom); not serving");
+        return ExitCode::from(2);
+    }
     println!(
         "doyle serve: http://127.0.0.1:{port} (state: {state_dir}, adapters: {})",
         server.adapter_names()
+    );
+    eprintln!(
+        "Review at http://127.0.0.1:{port}/?reviewer={}",
+        server.reviewer_token()
     );
     match serve(&listener, &mut server) {
         Ok(()) => ExitCode::SUCCESS,
@@ -1511,6 +1607,7 @@ fn handle_connection(stream: TcpStream, server: &mut ReviewServer) -> std::io::R
     let method = parts.next().unwrap_or("GET").to_string();
     let path = parts.next().unwrap_or("/").to_string();
     let mut content_length = 0usize;
+    let mut cookie: Option<String> = None;
     loop {
         let mut line = String::new();
         if reader.read_line(&mut line)? == 0 || line == "\r\n" || line == "\n" {
@@ -1520,6 +1617,14 @@ fn handle_connection(stream: TcpStream, server: &mut ReviewServer) -> std::io::R
             && name.trim().eq_ignore_ascii_case("content-length")
         {
             content_length = value.trim().parse().unwrap_or(0);
+        } else if let Some((name, value)) = line.split_once(':')
+            && name.trim().eq_ignore_ascii_case("cookie")
+        {
+            let joined = cookie.get_or_insert_with(String::new);
+            if !joined.is_empty() {
+                joined.push_str("; ");
+            }
+            joined.push_str(value.trim());
         }
     }
     if content_length > 1_048_576 {
@@ -1534,7 +1639,12 @@ fn handle_connection(stream: TcpStream, server: &mut ReviewServer) -> std::io::R
     }
     let mut body = vec![0u8; content_length];
     reader.read_exact(&mut body)?;
-    let response = server.handle(&method, &path, &String::from_utf8_lossy(&body));
+    let response = server.handle_request(
+        &method,
+        &path,
+        &String::from_utf8_lossy(&body),
+        cookie.as_deref(),
+    );
     write_response(&mut writer, &response)
 }
 
@@ -1542,6 +1652,7 @@ fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Resul
     let reason = match response.status {
         200 => "OK",
         303 => "See Other",
+        403 => "Forbidden",
         400 => "Bad Request",
         404 => "Not Found",
         405 => "Method Not Allowed",
@@ -1562,6 +1673,9 @@ fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Resul
     if let Some(location) = &response.location {
         head.push_str(&format!("Location: {location}\r\n"));
     }
+    if let Some(cookie) = &response.set_cookie {
+        head.push_str(&format!("Set-Cookie: {cookie}\r\n"));
+    }
     head.push_str("\r\n");
     writer.write_all(head.as_bytes())?;
     writer.write_all(payload)?;
@@ -1571,6 +1685,25 @@ fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Resul
 // ---------------------------------------------------------------------------
 // Form and URL decoding, and the clock (no time crate: RFC 3339 from epoch).
 // ---------------------------------------------------------------------------
+
+/// The cookie that marks a request as the person's.
+const REVIEWER_COOKIE: &str = "doyle_reviewer";
+
+/// 16 random bytes from the operating system, as 32 hex characters.
+fn random_token() -> std::io::Result<String> {
+    let mut bytes = [0u8; 16];
+    std::fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
+    Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// Compare without an early exit on the first differing byte.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    let mut diff = a.len() ^ b.len();
+    for i in 0..a.len().max(b.len()) {
+        diff |= usize::from(a.get(i).copied().unwrap_or(0) ^ b.get(i).copied().unwrap_or(0));
+    }
+    diff == 0
+}
 
 fn parse_form(body: &str) -> HashMap<String, String> {
     let mut form = HashMap::new();
@@ -2918,5 +3051,190 @@ mod tests {
             memories.len()
         );
         let _ = fs::remove_dir_all(&project);
+    }
+
+    // ----- T6.3: only a person settles a flag -----
+
+    fn state_files_text(dir: &Path) -> Vec<(PathBuf, String)> {
+        let mut out = Vec::new();
+        let mut stack = vec![dir.to_path_buf()];
+        while let Some(next) = stack.pop() {
+            for entry in fs::read_dir(&next).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else {
+                    let text = String::from_utf8_lossy(&fs::read(&path).unwrap()).to_string();
+                    out.push((path, text));
+                }
+            }
+        }
+        out.sort();
+        out
+    }
+
+    fn lambo_concepts(demo: &Demo) -> usize {
+        demo.lambo_state.lock().unwrap().concepts.len()
+    }
+
+    #[test]
+    fn t63_decide_and_retry_refused_without_the_cookie() {
+        let mut demo = demo_server();
+        let state_dir = demo.root.join(".doyle");
+        let flag_path = format!("/flag/{}", demo.flag_id);
+        let before_state = state_files_text(&state_dir);
+        let before_muse = state_files_text(&demo.muse_dir);
+        let before_lambo = lambo_concepts(&demo);
+        let token = demo.server.reviewer_token().to_string();
+        let wrong = format!("{REVIEWER_COOKIE}={}", "0".repeat(token.len()));
+        for cookie in [None, Some(wrong.as_str()), Some("other=1"), Some("")] {
+            let decide = demo.server.handle_request(
+                "POST",
+                &format!("{flag_path}/decide"),
+                "verdict=edit&new_text=agent+text&decided_by=muse-wonder-migration",
+                cookie,
+            );
+            assert_eq!(decide.status, 403, "decide refused for {cookie:?}");
+            assert!(
+                decide.body.contains("settles flags from the reviewer link"),
+                "403 page says a person settles: {}",
+                decide.body
+            );
+            assert!(
+                !decide.body.contains(&token),
+                "the 403 page never shows the token"
+            );
+            let retry =
+                demo.server
+                    .handle_request("POST", &format!("{flag_path}/retry"), "", cookie);
+            assert_eq!(retry.status, 403, "retry refused for {cookie:?}");
+        }
+        assert_eq!(
+            state_files_text(&state_dir),
+            before_state,
+            "no file in the state dir changed (decisions.jsonl included)"
+        );
+        assert!(
+            Store::open(&state_dir).unwrap().decisions().is_empty(),
+            "no decision recorded"
+        );
+        assert_eq!(
+            state_files_text(&demo.muse_dir),
+            before_muse,
+            "Muse Code untouched"
+        );
+        assert_eq!(lambo_concepts(&demo), before_lambo, "Lambo untouched");
+        assert!(demo.server.reports.is_empty(), "no write-back report");
+        let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    #[test]
+    fn t63_decide_accepted_with_the_right_cookie_and_token_is_in_no_file() {
+        let mut demo = demo_server();
+        let state_dir = demo.root.join(".doyle");
+        let flag_path = format!("/flag/{}", demo.flag_id);
+        let token = demo.server.reviewer_token().to_string();
+        assert_eq!(token.len(), 32, "16 bytes, hex");
+        assert!(token.bytes().all(|b| b.is_ascii_hexdigit()));
+        // A browser sends other cookies too.
+        let cookie = format!("theme=dark; {REVIEWER_COOKIE}={token}; x=y");
+        let response = demo.server.handle_request(
+            "POST",
+            &format!("{flag_path}/decide"),
+            "verdict=approve&decided_by=judge",
+            Some(&cookie),
+        );
+        assert_eq!(response.status, 303, "decide accepted: {}", response.body);
+        assert!(demo.server.store.open_flags().is_empty(), "flag settled");
+        for (path, text) in state_files_text(&state_dir)
+            .into_iter()
+            .chain(state_files_text(&demo.muse_dir))
+        {
+            assert!(
+                !text.contains(&token),
+                "the token is in no file: {}",
+                path.display()
+            );
+        }
+        let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    #[test]
+    fn t63_retry_accepted_with_the_cookie_and_refused_without() {
+        let mut demo = demo_server();
+        let flag_path = format!("/flag/{}", demo.flag_id);
+        let cookie = demo.server.reviewer_cookie();
+        let settled = demo.server.handle_request(
+            "POST",
+            &format!("{flag_path}/decide"),
+            "verdict=keep",
+            Some(&cookie),
+        );
+        assert_eq!(settled.status, 303);
+        let refused = demo
+            .server
+            .handle_request("POST", &format!("{flag_path}/retry"), "", None);
+        assert_eq!(refused.status, 403);
+        let allowed =
+            demo.server
+                .handle_request("POST", &format!("{flag_path}/retry"), "", Some(&cookie));
+        assert_ne!(allowed.status, 403, "the cookie passes the gate");
+        let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    #[test]
+    fn t63_reviewer_url_sets_the_cookie_and_redirects() {
+        let mut demo = demo_server();
+        let token = demo.server.reviewer_token().to_string();
+        let response = demo
+            .server
+            .handle_request("GET", &format!("/?reviewer={token}"), "", None);
+        assert_eq!(response.status, 303);
+        assert_eq!(response.location.as_deref(), Some("/"));
+        let cookie = response.set_cookie.expect("sets the cookie");
+        assert_eq!(
+            cookie,
+            format!("{REVIEWER_COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/")
+        );
+        // A wrong token sets nothing and just shows the list.
+        let wrong = demo
+            .server
+            .handle_request("GET", "/?reviewer=nope", "", None);
+        assert_eq!(wrong.status, 200);
+        assert!(wrong.set_cookie.is_none());
+        let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    #[test]
+    fn t63_no_decision_form_without_the_cookie() {
+        let mut demo = demo_server();
+        let flag_path = format!("/flag/{}", demo.flag_id);
+        let without = demo.server.handle_request("GET", &flag_path, "", None);
+        assert_eq!(without.status, 200, "GET pages stay readable");
+        assert!(!without.body.contains("/decide"), "no decision form");
+        assert!(!without.body.contains("<form"), "no form at all");
+        assert!(
+            without.body.contains("settled from the reviewer link"),
+            "says where flags are settled"
+        );
+        assert!(
+            without.body.contains(M1_CLAIM),
+            "the page is still readable"
+        );
+        let cookie = demo.server.reviewer_cookie();
+        let with = demo
+            .server
+            .handle_request("GET", &flag_path, "", Some(&cookie));
+        assert!(with.body.contains("/decide"), "the person sees the form");
+        let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    #[test]
+    fn t63_constant_time_eq_and_token_shape() {
+        assert!(constant_time_eq(b"abc", b"abc"));
+        assert!(!constant_time_eq(b"abc", b"abd"));
+        assert!(!constant_time_eq(b"abc", b"abcd"));
+        assert!(!constant_time_eq(b"", b"abc"));
+        assert_ne!(random_token().unwrap(), random_token().unwrap());
     }
 }

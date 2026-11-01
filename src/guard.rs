@@ -154,6 +154,13 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         return (ExitCode::SUCCESS, String::new(), String::new());
     }
     let dir = resolve_against_cwd(&state_dir_raw(cli), call.cwd.as_deref());
+    // Doyle protects itself first, whether or not any flag is open and
+    // whether or not the store can be read.
+    if let Some(matched) = self_protection(call, &state_dir_raw(cli), &dir) {
+        return deny(&format!(
+            "DOYLE-GUARD: this action would settle or change Doyle's own records, which only a person does. Matched {matched}."
+        ));
+    }
     let store = match Store::open(&dir) {
         Ok(store) => store,
         Err(e) => {
@@ -234,7 +241,11 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         return (ExitCode::SUCCESS, String::new(), String::new());
     }
     hits.sort_by_key(|(flag, _)| *flag);
-    let reason = deny_reason(&open, &store, &hits);
+    deny(&deny_reason(&open, &store, &hits))
+}
+
+/// A PreToolUse deny: `permissionDecision: deny` on stdout, exit 0.
+fn deny(reason: &str) -> (ExitCode, String, String) {
     let out = serde_json::json!({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
@@ -243,6 +254,221 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         }
     });
     (ExitCode::SUCCESS, format!("{out}\n"), String::new())
+}
+
+/// `doyle` subcommands that read or write Doyle's records or run its
+/// enforcement; a session never runs them.
+const DOYLE_SUBCOMMANDS: &[&str] = &["serve", "curate", "check", "cite", "guard"];
+
+/// Tools that write files or memory and carry a path.
+const WRITE_TOOLS: &[&str] = &[
+    "write_file",
+    "edit_file",
+    "apply_patch",
+    "add_memory",
+    "edit_memory",
+];
+
+/// The self-protection check: does this call settle or change Doyle's own
+/// records? Returns what matched. Generous by design: a string anywhere in
+/// the tool input naming a decision route is enough.
+fn self_protection(call: &HookCall, raw_state_dir: &str, state_dir: &str) -> Option<String> {
+    // 1. A post to a decision or retry route, in any string of the input.
+    for text in &call.strings {
+        if let Some(route) = decision_route_in(text) {
+            return Some(format!("the review page route {route}"));
+        }
+    }
+    // 2. A `doyle` command or the running binary, in a shell command.
+    if call.tool_name == "bash" {
+        let exe = std::env::current_exe()
+            .ok()
+            .map(|p| p.to_string_lossy().to_string());
+        for text in &call.strings {
+            if let Some(sub) = doyle_command_in(text) {
+                return Some(format!("a doyle command (doyle {sub})"));
+            }
+            if let Some(exe) = &exe
+                && names_path(text, exe)
+            {
+                return Some(String::from("the running doyle binary"));
+            }
+        }
+    }
+    // 3. A write under the state dir, or a shell command naming it.
+    let dirs = state_dir_forms(raw_state_dir, state_dir);
+    if call.tool_name == "bash" {
+        for text in &call.strings {
+            if dirs.iter().any(|dir| names_path(text, dir)) {
+                return Some(format!("Doyle's state directory {state_dir}"));
+            }
+        }
+    } else if WRITE_TOOLS.contains(&call.tool_name.as_str()) {
+        let state = normalize_abs(state_dir);
+        for text in &call.strings {
+            if call.tool_name == "apply_patch" && dirs.iter().any(|dir| names_path(text, dir)) {
+                return Some(format!("Doyle's state directory {state_dir}"));
+            }
+            let trimmed = text.trim();
+            if trimmed.is_empty() || trimmed.len() > 4096 || trimmed.contains('\n') {
+                continue;
+            }
+            let resolved = normalize_abs(&resolve_against_cwd(trimmed, call.cwd.as_deref()));
+            if Path::new(&resolved).starts_with(&state) {
+                return Some(format!(
+                    "a write under Doyle's state directory ({resolved})"
+                ));
+            }
+        }
+    }
+    None
+}
+
+/// The strings that name the state dir in a shell command: its resolved
+/// absolute form, and the configured form when that is relative.
+fn state_dir_forms(raw: &str, resolved: &str) -> Vec<String> {
+    let mut forms = vec![normalize_abs(resolved).trim_end_matches('/').to_string()];
+    if !Path::new(raw).is_absolute() {
+        let relative = raw.trim_start_matches("./").trim_end_matches('/');
+        if !relative.is_empty() && relative != "." {
+            forms.push(relative.to_string());
+        }
+    }
+    forms.retain(|f| !f.is_empty() && f != "/");
+    forms
+}
+
+/// Lexically normalise a path: drop `.` and empty segments, fold `..`.
+fn normalize_abs(path: &str) -> String {
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    let joined = parts.join("/");
+    if path.starts_with('/') {
+        format!("/{joined}")
+    } else {
+        joined
+    }
+}
+
+/// Does `text` name `path`, as a whole path (not a prefix of a longer
+/// name)? The character after the match must not continue a name.
+fn names_path(text: &str, path: &str) -> bool {
+    if path.is_empty() {
+        return false;
+    }
+    let bytes = text.as_bytes();
+    let mut from = 0;
+    while let Some(found) = text[from..].find(path) {
+        let start = from + found;
+        let end = start + path.len();
+        let after_ok = bytes
+            .get(end)
+            .is_none_or(|b| !(b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.')));
+        let before_ok = path.starts_with('/')
+            || start == 0
+            || !(bytes[start - 1].is_ascii_alphanumeric()
+                || matches!(bytes[start - 1], b'-' | b'_' | b'.'));
+        if after_ok && before_ok {
+            return true;
+        }
+        from = start + 1;
+        while from < text.len() && !text.is_char_boundary(from) {
+            from += 1;
+        }
+    }
+    false
+}
+
+/// Percent-decode, for routes written as `%64ecide`.
+fn percent_decode(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let Ok(hex) = std::str::from_utf8(&bytes[i + 1..i + 3])
+            && let Ok(byte) = u8::from_str_radix(hex, 16)
+        {
+            out.push(byte);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
+/// A `/flag/<anything>/decide` or `/flag/<anything>/retry` path anywhere in
+/// the text (also when percent-encoded).
+fn decision_route_in(text: &str) -> Option<String> {
+    for candidate in [text.to_string(), percent_decode(text)] {
+        let mut from = 0;
+        while let Some(found) = candidate[from..].find("/flag/") {
+            let start = from + found;
+            let rest = &candidate[start + "/flag/".len()..];
+            if let Some((id, tail)) = rest.split_once('/')
+                && !id.is_empty()
+                && !id.contains(char::is_whitespace)
+            {
+                for action in ["decide", "retry"] {
+                    if let Some(after) = tail.strip_prefix(action)
+                        && after
+                            .chars()
+                            .next()
+                            .is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '_'))
+                    {
+                        return Some(format!("/flag/{id}/{action}"));
+                    }
+                }
+            }
+            from = start + 1;
+        }
+    }
+    None
+}
+
+/// A `doyle <subcommand>` in a shell command: the word `doyle` (or a path
+/// ending `/doyle`) as a command word, with one of the subcommands after
+/// it in the same command. Returns the subcommand.
+fn doyle_command_in(text: &str) -> Option<String> {
+    for fragment in text.split([';', '&', '|', '\n', '(', ')', '`']) {
+        let tokens: Vec<&str> = fragment
+            .split_whitespace()
+            .map(|t| t.trim_matches(|c| matches!(c, '"' | '\'' | '{' | '}' | '$')))
+            .collect();
+        for (i, token) in tokens.iter().enumerate() {
+            let is_doyle = *token == "doyle" || token.ends_with("/doyle");
+            if is_doyle
+                && let Some(sub) = tokens[i + 1..]
+                    .iter()
+                    .find(|t| DOYLE_SUBCOMMANDS.contains(t))
+            {
+                return Some((*sub).to_string());
+            }
+            // `cargo run -- serve` runs the same binary.
+            if *token == "run"
+                && i > 0
+                && tokens[i - 1] == "cargo"
+                && let Some(dashes) = tokens[i + 1..].iter().position(|t| *t == "--")
+                && let Some(sub) = tokens[i + 1 + dashes + 1..]
+                    .iter()
+                    .find(|t| DOYLE_SUBCOMMANDS.contains(t))
+            {
+                return Some((*sub).to_string());
+            }
+        }
+    }
+    None
 }
 
 fn decide_session_start(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, String) {
@@ -278,7 +504,7 @@ fn decide_session_start(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, S
         "memories"
     };
     let notice = format!(
-        "DOYLE NOTICE: {} {noun} flagged stale: {}. Review with `doyle serve`.",
+        "DOYLE NOTICE: {} {noun} flagged stale: {}. A person reviews flagged memories.",
         open.len(),
         items.join("; ")
     );
@@ -660,7 +886,7 @@ fn deny_reason(open: &[crate::core::Flag], store: &Store, hits: &[(usize, String
         ));
     }
     format!(
-        "DOYLE-GUARD: {} Review with `doyle serve`, then retry against the current contract.",
+        "DOYLE-GUARD: {} A person reviews this flag on Doyle's review page; this session cannot settle it.",
         parts.join(" ")
     )
 }
@@ -920,9 +1146,16 @@ mod tests {
             "reason carries the severity: {reason}"
         );
         assert!(
-            reason.contains("doyle serve"),
-            "reason names the review page: {reason}"
+            !reason.contains("doyle serve"),
+            "reason no longer points at serve: {reason}"
         );
+        assert!(
+            reason.ends_with(
+                "A person reviews this flag on Doyle's review page; this session cannot settle it."
+            ),
+            "reason ends with the person-reviews sentence: {reason}"
+        );
+        eprintln!("STALE DENIAL: {reason}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1173,9 +1406,14 @@ mod tests {
             .expect("notice carries additionalContext");
         assert!(context.contains("M1"), "notice names the memory: {context}");
         assert!(
-            context.contains("doyle serve"),
-            "notice names the review page: {context}"
+            !context.contains("doyle serve"),
+            "notice no longer points at serve: {context}"
         );
+        assert!(
+            context.contains("A person reviews flagged memories."),
+            "notice says a person reviews: {context}"
+        );
+        eprintln!("SESSION NOTICE: {context}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -1572,6 +1810,157 @@ paths:
         );
         assert!(stdout.contains("M1"), "binary names the memory: {stdout}");
 
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // ----- T6.3: the guard protects Doyle itself -----
+
+    fn tool_hook(tool: &str, input: serde_json::Value) -> String {
+        serde_json::json!({
+            "cwd": "/tmp/scratch/repo-a",
+            "hook_event_name": "PreToolUse",
+            "tool_name": tool,
+            "tool_input": input,
+        })
+        .to_string()
+    }
+
+    fn self_protection_deny(dir: &Path, input: &str) -> String {
+        let (code, out, _err) = decide(input, &cli_for(dir));
+        let value = is_deny(code, &out);
+        let reason = value["hookSpecificOutput"]["permissionDecisionReason"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(
+            reason.starts_with(
+                "DOYLE-GUARD: this action would settle or change Doyle's own records, which only a person does."
+            ),
+            "self-protection wording: {reason}"
+        );
+        reason
+    }
+
+    #[test]
+    fn t63_denies_decision_route_posts_with_no_flag_open() {
+        let dir = temp_state_dir("t63-route");
+        Store::open(&dir).unwrap();
+        let reason = self_protection_deny(
+            &dir,
+            &bash_hook(
+                "curl -s -X POST http://127.0.0.1:8080/flag/flag-1/decide -d verdict=approve",
+            ),
+        );
+        assert!(reason.contains("/flag/flag-1/decide"), "{reason}");
+        eprintln!("SELF-PROTECTION DENIAL: {reason}");
+        self_protection_deny(
+            &dir,
+            &bash_hook("curl -X POST http://localhost:9/flag/abc/retry"),
+        );
+        // Encoded, and inside a file's content.
+        self_protection_deny(&dir, &bash_hook("curl -d x http://h/flag/f/%64ecide"));
+        self_protection_deny(
+            &dir,
+            &tool_hook(
+                "write_file",
+                serde_json::json!({"path": "go.sh", "content": "curl -d x host/flag/flag-2/decide"}),
+            ),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn t63_denies_doyle_commands_with_no_flag_open() {
+        let dir = temp_state_dir("t63-cmd");
+        Store::open(&dir).unwrap();
+        for command in [
+            "doyle serve",
+            "/abs/path/doyle check a b",
+            "cd x && ./target/debug/doyle curate --state-dir y",
+            "timeout 5 doyle --state-dir /s cite",
+            "echo '{}' | doyle guard",
+            "cargo run -- serve",
+        ] {
+            self_protection_deny(&dir, &bash_hook(command));
+        }
+        let exe = std::env::current_exe().unwrap();
+        self_protection_deny(&dir, &bash_hook(&format!("{} --help", exe.display())));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn t63_denies_writes_under_the_state_dir_with_no_flag_open() {
+        let dir = temp_state_dir("t63-state");
+        Store::open(&dir).unwrap();
+        let state = dir.to_string_lossy().to_string();
+        for tool in ["write_file", "edit_file", "add_memory", "edit_memory"] {
+            self_protection_deny(
+                &dir,
+                &tool_hook(
+                    tool,
+                    serde_json::json!({"path": format!("{state}/decisions.jsonl"), "content": "x"}),
+                ),
+            );
+        }
+        self_protection_deny(
+            &dir,
+            &tool_hook(
+                "apply_patch",
+                serde_json::json!({"patch": format!("*** Update File: {state}/flags.jsonl\n")}),
+            ),
+        );
+        // A traversal that lands under the state dir.
+        self_protection_deny(
+            &dir,
+            &tool_hook(
+                "write_file",
+                serde_json::json!({"path": format!("{state}/sub/../flags.jsonl"), "content": "x"}),
+            ),
+        );
+        self_protection_deny(
+            &dir,
+            &bash_hook(&format!("echo x >> {state}/decisions.jsonl")),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn t63_allows_reads_and_ordinary_commands_with_no_flag_open() {
+        let dir = temp_state_dir("t63-allow");
+        Store::open(&dir).unwrap();
+        let state = dir.to_string_lossy().to_string();
+        for input in [
+            tool_hook(
+                "read_file",
+                serde_json::json!({"path": format!("{state}/flags.jsonl")}),
+            ),
+            bash_hook("ls -la"),
+            bash_hook("curl -s http://127.0.0.1:8091/health"),
+            bash_hook("git commit -m 'fix the flagged element'"),
+            tool_hook(
+                "write_file",
+                serde_json::json!({"path": format!("{state}-other/x"), "content": "x"}),
+            ),
+            tool_hook(
+                "submit_reminder_decision",
+                serde_json::json!({"decision": "dismiss"}),
+            ),
+        ] {
+            let (code, out, err) = decide(&input, &cli_for(&dir));
+            is_allow(code, &out, &err);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn t63_self_protection_runs_even_with_flags_open_and_unreadable_state() {
+        let dir = temp_state_dir("t63-open");
+        seed_demo_store(&dir);
+        self_protection_deny(&dir, &bash_hook("doyle serve"));
+        // An unreadable store still denies (and does not warn-and-allow).
+        let missing = temp_state_dir("t63-missing").join("nope");
+        std::fs::write(&missing, "not a directory").unwrap();
+        self_protection_deny(&missing, &bash_hook("doyle serve"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

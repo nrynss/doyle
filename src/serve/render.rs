@@ -43,6 +43,19 @@ pub fn page(title: &str, body: &str) -> String {
     )
 }
 
+/// The line a page without the reviewer cookie shows in place of a form.
+pub fn reviewer_only_section() -> String {
+    "<section class=\"card wide\"><h2>Decide</h2><p>Flags are settled from the reviewer link printed by <code>doyle serve</code>, by a person. This view is read-only.</p></section>".to_string()
+}
+
+/// The 403 page for a decision or retry without the reviewer cookie.
+pub fn reviewer_only_page() -> String {
+    page(
+        "Reviewer only",
+        "<section class=\"card\"><h1>A person settles flags</h1><p>Nothing was recorded. A person settles flags from the reviewer link printed by <code>doyle serve</code>.</p><p><a href=\"/\">Back to the review list</a>.</p></section>",
+    )
+}
+
 /// A severity pill (`breaking` / `review`), matching `doyle check`'s words.
 pub fn severity_badge(severity: crate::core::Severity) -> String {
     let word = match severity {

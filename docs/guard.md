@@ -43,19 +43,26 @@ recorded paths resolve from wherever the hook fires.
   `tool blocked by hook:` followed by the reason, which names the memory
   (`adapter/id`), quotes its stale claim in one line, names the matched
   native location, the versions on either side of the change and its
-  severity, and points at the review page:
+  severity, and says who settles it. It does not point the agent at
+  `doyle serve`: a person reviews the flag, and the session cannot
+  settle it:
 
-  `DOYLE-GUARD: memory muse-code/M1 is stale ("GET /patients returns every patient in one response"). Matched GET /patients (listPatients). Changed v1 -> v2 (breaking). Review with `doyle serve`, then retry against the current contract.`
+  `DOYLE-GUARD: memory muse-code/M1 is stale ("GET /patients returns every patient in one response"). Matched GET /patients (listPatients). Changed v1 -> v2 (breaking). A person reviews this flag on Doyle's review page; this session cannot settle it.`
 
   Technically: JSON `hookSpecificOutput` with `permissionDecision: deny`
   on stdout, exit 0.
 
+- **PreToolUse, the action would settle or change Doyle's own records:**
+  deny, whether or not any flag is open. See "Self-protection" below.
+
+  `DOYLE-GUARD: this action would settle or change Doyle's own records, which only a person does. Matched a doyle command (doyle serve).`
+
 - **PreToolUse, anything else:** allow, silently. Empty stdout, exit 0.
 
 - **SessionStart, open flags exist:** inject one plain notice naming each
-  flagged memory and the review page, as `additionalContext`:
+  flagged memory, as `additionalContext`:
 
-  `DOYLE NOTICE: 1 memory flagged stale: muse-code/M1 ("GET /patients returns every patient in one response"). Review with `doyle serve`.`
+  `DOYLE NOTICE: 1 memory flagged stale: muse-code/M1 ("GET /patients returns every patient in one response"). A person reviews flagged memories.`
 
 - **SessionStart, no open flags:** nothing. Empty stdout, exit 0.
 
@@ -67,6 +74,54 @@ recorded paths resolve from wherever the hook fires.
   `PreToolUse` without `tool_name`): exit 2 with the reason on stderr.
   The hook setup itself is broken and needs attention; there is no event
   to route.
+
+## Self-protection
+
+A decision is the one step Doyle reserves for a person. An agent that
+reads the review page can post to its decision form, and Doyle would
+record the agent's own text as a sign-off. Two things stop that: the
+review page's reviewer token (below) and this check. The guard runs it
+on every `PreToolUse` of a known tool, before it looks at any flag, so
+it holds with no flag open and when the store cannot be read. It denies
+a call that:
+
+- **posts to a decision route.** Any string in `tool_input` containing a
+  path `/flag/<anything>/decide` or `/flag/<anything>/retry` (any host,
+  any method flag, also percent-encoded). A `bash` command, a file's
+  content or a patch is enough.
+- **runs a `doyle` command.** In a `bash` command, the word `doyle` (or
+  any path ending `/doyle`, or `cargo run --`) as a command word, with
+  `serve`, `curate`, `check`, `cite` or `guard` after it in the same
+  command; or the absolute path of the running binary.
+- **writes under the state dir.** `write_file`, `edit_file`,
+  `apply_patch`, `add_memory` or `edit_memory` with a path (resolved
+  against `cwd`, `..` folded) under the state dir; an `apply_patch`
+  naming the state dir; or a `bash` command that names the state dir
+  path (absolute, or as configured when relative).
+
+Reading stays allowed: a `read_file` of a state-dir file passes, as does
+every ordinary command (`ls -la`, `curl -s http://127.0.0.1:8091/health`).
+The check is generous on purpose, so a command that only mentions
+`doyle serve` in a commit message is denied too; the denial names what
+matched. A command that changes into the state dir and then uses a bare
+file name is not caught: the token below, not the guard alone, keeps a
+decision with a person.
+
+## The reviewer link
+
+`doyle serve` makes a random reviewer token at start (16 bytes from the
+operating system, as hex), holds it in memory only, and prints the link
+on its own stderr:
+
+`Review at http://127.0.0.1:<port>/?reviewer=<token>`
+
+A person opens that link once. The page sets a cookie (`HttpOnly;
+SameSite=Strict; Path=/`) and redirects to `/`. `POST /flag/<id>/decide`
+and `POST /flag/<id>/retry` without the cookie answer 403 with a page
+saying a person settles flags from the reviewer link, and record and
+write nothing. GET pages stay readable without it, but the flag page then
+shows a line in place of the decision form. The token is never written to
+the state dir or any file, and tokens are compared without an early exit.
 
 ## Matching rules
 
@@ -116,7 +171,8 @@ in `testdata/muse/hooks/` and a seeded fixture store with M1's flag open.
    no side yields a location, the action is allowed with a warning, never
    blocked.
 8. **The internal `submit_reminder_decision` tool always passes**, before
-   any state is read.
+   any state is read. Self-protection runs after it and before any flag
+   is read.
 9. **Unknown tool names pass unseen.** Allow unknown, deny known-bad.
 10. **Unknown event names pass silently**, so a future event the guard
    does not know stays out of the agent's way.

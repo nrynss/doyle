@@ -70,7 +70,7 @@ requires:   [T6.1, T6.2]
 fixture-ok: yes
 size:       M · mid
 owns:       src/guard.rs, docs/guard.md, src/serve/mod.rs, src/serve/render.rs (the decision form and the serve banner only)
-status:     claimed:sonnet-t6.3
+status:     in-review
 ```
 
 Found by T7.3a: the agent the guard held settled its own flags. After the denial, whose reason pointed it at `doyle serve`, Muse Wonder read the flag pages and posted `edit` decisions to `/flag/<id>/decide` as `decided_by=muse-wonder-migration`. Nothing authenticates that route, so Doyle wrote Wonder's own text into both memory systems as a person's sign-off. A decision is the one step Doyle reserves for a person; the agent must not be able to take it.
@@ -84,6 +84,13 @@ Build:
 Existing flows keep working with the token: every serve test that settles a flag sends the cookie. The guard keeps allowing everything T6.1 allowed that is not one of the new cases.
 
 **Done when:** the gate passes with no key; tests show `POST /decide` and `/retry` refused without the token (nothing recorded, no adapter written) and accepted with it; the token in no file under the state dir after a run; the guard denying each new case (a curl POST to `/flag/flag-1/decide`, `doyle serve`, `/abs/path/doyle check`, a `write_file` under the state dir, a `bash` `echo >> <state>/decisions.jsonl`) with no flag open, and allowing a read of the state dir and an ordinary command; the new denial wording, with no mention of `doyle serve`.
+
+**Notes (T6.3):**
+- Built: a reviewer token in `doyle serve` (16 bytes of `/dev/urandom` as hex, in memory only, printed on stderr as `Review at http://127.0.0.1:<port>/?reviewer=<token>`); `GET /?reviewer=<token>` sets an `HttpOnly; SameSite=Strict; Path=/` cookie and redirects to `/`; `POST /flag/<id>/decide` and `/retry` answer 403 without the matching cookie, before any lookup, so nothing is recorded or written. Without the cookie the flag page shows a line instead of the form (and instead of the retry button). The guard's self-protection check runs before the store is opened, so it holds with no flag open and with unreadable state. New wording in the stale denial, the self-protection denial and the SessionStart notice; `docs/guard.md` documents all of it.
+- Decided: the cookie check sits at the top of the router for those two POST routes, so an unknown flag id also answers 403 (not 404) without the cookie, and the route reveals nothing. If `/dev/urandom` cannot be read, serve refuses to start rather than run with a guessable token.
+- Decided: the guard is generous where the brief says so. Any string naming a decision route denies, even inside file content; a `bash` command naming the state dir denies even a read (only the `read_file` tool may read it). `cargo run -- serve` is treated as the binary. Known gap: `cd <state> && echo x > decisions.jsonl` names no state-dir path and passes the guard; the token still keeps the decision with a person.
+- Decided: `ReviewServer::handle` became a test-only helper that sends the reviewer cookie, so the settling tests act as the person with no change; production and the refusal tests use `handle_request` with the `Cookie` header.
+- Surprised me: the denial text had been the agent's only pointer to the form, so the wording change and the 403 each close half of the hole; neither alone would have held.
 
 ---
 
