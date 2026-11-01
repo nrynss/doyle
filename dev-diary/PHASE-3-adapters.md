@@ -130,6 +130,26 @@ Build: on a `404` to a request that carried a session id, drop the id, re-run `i
 
 ---
 
+### T3.6: Lambo adapter: a correction Lambo already holds ★
+```yaml
+requires:   [T3.3, T3.5]
+fixture-ok: yes
+size:       S · mid
+owns:       src/adapters/lambo.rs (supersede and its tests), testdata/lambo/ (new recordings only, from the doyle-probe session)
+status:     claimed:sonnet-t3.6
+```
+
+Found by the T7.3 re-run. After T6.4, the person retried both flags' Lambo write-backs. flag-2's landed: its correction is recorded `against` the stale concept and recall warns. flag-1's failed with `lambo_stats returned no created node id`, yet its correction text is in Lambo (`df979a15`) and is not recorded against the stale concept. Serve logged two `os error 11` request failures, so the retry was likely sent twice: the first derive created the node, the second was matched to it by Lambo's de-duplication and the receipt listed nothing as created. The adapter treats an empty `created` as failure, so every later retry fails the same way.
+
+Build:
+- When the derive's receipt creates nothing but matches an existing concept, find that concept's id (from the receipt or a recall of the correction text) and treat it as the correction.
+- Make sure the correction ends up recorded `against` the stale concept. Whether a matched re-derive records the contradiction is Lambo's behaviour to probe, not assume: record it against the `doyle-probe` session only (docs/lambo.md), never `doyle`, `doyle-t73` or `lambo-dev`. If a matched derive does not record it, find the call that does.
+- A retry when the correction is already linked stays a no-op.
+
+**Done when:** the gate passes with no key and no server; replay tests from new `doyle-probe` recordings show a supersede whose derive matches an existing concept returns that concept's id and leaves the correction `against` the stale concept, and a repeated supersede is a no-op; existing recordings replay unchanged; the probe transcript is in the report.
+
+---
+
 ## Exit Criteria
 
 - [x] Muse Code memory is read from both scopes with stable references (T3.1).
