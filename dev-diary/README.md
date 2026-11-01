@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P6 done. P9 9/10 (T9.10 waits on T7.3). P7: T7.1/T7.2 done; T7.1b (quiet v2) ready, then T7.2b, then T7.3. Open user decisions: screen-differ tolerance task; live-curator-budget task; push.
+**Current status:** P0–P6 done; T5.5 (Lambo session) claimed, a fix found while briefing T7.3. P9 9/10 (T9.10 waits on T7.3). P7: T7.1, T7.2, T7.1b and T7.2b done; T7.3 next, after T5.5. Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
 
 ---
 
@@ -147,7 +147,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
 | P3 | 3 / 3 | Done: locate+read, annotate, Lambo. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
-| P5 | 4 / 4 | Done. T5.4 wired the binary for live runs. |
+| P5 | 4 / 5 | T5.5 (Lambo session) claimed. T5.4 wired the binary for live runs. |
 | P6 | 2 / 2 | Done. |
 | P7 | 4 / 7 | T7.1/T7.2/T7.1b/T7.2b done (both no-Doyle runs caught: loud and quiet). T7.3 next (needs your approval click). |
 | P8 | 0 / 4 | Waits for P7. |

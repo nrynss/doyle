@@ -99,6 +99,29 @@ Build:
 
 ---
 
+### T5.5: Lambo session ★
+```yaml
+requires:   [T5.4]
+fixture-ok: yes
+size:       S · mid
+owns:       src/adapters/lambo.rs (the default URL and session only, and their tests), src/curate.rs (Lambo adapter construction only), src/serve/mod.rs (Lambo adapter construction only), .env.example (the LAMBO_URL line only)
+status:     claimed:sonnet-t5.5
+```
+
+Found while briefing T7.3: the binary reaches Lambo's `lambo-dev` session, which Doyle must never write to. `doyle curate` hardcodes `http://127.0.0.1:7700/mcp` with no override, and the bare `/mcp` path is `lambo-dev`, the server's default session. `doyle serve` reads `LAMBO_URL` but falls back to the same URL, so an approval writes its correction into `lambo-dev`. `session_from_url` returns `lambo-dev` for any URL without `/mcp/s/<name>`. `.env.example` names the same URL. `check` and `guard` do not touch Lambo.
+
+Build:
+- One default in `src/adapters/lambo.rs`: `http://127.0.0.1:7700/mcp/s/doyle`, Doyle's own session (docs/lambo.md).
+- `curate` and `serve` both read `LAMBO_URL`, falling back to that default.
+- `session_from_url` falls back to `doyle`, never `lambo-dev`.
+- `.env.example` names the `doyle` session URL.
+
+Existing recordings replay unchanged. A test that depends on the session being `lambo-dev` names that URL explicitly rather than relying on the default.
+
+**Done when:** the gate passes with no key and no running server; tests show that `curate` and `serve` take `LAMBO_URL` when set, and that with it unset each builds its Lambo adapter on the `doyle` session; no path in `src/` outside tests defaults to the bare `/mcp` URL or the `lambo-dev` session (grep in the report).
+
+---
+
 ## Exit Criteria
 
 - [x] `doyle curate` cites memories from both systems, idempotently (T5.1).
