@@ -12,7 +12,7 @@ requires:   [T7.5]
 fixture-ok: yes
 size:       S · mid
 owns:       README.md
-status:     not-started
+status:     claimed:t81
 ```
 What Doyle is, how to run the demo from a fresh clone, and a clear line between what was built during the event (Doyle) and what are existing dependencies (Vimanam, Lambo, Muse Code), as the rules require. Usage replaces "planned". The status note goes.
 
@@ -26,7 +26,7 @@ requires:   [T7.3]
 fixture-ok: no
 size:       M · user
 owns:       evidence/video/
-status:     not-started
+status:     claimed:t82
 ```
 Three minutes, of what was built during the event: the problem, the run without Doyle, the run with Doyle, the review page, the numbers. The agent drafts the script from the recorded runs; the user records and publishes. The cut assembles from the takes T7.2 and T7.3 left in the demo-shoot `takes/`.
 
