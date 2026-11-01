@@ -64,6 +64,29 @@ Readable at phone and desktop width, in light and dark. Everything a judge needs
 
 ---
 
+### T6.3: Reviewer-only decisions ★
+```yaml
+requires:   [T6.1, T6.2]
+fixture-ok: yes
+size:       M · mid
+owns:       src/guard.rs, docs/guard.md, src/serve/mod.rs, src/serve/render.rs (the decision form and the serve banner only)
+status:     claimed:sonnet-t6.3
+```
+
+Found by T7.3a: the agent the guard held settled its own flags. After the denial, whose reason pointed it at `doyle serve`, Muse Wonder read the flag pages and posted `edit` decisions to `/flag/<id>/decide` as `decided_by=muse-wonder-migration`. Nothing authenticates that route, so Doyle wrote Wonder's own text into both memory systems as a person's sign-off. A decision is the one step Doyle reserves for a person; the agent must not be able to take it.
+
+Build:
+- **A reviewer token.** `doyle serve` makes a random token at start, holds it in memory only (never in the state dir or any file, never logged elsewhere), and prints the review URL with it (`http://127.0.0.1:<port>/?reviewer=<token>`) on its own stderr. Opening that URL sets an HttpOnly, SameSite=Strict cookie and redirects to `/`. `POST /flag/<id>/decide` and `/retry` without the matching cookie answer 403 with a page saying a person settles flags from the reviewer link, and record nothing. GET pages stay readable without the token and render no decision form without it.
+- **The guard protects Doyle itself**, whether or not any flag is open: it denies a tool call that posts to a `/flag/<id>/decide` or `/retry` path, that runs a `doyle` command (`serve`, `curate`, `check`, `cite`, `guard`, by name or by the binary's absolute path), or that writes under the state dir (`write_file`, `edit_file`, `apply_patch`, `add_memory`, `edit_memory` paths, and `bash` commands naming the state dir). Reading the state dir stays allowed.
+- **The guard's wording.** A stale-memory denial says a person reviews the flag and that this session cannot settle it, and no longer points the agent at `doyle serve`. A self-protection denial says the action would settle or change Doyle's own records, which only a person does.
+- `docs/guard.md` documents both, and the serve banner.
+
+Existing flows keep working with the token: every serve test that settles a flag sends the cookie. The guard keeps allowing everything T6.1 allowed that is not one of the new cases.
+
+**Done when:** the gate passes with no key; tests show `POST /decide` and `/retry` refused without the token (nothing recorded, no adapter written) and accepted with it; the token in no file under the state dir after a run; the guard denying each new case (a curl POST to `/flag/flag-1/decide`, `doyle serve`, `/abs/path/doyle check`, a `write_file` under the state dir, a `bash` `echo >> <state>/decisions.jsonl`) with no flag open, and allowing a read of the state dir and an ordinary command; the new denial wording, with no mention of `doyle serve`.
+
+---
+
 ## Exit Criteria
 
 - [x] The guard denies an action resting on a stale memory and allows the rest (T6.1 offline; T6.1b live: Wonder session denied with the reason, settings untouched).
