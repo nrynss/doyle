@@ -89,7 +89,7 @@ requires:   [T3.1, T3.2]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/muse_code/parse.rs, src/adapters/muse_code/write.rs, src/adapters/muse_code/mod.rs (tests, and wiring only if needed)
-status:     in-review
+status:     done
 ```
 
 Found by the T7.3 re-run: Wonder's seed session saved its note as a topic file (`old-records-service.md`, with `type` and `description` frontmatter) and wrote no `MEMORY.md`. `read_folder` returns nothing when `MEMORY.md` is absent, so `doyle curate` could not see the note. product.md names both layouts: a `MEMORY.md` index with short notes inline, or one file per topic.

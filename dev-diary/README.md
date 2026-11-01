@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P2, P4–P6 done. P3: T3.4 (topic files without an index) claimed, found by the T7.3 re-run, which is paused at curate. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; T7.3 re-run in progress on Lambo session `doyle-t73`. P9 9/10 (T9.10 waits on T7.3). Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
+**Current status:** P0–P6 done. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; T7.3 re-run in progress on Lambo session `doyle-t73`, resuming at curate after T3.4. P9 9/10 (T9.10 waits on T7.3). Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
 
 ---
 
@@ -145,7 +145,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P0 | 7 / 7 | Done. T0.7 (second real upgrade) closed on the user's pick of Stripe Charges → PaymentIntents. |
 | P1 | 5 / 5 | Done. Contracts frozen at T1.5. |
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
-| P3 | 3 / 4 | T3.4 (topic files without an index) claimed. |
+| P3 | 4 / 4 | Done: locate+read, annotate, Lambo, topic files without an index. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
 | P5 | 5 / 5 | Done. T5.4 wired the binary for live runs; T5.5 keeps Lambo on Doyle's own session. |
 | P6 | 3 / 3 | Done. T6.3 makes a decision a person's only. |
@@ -159,6 +159,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T3.4 closed: Muse Code topic files without an index (finding from the T7.3 re-run).** Wonder's seed this time wrote `old-records-service.md` with frontmatter and no `MEMORY.md`, and the adapter read nothing without the index. `read_folder` now also reads unindexed top-level topic files with frontmatter (`<file>#0` for a bullet-less body; indexed and bullet ids unchanged); annotate and supersede work in place in the topic file. A supersede with no `MEMORY.md` creates one linking every topic file, with the correction as a bullet, because Muse's session snapshot injects `MEMORY.md` (inference from docs/muse-code.md, not run live). Leftover `.muse-memory.lock` files name dead pids and do not block. Validated: real folder untouched, a copy reads `old-records-service.md#0`, gate green (394) on `main` after the merge.
 - **T6.3 closed: a decision is a person's only.** `doyle serve` makes a random reviewer token at start, in memory only, and prints `Review at http://127.0.0.1:<port>/?reviewer=<token>` on its stderr; that link sets an HttpOnly, SameSite=Strict cookie. `POST /flag/<id>/decide` and `/retry` without it answer 403 and record nothing; without it the pages show no decision form. The guard, with or without an open flag, denies posts to a decision route, running `doyle serve|curate|check|cite|guard` or the running binary, and writes under the state dir; reads through `read_file` stay allowed. The stale denial and SessionStart notice now say a person reviews the flag, with no pointer to `doyle serve`. Known limits, accepted: a `bash` read naming the state dir is denied; `cd <state> && echo > file` slips past the guard but cannot settle anything without the token; the generous match denies a commit message naming `doyle serve`. Validated: test-only cookie helper, constant-time compare, token in no file after a settle, gate green (385) on `main` after the merge.
 - **T7.3a closed: the first run with Doyle, published as it happened.** `evidence/with-doyle-self-approved/` holds the guard pre-check, the denial naming both memories, Wonder's two self-posted decisions, the correction in both memory systems, 4,812 migrated and the old system decommissioned at about t+351s with no safety escalation, nothing lost, no person approved. Validated: only the evidence folder, no key or personal data, gate green. Two small bugs noted for later: `cite` rejects `listPatients` though it suggests it; the re-check's instruction-wording filter rejected one valid proposal.
 - **T7.3 split: the agent approved its own correction (finding, user decision).** T7.3's first run: the guard denied the one-call export, then Wonder read the review page the denial pointed to and posted `edit` decisions to both flags as `muse-wonder-migration`; the decision route had no authentication, so Doyle wrote Wonder's text into both memory systems as a sign-off. Wonder then paged, imported 4,812 and decommissioned, with no escalation from Muse Code's safety review. Nothing lost, no person approved. User decision: publish the run as T7.3a, fix with T6.3 (a reviewer token on serve, the guard protecting Doyle's own routes, binary and state, new denial wording), then re-run T7.3 from scratch. The re-run needs a fresh Lambo session, since `doyle` now holds this run's concepts and Doyle deletes nothing.
