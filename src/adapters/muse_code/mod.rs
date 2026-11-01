@@ -511,4 +511,234 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         let _ = fs::remove_dir_all(&home);
     }
+
+    // ---- T3.4: topic files without an index ----
+
+    const TOPIC_FILE: &str = "---\ntype: project\ndescription: Old records service GET /patients behavior\n---\n\nOn the old records service, GET /patients returns every patient in one response; one call exports the whole clinic.\n";
+    const TOPIC_TEXT: &str = "On the old records service, GET /patients returns every patient in one response; one call exports the whole clinic.";
+
+    /// The shape of the folder that T7.3's Wonder session left behind.
+    fn topic_only_folder() -> PathBuf {
+        let dir = temp_dir("topic");
+        fs::write(dir.join("old-records-service.md"), TOPIC_FILE).unwrap();
+        fs::write(dir.join(".muse-memory.lock"), "pid=2147483000\n").unwrap();
+        dir
+    }
+
+    fn scoped(dir: &Path) -> MuseCodeAdapter {
+        MuseCodeAdapter::from_scopes(vec![(dir.to_path_buf(), "personal_project".to_string())])
+    }
+
+    #[test]
+    fn topic_only_folder_reads_the_topic_file() {
+        let dir = topic_only_folder();
+        let all = scoped(&dir).list("").unwrap();
+        assert_eq!(all.len(), 1, "lock file must not be read as a note");
+        assert_eq!(all[0].reference.id, "old-records-service.md#0");
+        assert_eq!(all[0].text, TOPIC_TEXT);
+        assert_eq!(
+            scoped(&dir).list("").unwrap()[0].reference.id,
+            all[0].reference.id
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn topic_only_folder_annotate_keeps_frontmatter_and_id() {
+        let _g = HOME_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = topic_only_folder();
+        let a = scoped(&dir);
+        a.annotate("old-records-service.md#0", "[STALE per Doyle: paged now]")
+            .unwrap();
+        let after = fs::read_to_string(dir.join("old-records-service.md")).unwrap();
+        assert!(after.starts_with(
+            "---\ntype: project\ndescription: Old records service GET /patients behavior\n---\n\n"
+        ));
+        assert!(
+            after.ends_with("whole clinic. [STALE per Doyle: paged now]\n"),
+            "{after:?}"
+        );
+        assert!(
+            !dir.join("MEMORY.md").exists(),
+            "annotate must not create an index"
+        );
+        let m = a.read("old-records-service.md#0").unwrap();
+        assert!(m.text.ends_with("[STALE per Doyle: paged now]"));
+        assert_eq!(a.list("").unwrap().len(), 1);
+        assert!(!dir.join(".old-records-service.md.doyle-tmp").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn topic_only_folder_supersede_links_every_topic_and_retry_is_noop() {
+        let _g = HOME_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = topic_only_folder();
+        fs::write(
+            dir.join("zeta.md"),
+            "---\ntype: project\ndescription: Second topic\n---\n\nZeta fact.\n",
+        )
+        .unwrap();
+        let a = scoped(&dir);
+        let correction = "The old records service pages GET /patients, 50 per page";
+        let r1 = a.supersede("old-records-service.md#0", correction).unwrap();
+
+        // The correction landed in a new MEMORY.md, below an index that links
+        // every existing topic file.
+        let index = fs::read_to_string(dir.join("MEMORY.md")).unwrap();
+        assert!(index.starts_with("---\ntype: reference\n---\n"));
+        assert!(index.contains("(old-records-service.md)"));
+        assert!(index.contains("(zeta.md)"));
+        assert!(index.trim_end().ends_with(&format!("- {correction}")));
+        assert_eq!(r1.id, "MEMORY.md#3");
+
+        // The topic file kept its frontmatter and gained the trace.
+        let topic = fs::read_to_string(dir.join("old-records-service.md")).unwrap();
+        assert!(topic.starts_with("---\ntype: project\n"));
+        assert!(topic.contains("[Superseded by MEMORY.md#3]"));
+
+        // Fresh adapter: nothing dropped out, ids stable, correction readable.
+        let b = scoped(&dir);
+        let all = b.list("").unwrap();
+        let ids: Vec<&str> = all.iter().map(|m| m.reference.id.as_str()).collect();
+        assert!(ids.contains(&"old-records-service.md#0"), "{ids:?}");
+        assert!(ids.contains(&"zeta.md#0"), "{ids:?}");
+        assert!(ids.contains(&"MEMORY.md#3"), "{ids:?}");
+        assert_eq!(all.len(), 3);
+        assert_eq!(b.read("MEMORY.md#3").unwrap().text, correction);
+
+        // Retry is a no-op: same ref, bytes unchanged.
+        let before_index = fs::read_to_string(dir.join("MEMORY.md")).unwrap();
+        let before_topic = fs::read_to_string(dir.join("old-records-service.md")).unwrap();
+        let r2 = b.supersede("old-records-service.md#0", correction).unwrap();
+        assert_eq!(r1, r2);
+        assert_eq!(
+            before_index,
+            fs::read_to_string(dir.join("MEMORY.md")).unwrap()
+        );
+        assert_eq!(
+            before_topic,
+            fs::read_to_string(dir.join("old-records-service.md")).unwrap()
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn index_plus_unindexed_topic_reads_both_and_keeps_indexed_ids() {
+        let _g = HOME_LOCK.lock().unwrap();
+        let home = temp_dir("home");
+        set_home(&home);
+        let dir = temp_fixture();
+        let list = |d: &Path| -> Vec<(String, String)> {
+            scoped(d)
+                .list("")
+                .unwrap()
+                .into_iter()
+                .map(|m| (m.reference.id, m.text))
+                .collect()
+        };
+        let before = list(&dir);
+        fs::write(dir.join("old-records-service.md"), TOPIC_FILE).unwrap();
+        let after = list(&dir);
+        assert_eq!(after.len(), before.len() + 1);
+        for b in &before {
+            assert!(after.contains(b), "indexed note changed: {b:?}");
+        }
+        assert!(after.contains(&(
+            "old-records-service.md#0".to_string(),
+            TOPIC_TEXT.to_string()
+        )));
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn existing_fixture_ids_unchanged() {
+        let _g = HOME_LOCK.lock().unwrap();
+        let home = temp_dir("home");
+        set_home(&home);
+        let dir = temp_fixture();
+        let mut ids: Vec<String> = scoped(&dir)
+            .list("")
+            .unwrap()
+            .into_iter()
+            .map(|m| m.reference.id)
+            .collect();
+        ids.sort();
+        assert_eq!(
+            ids,
+            vec![
+                "MEMORY.md#1",
+                "MEMORY.md#2",
+                "MEMORY.md#3",
+                "patients-stats.md#1"
+            ]
+        );
+        let _ = fs::remove_dir_all(&dir);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn lock_dotfiles_temp_and_frontmatterless_files_are_ignored() {
+        let dir = topic_only_folder();
+        fs::write(dir.join(".hidden.md"), TOPIC_FILE).unwrap();
+        fs::write(dir.join(".old-records-service.md.doyle-tmp"), TOPIC_FILE).unwrap();
+        fs::write(dir.join("notes.md.tmp"), TOPIC_FILE).unwrap();
+        fs::write(dir.join("README.md"), "Just prose, no frontmatter.\n").unwrap();
+        fs::write(dir.join("bullets.md"), "- a bullet\n- another\n").unwrap();
+        fs::create_dir_all(dir.join("sub.md")).unwrap();
+        let all = scoped(&dir).list("").unwrap();
+        let ids: Vec<&str> = all.iter().map(|m| m.reference.id.as_str()).collect();
+        assert_eq!(ids, vec!["old-records-service.md#0"], "{ids:?}");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unindexed_topic_file_with_bullets_uses_bullet_ids() {
+        let _g = HOME_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = temp_dir("topic-bullets");
+        fs::write(
+            dir.join("api.md"),
+            "---\ntype: reference\ndescription: API\n---\n\n- first\n- second\n",
+        )
+        .unwrap();
+        let a = scoped(&dir);
+        let ids: Vec<String> = a
+            .list("")
+            .unwrap()
+            .into_iter()
+            .map(|m| m.reference.id)
+            .collect();
+        assert_eq!(ids, vec!["api.md#1", "api.md#2"]);
+        a.annotate("api.md#2", "[STALE]").unwrap();
+        assert_eq!(a.read("api.md#2").unwrap().text, "second [STALE]");
+        assert_eq!(a.read("api.md#1").unwrap().text, "first");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn write_into_topic_only_folder_keeps_topic_in_recall() {
+        let _g = HOME_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = topic_only_folder();
+        let a = scoped(&dir);
+        a.write("a new note", "personal_project").unwrap();
+        let index = fs::read_to_string(dir.join("MEMORY.md")).unwrap();
+        assert!(index.contains("(old-records-service.md)"));
+        assert_eq!(a.list("").unwrap().len(), 2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Read-only demonstration on a temp copy of the real folder: set
+    /// DOYLE_T34_REAL_COPY to the copy's path to see it. Passes trivially
+    /// otherwise.
+    #[test]
+    fn prints_memory_from_copy_of_real_folder() {
+        let Ok(copy) = std::env::var("DOYLE_T34_REAL_COPY") else {
+            return;
+        };
+        let memories = parse::read_folder(Path::new(&copy), "personal_project", "muse-code");
+        for m in &memories {
+            println!("id={} text={}", m.reference.id, m.text);
+        }
+        assert_eq!(memories.len(), 1);
+    }
 }

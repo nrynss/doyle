@@ -13,6 +13,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::adapters::muse_code::MuseCodeAdapter;
+use crate::adapters::muse_code::parse::{
+    BODY_ORDINAL, has_frontmatter, split_frontmatter, topic_files,
+};
 use crate::adapters::{AdapterError, MemoryAdapter};
 use crate::core::MemoryRef;
 
@@ -113,9 +116,69 @@ fn atomic_write(path: &Path, content: &str, adapter: &str) -> Result<(), Adapter
     }
 }
 
+/// Append `suffix` to the note at `ordinal` in `content`, leaving everything
+/// else (frontmatter, other notes, line endings) untouched. Ordinal 0 is a
+/// topic file's whole-body note: the suffix goes after the last body text.
+fn mark_note(content: &str, ordinal: usize, suffix: &str) -> Option<String> {
+    if ordinal == BODY_ORDINAL {
+        if !has_frontmatter(content) {
+            return None;
+        }
+        let (_, body) = split_frontmatter(content);
+        if body.trim().is_empty() {
+            return None;
+        }
+        let kept = content.trim_end();
+        let tail = &content[kept.len()..];
+        return Some(format!("{kept} {suffix}{tail}"));
+    }
+    let mut lines: Vec<String> = content.split('\n').map(String::from).collect();
+    let mut count = 0usize;
+    let mut found = false;
+    for line in lines.iter_mut() {
+        if let Some(rest) = line.trim().strip_prefix("- ") {
+            if rest.trim().is_empty() {
+                continue;
+            }
+            count += 1;
+            if count == ordinal {
+                let trimmed = line.trim_end().to_string();
+                *line = format!("{trimmed} {suffix}");
+                found = true;
+                break;
+            }
+        }
+    }
+    found.then(|| lines.join("\n"))
+}
+
+/// Starting content for a `MEMORY.md` Doyle has to create: frontmatter, then
+/// an index line for every topic file already in the folder, so creating the
+/// index never drops a topic file out of what Muse Code reads.
+fn new_index_content(folder: &Path) -> String {
+    let mut out = String::from("---\ntype: reference\n---\n\n");
+    for name in topic_files(folder) {
+        let desc = fs::read_to_string(folder.join(&name))
+            .ok()
+            .and_then(|c| split_frontmatter(&c).0.description)
+            .filter(|d| !d.is_empty());
+        let stem = name.strip_suffix(".md").unwrap_or(&name);
+        match desc {
+            Some(d) => out.push_str(&format!("- [{stem}]({name}) — {d}\n")),
+            None => out.push_str(&format!("- [{stem}]({name})\n")),
+        }
+    }
+    out
+}
+
 fn note_text_at(folder: &Path, source: &str, ordinal: usize) -> Option<String> {
     let full = folder.join(source);
     let content = fs::read_to_string(&full).ok()?;
+    if ordinal == BODY_ORDINAL {
+        return has_frontmatter(&content)
+            .then(|| split_frontmatter(&content).1.trim().to_string())
+            .filter(|t| !t.is_empty());
+    }
     // split frontmatter
     let body = if content.starts_with("---") {
         let after = &content[content.find('\n')? + 1..];
@@ -187,8 +250,8 @@ pub fn write(
     let path = folder.join("MEMORY.md");
     // Ensure file exists
     if !path.is_file() {
-        let fm = "---\ntype: reference\n---\n\n";
-        atomic_write(&path, fm, adapter.name())?;
+        let fm = new_index_content(&folder);
+        atomic_write(&path, &fm, adapter.name())?;
     }
     let content = fs::read_to_string(&path).map_err(|e| AdapterError::Backend {
         adapter: adapter.name().to_string(),
@@ -226,33 +289,8 @@ pub fn annotate(adapter: &MuseCodeAdapter, id: &str, warning: &str) -> Result<()
         memory: Some(id.to_string()),
         message: format!("read memory file: {e}"),
     })?;
-    let mut lines: Vec<String> = content
-        .split('\n')
-        .collect::<Vec<_>>()
-        .into_iter()
-        .map(String::from)
-        .collect();
-    let mut count = 0usize;
-    let mut found = false;
-    for line in lines.iter_mut() {
-        let t = line.trim();
-        if let Some(rest) = t.strip_prefix("- ") {
-            if rest.trim().is_empty() {
-                continue;
-            }
-            count += 1;
-            if count == ordinal {
-                let trimmed = line.trim_end().to_string();
-                *line = format!("{} {}", trimmed, warning);
-                found = true;
-                break;
-            }
-        }
-    }
-    if !found {
-        return Err(AdapterError::not_found(adapter.name(), id));
-    }
-    let new_content = lines.join("\n");
+    let new_content = mark_note(&content, ordinal, warning)
+        .ok_or_else(|| AdapterError::not_found(adapter.name(), id))?;
     atomic_write(&path, &new_content, adapter.name())?;
     Ok(())
 }
@@ -326,8 +364,8 @@ pub fn supersede(
             })?;
     let correction_path = first_folder.join("MEMORY.md");
     if !correction_path.is_file() {
-        let fm = "---\ntype: reference\n---\n\n";
-        atomic_write(&correction_path, fm, adapter.name())?;
+        let fm = new_index_content(&first_folder);
+        atomic_write(&correction_path, &fm, adapter.name())?;
     }
 
     let stale_path = folder.join(&source);
@@ -382,28 +420,12 @@ pub fn supersede(
             memory: Some(stale_id.to_string()),
             message: format!("read memory file: {e}"),
         })?;
-        let mut lines: Vec<String> = content.split('\n').map(String::from).collect();
-        let mut count = 0usize;
-        let mut found = false;
-        for line in lines.iter_mut() {
-            let t = line.trim();
-            if let Some(rest) = t.strip_prefix("- ") {
-                if rest.trim().is_empty() {
-                    continue;
-                }
-                count += 1;
-                if count == ordinal {
-                    let trimmed = line.trim_end().to_string();
-                    *line = format!("{} [Superseded by {}]", trimmed, correction_id);
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if !found {
-            return Err(AdapterError::not_found(adapter.name(), stale_id));
-        }
-        let mut new_content = lines.join("\n");
+        let mut new_content = mark_note(
+            &content,
+            ordinal,
+            &format!("[Superseded by {}]", correction_id),
+        )
+        .ok_or_else(|| AdapterError::not_found(adapter.name(), stale_id))?;
         if reuse_id.is_none() {
             if !new_content.ends_with('\n') && !new_content.is_empty() {
                 new_content.push('\n');
@@ -429,28 +451,12 @@ pub fn supersede(
             memory: Some(stale_id.to_string()),
             message: format!("read memory file: {e}"),
         })?;
-        let mut lines: Vec<String> = stale_content.split('\n').map(String::from).collect();
-        let mut count = 0usize;
-        let mut found = false;
-        for line in lines.iter_mut() {
-            let t = line.trim();
-            if let Some(rest) = t.strip_prefix("- ") {
-                if rest.trim().is_empty() {
-                    continue;
-                }
-                count += 1;
-                if count == ordinal {
-                    let trimmed = line.trim_end().to_string();
-                    *line = format!("{} [Superseded by {}]", trimmed, correction_id);
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if !found {
-            return Err(AdapterError::not_found(adapter.name(), stale_id));
-        }
-        let new_stale = lines.join("\n");
+        let new_stale = mark_note(
+            &stale_content,
+            ordinal,
+            &format!("[Superseded by {}]", correction_id),
+        )
+        .ok_or_else(|| AdapterError::not_found(adapter.name(), stale_id))?;
         atomic_write(&stale_path, &new_stale, adapter.name())?;
     }
 

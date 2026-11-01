@@ -54,6 +54,45 @@ pub fn split_frontmatter(content: &str) -> (Frontmatter, String) {
     }
 }
 
+/// True when `content` opens with a complete `---` ... `---` frontmatter block.
+pub fn has_frontmatter(content: &str) -> bool {
+    if !content.starts_with("---") {
+        return false;
+    }
+    match content.find('\n') {
+        Some(i) => content[i + 1..].contains("\n---"),
+        None => false,
+    }
+}
+
+/// Ordinal of a topic file's whole-body note. Bullets count from 1, so this
+/// never collides with a bullet id.
+pub const BODY_ORDINAL: usize = 0;
+
+const INDEX: &str = "MEMORY.md";
+
+/// Top-level `*.md` topic files that carry frontmatter, sorted by name.
+/// Skips dotfiles (Muse's lock, Doyle's temp files), `MEMORY.md` itself, and
+/// anything that is not a regular `.md` file.
+pub fn topic_files(folder: &Path) -> Vec<String> {
+    let mut names: Vec<String> = match fs::read_dir(folder) {
+        Ok(rd) => rd
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_file())
+            .filter_map(|e| e.file_name().into_string().ok())
+            .filter(|n| n.ends_with(".md") && !n.starts_with('.') && n != INDEX)
+            .filter(|n| {
+                fs::read_to_string(folder.join(n))
+                    .map(|c| has_frontmatter(&c))
+                    .unwrap_or(false)
+            })
+            .collect(),
+        Err(_) => Vec::new(),
+    };
+    names.sort();
+    names
+}
+
 /// If `content` (the text after "- ") is an index line pointing at a .md file,
 /// return that target path.
 pub fn index_target(content: &str) -> Option<String> {
@@ -119,6 +158,19 @@ pub fn collect_notes(root: &Path, entry_rel: &str, seen: &mut HashSet<String>) -
             });
         }
     }
+    // A topic file (not the index) with frontmatter and no bullets is one note:
+    // its whole body, with an id derived from the file name alone.
+    if ordinal == 0 && entry_rel != INDEX && has_frontmatter(&content) {
+        let text = body.trim();
+        if !text.is_empty() {
+            notes.push(Note {
+                text: text.to_string(),
+                frontmatter: fm,
+                source: entry_rel.to_string(),
+                ordinal: BODY_ORDINAL,
+            });
+        }
+    }
     notes
 }
 
@@ -132,13 +184,16 @@ pub fn note_id(source: &str, ordinal: usize) -> String {
 
 /// Read all notes from a memory folder into Memories.
 pub fn read_folder(folder: &Path, scope: &str, adapter_name: &str) -> Vec<Memory> {
-    let entry = "MEMORY.md";
-    let full = folder.join(entry);
-    if !full.is_file() {
-        return Vec::new();
-    }
     let mut seen = HashSet::new();
-    let notes = collect_notes(folder, entry, &mut seen);
+    let mut notes = Vec::new();
+    if folder.join(INDEX).is_file() {
+        notes = collect_notes(folder, INDEX, &mut seen);
+    }
+    for name in topic_files(folder) {
+        if !seen.contains(&name) {
+            notes.extend(collect_notes(folder, &name, &mut seen));
+        }
+    }
     notes
         .into_iter()
         .map(|n| Memory {

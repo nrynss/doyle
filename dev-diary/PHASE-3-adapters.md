@@ -89,7 +89,7 @@ requires:   [T3.1, T3.2]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/muse_code/parse.rs, src/adapters/muse_code/write.rs, src/adapters/muse_code/mod.rs (tests, and wiring only if needed)
-status:     claimed:sonnet-t3.4
+status:     in-review
 ```
 
 Found by the T7.3 re-run: Wonder's seed session saved its note as a topic file (`old-records-service.md`, with `type` and `description` frontmatter) and wrote no `MEMORY.md`. `read_folder` returns nothing when `MEMORY.md` is absent, so `doyle curate` could not see the note. product.md names both layouts: a `MEMORY.md` index with short notes inline, or one file per topic.
@@ -100,6 +100,13 @@ Build:
 - Ignore Muse's own files (`.muse-memory.lock`, dotfiles, temp files) and files without frontmatter.
 
 **Done when:** the gate passes; tests cover a folder with only a topic file (read, annotate, supersede, retry no-op), a folder with `MEMORY.md` plus an unindexed topic file (both read, ids of indexed notes unchanged), and the existing fixtures unchanged in ids and behaviour.
+
+**Notes (T3.4)**
+- Built: `read_folder` now reads `MEMORY.md` (if present) and then every top-level `*.md` topic file with a complete frontmatter block that the index did not reach, sorted by name. A topic file with bullets keeps `<file>#<n>` bullet ids, the same as when indexed; a topic file with no bullets is one note, its whole body, id `<file>#0` (bullets count from 1, so `#0` cannot collide). The id depends on the file name only, so it is the same before and after an index links the file. Dotfiles (lock, Doyle's `.x.doyle-tmp`), non-`.md` names, directories, `MEMORY.md` itself and files without frontmatter are skipped. Existing fixture ids are unchanged (pinned by a test).
+- Annotate and supersede on `#0` append the marker after the last body text (`mark_note`), leaving frontmatter and the rest of the file byte-identical, through the same lock check and temp-file rename. The three duplicated bullet loops in `write.rs` became one `mark_note`; bullet behaviour is unchanged.
+- Decided, where a correction goes with no `MEMORY.md`: Doyle creates `MEMORY.md`, with an index line `- [stem](file.md) — description` for every existing topic file, then the correction as a bullet. Why: Muse Code's session snapshot injects `MEMORY.md` only (docs/muse-code.md 1.1: `MEMORY.md:` under the scope; topic files are reached through `read_memory`), and a stale topic file is not in the snapshot, so a correction in a new topic file would sit where a session does not look first. A correction in `MEMORY.md` is in the snapshot, and the links keep every topic file reachable. The same creation path serves `write` into a folder with no `MEMORY.md`. Not verified against a live Muse session; no live call was made.
+- Lock finding: Muse writes `pid=<n>` and a newline, which is exactly what `check_lock` parses (checked on the real folders; all five lock files on this machine name a pid that is no longer running). A lock naming a dead pid does not block (fail-open), so Muse leaving the file behind after a session does not block write-back. Left unchanged. Residual risk: a reused pid belonging to an unrelated process would block until it exits.
+- Surprised me: the index Doyle creates would make a bullet-less topic file vanish (an indexed file with no bullets yielded no notes), so bullet-less indexed topic files with frontmatter are now read as a whole-body note too.
 
 ---
 
