@@ -116,7 +116,7 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
             }
             "lambo" => {
                 adapters.push(Box::new(LamboAdapter::http(
-                    "http://127.0.0.1:7700/mcp",
+                    crate::adapters::lambo::lambo_url(),
                     "doyle",
                 )));
             }

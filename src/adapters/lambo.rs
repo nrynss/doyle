@@ -130,6 +130,22 @@ impl LamboAdapter {
     }
 }
 
+/// Doyle's own Lambo session. The bare `/mcp` path is the server's default
+/// session, `lambo-dev`, which Doyle never writes to.
+pub const DEFAULT_URL: &str = "http://127.0.0.1:7700/mcp/s/doyle";
+
+/// The Lambo URL to use: `LAMBO_URL` when set and non-empty, else `DEFAULT_URL`.
+pub fn lambo_url() -> String {
+    url_from_env(std::env::var("LAMBO_URL").ok().as_deref())
+}
+
+fn url_from_env(value: Option<&str>) -> String {
+    match value {
+        Some(v) if !v.trim().is_empty() => v.trim().to_string(),
+        _ => DEFAULT_URL.to_string(),
+    }
+}
+
 fn session_from_url(url: &str) -> String {
     if let Some(idx) = url.find("/mcp/s/") {
         let rest = &url[idx + "/mcp/s/".len()..];
@@ -144,7 +160,7 @@ fn session_from_url(url: &str) -> String {
             return seg.to_string();
         }
     }
-    "lambo-dev".to_string()
+    "doyle".to_string()
 }
 
 fn short_id(id: &str) -> String {
@@ -714,6 +730,41 @@ impl LamboAdapter {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn url_takes_lambo_url_when_set() {
+        assert_eq!(
+            url_from_env(Some("http://127.0.0.1:9000/mcp/s/other")),
+            "http://127.0.0.1:9000/mcp/s/other"
+        );
+    }
+
+    #[test]
+    fn url_defaults_to_doyle_session_when_unset_or_empty() {
+        for v in [None, Some(""), Some("  ")] {
+            let url = url_from_env(v);
+            assert_eq!(url, DEFAULT_URL);
+            assert_eq!(session_from_url(&url), "doyle");
+        }
+        assert_eq!(DEFAULT_URL, "http://127.0.0.1:7700/mcp/s/doyle");
+    }
+
+    #[test]
+    fn session_from_url_names_the_session() {
+        assert_eq!(
+            session_from_url("http://127.0.0.1:7700/mcp/s/doyle"),
+            "doyle"
+        );
+        assert_eq!(
+            session_from_url("http://127.0.0.1:7700/mcp/s/doyle-probe"),
+            "doyle-probe"
+        );
+        assert_eq!(
+            session_from_url("http://127.0.0.1:7700/mcp/s/lambo-dev"),
+            "lambo-dev"
+        );
+        assert_eq!(session_from_url("http://127.0.0.1:7700/mcp"), "doyle");
+    }
+
     use super::*;
     use crate::mcp::FakeTransport;
     use std::fs;

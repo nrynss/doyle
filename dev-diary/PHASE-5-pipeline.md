@@ -105,7 +105,7 @@ requires:   [T5.4]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/lambo.rs (the default URL and session only, and their tests), src/curate.rs (Lambo adapter construction only), src/serve/mod.rs (Lambo adapter construction only), .env.example (the LAMBO_URL line only)
-status:     claimed:sonnet-t5.5
+status:     in-review
 ```
 
 Found while briefing T7.3: the binary reaches Lambo's `lambo-dev` session, which Doyle must never write to. `doyle curate` hardcodes `http://127.0.0.1:7700/mcp` with no override, and the bare `/mcp` path is `lambo-dev`, the server's default session. `doyle serve` reads `LAMBO_URL` but falls back to the same URL, so an approval writes its correction into `lambo-dev`. `session_from_url` returns `lambo-dev` for any URL without `/mcp/s/<name>`. `.env.example` names the same URL. `check` and `guard` do not touch Lambo.
@@ -119,6 +119,8 @@ Build:
 Existing recordings replay unchanged. A test that depends on the session being `lambo-dev` names that URL explicitly rather than relying on the default.
 
 **Done when:** the gate passes with no key and no running server; tests show that `curate` and `serve` take `LAMBO_URL` when set, and that with it unset each builds its Lambo adapter on the `doyle` session; no path in `src/` outside tests defaults to the bare `/mcp` URL or the `lambo-dev` session (grep in the report).
+
+**Notes (T5.5).** Built: `DEFAULT_URL` (`http://127.0.0.1:7700/mcp/s/doyle`) and `lambo_url()` in `src/adapters/lambo.rs`; `lambo_url()` returns `LAMBO_URL` when set and non-empty, else the default, via a pure `url_from_env(Option<&str>)` so tests never touch process env. `curate` and `serve` both call it. `session_from_url` falls back to `doyle`. `.env.example` names the `doyle` session URL. Decided: an empty or blank `LAMBO_URL` counts as unset. Surprised: no existing test or recording depended on the session being `lambo-dev`, so no test URL changed; the bare `/mcp` URLs left in tests now resolve to `doyle`, and replay unchanged. `src/core/decide.rs` has a bare `/mcp` URL in a test only, outside this task's `owns`; left as is.
 
 ---
 

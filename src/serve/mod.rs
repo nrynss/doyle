@@ -1446,8 +1446,7 @@ fn build_adapters(cli: &cli::Cli) -> Result<Vec<Box<dyn MemoryAdapter>>, String>
                 adapters.push(Box::new(MuseCodeAdapter::new(Path::new(&project))));
             }
             "lambo" => {
-                let url = std::env::var("LAMBO_URL")
-                    .unwrap_or_else(|_| "http://127.0.0.1:7700/mcp".to_string());
+                let url = crate::adapters::lambo::lambo_url();
                 adapters.push(Box::new(LamboAdapter::http(url, "doyle")));
             }
             other => return Err(format!("unknown adapter: {other}")),
