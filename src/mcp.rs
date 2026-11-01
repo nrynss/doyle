@@ -362,7 +362,16 @@ impl McpClient {
                 "arguments": arguments
             }
         });
-        let resp = self.post(&body.to_string(), &[])?;
+        let body = body.to_string();
+        let carried_session = self.session_id.is_some();
+        let mut resp = self.post(&body, &[])?;
+        if resp.status == 404 && carried_session {
+            // The server forgot our session. Start a new one and retry once.
+            self.session_id = None;
+            self.initialized = false;
+            self.initialize()?;
+            resp = self.post(&body, &[])?;
+        }
         if resp.status != 200 {
             return Err(McpError {
                 url: self.url.clone(),
@@ -456,5 +465,143 @@ pub fn recorded_to_http(recorded: &Value) -> HttpResponse {
         status,
         headers,
         body,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::rc::Rc;
+
+    struct Shared(Rc<FakeTransport>);
+    impl Transport for Shared {
+        fn post(
+            &self,
+            url: &str,
+            headers: &[(String, String)],
+            body: &str,
+        ) -> Result<HttpResponse, TransportError> {
+            self.0.post(url, headers, body)
+        }
+        fn recorded(&self) -> Vec<RecordedRequest> {
+            self.0.recorded()
+        }
+    }
+
+    fn init_resp(sid: &str) -> HttpResponse {
+        HttpResponse {
+            status: 200,
+            headers: vec![("Mcp-Session-Id".into(), sid.into())],
+            body: "data: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n".into(),
+        }
+    }
+    fn accepted() -> HttpResponse {
+        HttpResponse {
+            status: 202,
+            headers: vec![],
+            body: String::new(),
+        }
+    }
+    fn status(code: u16) -> HttpResponse {
+        HttpResponse {
+            status: code,
+            headers: vec![],
+            body: "nope".into(),
+        }
+    }
+    fn ok_call(text: &str) -> HttpResponse {
+        HttpResponse {
+            status: 200,
+            headers: vec![],
+            body: format!(
+                "data: {{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{{\"content\":[{{\"type\":\"text\",\"text\":\"{text}\"}}]}}}}\n\n"
+            ),
+        }
+    }
+    fn client(responses: Vec<HttpResponse>) -> (McpClient, Rc<FakeTransport>) {
+        let fake = Rc::new(FakeTransport::new(responses));
+        let c = McpClient::new("http://fake/mcp", Box::new(Shared(fake.clone())));
+        (c, fake)
+    }
+    fn sid(r: &RecordedRequest) -> Option<String> {
+        r.headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case("Mcp-Session-Id"))
+            .map(|(_, v)| v.clone())
+    }
+    fn method(r: &RecordedRequest) -> String {
+        let v: Value = serde_json::from_str(&r.body).unwrap();
+        v["method"].as_str().unwrap().to_string()
+    }
+
+    #[test]
+    fn call_tool_404_reinitializes_and_retries_with_new_session() {
+        let (mut c, fake) = client(vec![
+            init_resp("old"),
+            accepted(),
+            status(404),
+            init_resp("new"),
+            accepted(),
+            ok_call("fresh"),
+        ]);
+        let r = c.call_tool("t", serde_json::json!({})).unwrap();
+        assert_eq!(r.text, "fresh");
+        let reqs = fake.recorded();
+        let methods: Vec<String> = reqs.iter().map(method).collect();
+        assert_eq!(
+            methods,
+            [
+                "initialize",
+                "notifications/initialized",
+                "tools/call",
+                "initialize",
+                "notifications/initialized",
+                "tools/call"
+            ]
+        );
+        assert_eq!(sid(&reqs[2]).as_deref(), Some("old"));
+        assert_eq!(sid(&reqs[3]), None, "re-initialize carries no session id");
+        assert_eq!(sid(&reqs[4]).as_deref(), Some("new"));
+        assert_eq!(sid(&reqs[5]).as_deref(), Some("new"));
+        assert_eq!(reqs[2].body, reqs[5].body);
+        assert_eq!(c.session_id(), Some("new"));
+    }
+
+    #[test]
+    fn second_404_after_reinitialize_errors_without_further_retry() {
+        let (mut c, fake) = client(vec![
+            init_resp("old"),
+            accepted(),
+            status(404),
+            init_resp("new"),
+            accepted(),
+            status(404),
+        ]);
+        let e = c.call_tool("t", serde_json::json!({})).unwrap_err();
+        assert!(e.message.contains("HTTP 404"), "{e}");
+        assert_eq!(fake.recorded().len(), 6);
+    }
+
+    #[test]
+    fn call_tool_404_without_session_id_does_not_reinitialize() {
+        let no_sid = HttpResponse {
+            status: 200,
+            headers: vec![],
+            body: "data: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n".into(),
+        };
+        let (mut c, fake) = client(vec![no_sid, accepted(), status(404)]);
+        let e = c.call_tool("t", serde_json::json!({})).unwrap_err();
+        assert!(e.message.contains("HTTP 404"), "{e}");
+        let reqs = fake.recorded();
+        assert_eq!(reqs.len(), 3);
+        assert_eq!(method(&reqs[2]), "tools/call");
+    }
+
+    #[test]
+    fn call_tool_500_is_not_retried() {
+        let (mut c, fake) = client(vec![init_resp("old"), accepted(), status(500)]);
+        let e = c.call_tool("t", serde_json::json!({})).unwrap_err();
+        assert!(e.message.contains("HTTP 500"), "{e}");
+        assert_eq!(fake.recorded().len(), 3);
     }
 }

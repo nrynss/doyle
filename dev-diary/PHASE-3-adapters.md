@@ -116,7 +116,7 @@ requires:   [T3.3]
 fixture-ok: yes
 size:       S · mid
 owns:       src/mcp.rs
-status:     claimed:sonnet-t3.5
+status:     in-review
 ```
 
 Found by the T7.3 re-run: `doyle serve` initialized its Lambo MCP session at start, and about 25 minutes later, when the person approved, Lambo answered `404` for that `Mcp-Session-Id`. The client sets `initialized` once and never re-initializes, so both Lambo write-backs failed (`http status: 404`) while Muse Code memory was corrected. The MCP Streamable HTTP transport says a client that gets `404` for a request carrying a session id must start a new session with a fresh `initialize`.
@@ -124,6 +124,9 @@ Found by the T7.3 re-run: `doyle serve` initialized its Lambo MCP session at sta
 Build: on a `404` to a request that carried a session id, drop the id, re-run `initialize` and `notifications/initialized`, and retry the request once. A second `404`, or a `404` with no session id, is an error as today. No change to any adapter.
 
 **Done when:** the gate passes; tests with the fake transport show a call that gets `404` re-initializes and succeeds on the retry with the new session id, a repeated `404` errors after one retry, and the existing recordings replay unchanged.
+
+
+**Notes (T3.5).** `McpClient::call_tool` now remembers whether its request carried a session id. On `404` with one, it clears the id and `initialized`, runs `initialize` and `notifications/initialized` (which capture the new id), and re-sends the same body once. Any other status, a `404` with no session id, and a second `404` return the error as before. No adapter changed. Four fake-transport tests in `src/mcp.rs` cover the retry, the repeated `404`, a `404` with no id, and a `500`. Decision: the retry reuses the original JSON-RPC id, since the first attempt got no result. Surprise: `src/mcp.rs` had no tests module of its own; the transport was only exercised through adapters.
 
 ---
 
