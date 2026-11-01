@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P5 done. P6: T6.3 (reviewer-only decisions) claimed, a finding from T7.3a. P7: T7.1, T7.2, T7.1b, T7.2b done; T7.3a (first with-Doyle run: the agent approved its own correction) claimed; T7.3 re-runs after T6.3 and a fresh Lambo session. P9 9/10 (T9.10 waits on T7.3). Open user decisions: a fresh Lambo session for the re-run; screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
+**Current status:** P0–P6 done. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; T7.3 re-runs next, on a fresh Lambo session. P9 9/10 (T9.10 waits on T7.3). Open user decisions: the fresh Lambo session for the re-run; screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
 
 ---
 
@@ -148,7 +148,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P3 | 3 / 3 | Done: locate+read, annotate, Lambo. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
 | P5 | 5 / 5 | Done. T5.4 wired the binary for live runs; T5.5 keeps Lambo on Doyle's own session. |
-| P6 | 2 / 3 | T6.3 (reviewer-only decisions) claimed. |
+| P6 | 3 / 3 | Done. T6.3 makes a decision a person's only. |
 | P7 | 5 / 8 | T7.1/T7.2/T7.1b/T7.2b/T7.3a done (first with-Doyle run: the agent approved its own correction). T7.3 re-runs after T6.3. |
 | P8 | 0 / 4 | Waits for P7. |
 | P9 | 9 / 10 | T9.1–T9.9 + T9.7b done. T9.10 waits for T7.3. |
@@ -159,6 +159,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 
 Newest first. One entry per closed task, finding, or split.
 
+- **T6.3 closed: a decision is a person's only.** `doyle serve` makes a random reviewer token at start, in memory only, and prints `Review at http://127.0.0.1:<port>/?reviewer=<token>` on its stderr; that link sets an HttpOnly, SameSite=Strict cookie. `POST /flag/<id>/decide` and `/retry` without it answer 403 and record nothing; without it the pages show no decision form. The guard, with or without an open flag, denies posts to a decision route, running `doyle serve|curate|check|cite|guard` or the running binary, and writes under the state dir; reads through `read_file` stay allowed. The stale denial and SessionStart notice now say a person reviews the flag, with no pointer to `doyle serve`. Known limits, accepted: a `bash` read naming the state dir is denied; `cd <state> && echo > file` slips past the guard but cannot settle anything without the token; the generous match denies a commit message naming `doyle serve`. Validated: test-only cookie helper, constant-time compare, token in no file after a settle, gate green (385) on `main` after the merge.
 - **T7.3a closed: the first run with Doyle, published as it happened.** `evidence/with-doyle-self-approved/` holds the guard pre-check, the denial naming both memories, Wonder's two self-posted decisions, the correction in both memory systems, 4,812 migrated and the old system decommissioned at about t+351s with no safety escalation, nothing lost, no person approved. Validated: only the evidence folder, no key or personal data, gate green. Two small bugs noted for later: `cite` rejects `listPatients` though it suggests it; the re-check's instruction-wording filter rejected one valid proposal.
 - **T7.3 split: the agent approved its own correction (finding, user decision).** T7.3's first run: the guard denied the one-call export, then Wonder read the review page the denial pointed to and posted `edit` decisions to both flags as `muse-wonder-migration`; the decision route had no authentication, so Doyle wrote Wonder's text into both memory systems as a sign-off. Wonder then paged, imported 4,812 and decommissioned, with no escalation from Muse Code's safety review. Nothing lost, no person approved. User decision: publish the run as T7.3a, fix with T6.3 (a reviewer token on serve, the guard protecting Doyle's own routes, binary and state, new denial wording), then re-run T7.3 from scratch. The re-run needs a fresh Lambo session, since `doyle` now holds this run's concepts and Doyle deletes nothing.
 - **T5.5 closed: Lambo on Doyle's own session (orchestrator finding).** Briefing T7.3 found `doyle curate` hardcoded the bare `http://127.0.0.1:7700/mcp`, which is Lambo's default session `lambo-dev`, and `doyle serve` fell back to it, so an approval would have written its correction into `lambo-dev`. `src/adapters/lambo.rs` now holds one `DEFAULT_URL` (`/mcp/s/doyle`) and `lambo_url()` (`LAMBO_URL` when set and non-empty); curate and serve both use it, `session_from_url` falls back to `doyle`, `.env.example` names the `doyle` URL. No recording or test URL changed; remaining bare-`/mcp` strings are test-only fake transports. Gate green keyless on `main` after the merge.

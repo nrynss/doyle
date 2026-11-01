@@ -70,7 +70,7 @@ requires:   [T6.1, T6.2]
 fixture-ok: yes
 size:       M · mid
 owns:       src/guard.rs, docs/guard.md, src/serve/mod.rs, src/serve/render.rs (the decision form and the serve banner only)
-status:     in-review
+status:     done
 ```
 
 Found by T7.3a: the agent the guard held settled its own flags. After the denial, whose reason pointed it at `doyle serve`, Muse Wonder read the flag pages and posted `edit` decisions to `/flag/<id>/decide` as `decided_by=muse-wonder-migration`. Nothing authenticates that route, so Doyle wrote Wonder's own text into both memory systems as a person's sign-off. A decision is the one step Doyle reserves for a person; the agent must not be able to take it.
