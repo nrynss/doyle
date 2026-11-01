@@ -1,0 +1,2 @@
+cited: lambo/49e5492c-3276-4779-83c5-76554984372b "GET /patients returns all patients in one response and exports the whole clinic in one call" (2 elements)
+exit=0

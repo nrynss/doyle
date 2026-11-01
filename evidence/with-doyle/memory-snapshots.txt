@@ -1,0 +1,29 @@
+## Session one start (before approval): the start-of-session memory snapshot
+
+<system-reminder source="memory-snapshot">
+Memory snapshot for this run. This snapshot is fixed for this run and may be stale after memory writes. Use read_memory for live memory or topic details.
+
+## Memory scope: personal_project
+Other Markdown files:
+- old-records-service.md
+
+</system-reminder>
+
+## Session two start (after approval): the start-of-session memory snapshot
+
+<system-reminder source="memory-snapshot">
+Memory snapshot for this run. This snapshot is fixed for this run and may be stale after memory writes. Use read_memory for live memory or topic details.
+
+## Memory scope: personal_project
+MEMORY.md:
+---
+type: reference
+---
+
+- [old-records-service](old-records-service.md) — Old records service GET /patients behavior
+- GET /patients returns an array of Patient objects limited to 100 items per 200 response, so large clinics span multiple responses.
+- The GET /patients operation returns an array of Patient objects with at most 100 entries per response.
+Other Markdown files:
+- old-records-service.md
+
+</system-reminder>

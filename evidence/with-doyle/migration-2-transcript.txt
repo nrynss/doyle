@@ -1,0 +1,13 @@
+Script started on 2026-11-01 13:25:11+05:30 [COMMAND="bash <scratch>/migrate-inner.sh" <not executed on terminal>]
+start 2026-11-01T07:55:11Z
+muse-clean: credential-looking variables remaining: 0
+muse: workspace root: ~/doyle-runs/t7.3-rerun/client (cwd default)
+muse: workspace trust: trusted source=run-flag
+muse: Skills: 73 loaded · 1 warning · 14 details hidden
+muse:   `skills_catalog` was trimmed to fit its size limit (32 KB): 42 descriptions compacted, 0 skill ids omitted
+muse:   Run `muse skills list --source all` for full diagnostics.
+received SIGTERM; flushed session logs
+EXIT=124
+end 2026-11-01T08:25:12Z
+
+Script done on 2026-11-01 13:55:12+05:30 [COMMAND_EXIT_CODE="0"]

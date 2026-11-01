@@ -1,0 +1,4 @@
+Review · Doyle review Doyle truth maintenance for agent memory Review 0 open · 2 settled. An open flag is a memory a contract change has made stale; settle it and the correction is written back to every memory system that holds it. Open flags Nothing is flagged stale. Every cited memory still matches the contracts Doyle has checked. Settled GET /patients returns all patients in one response and exports the whole clinic in one call review settled Proposal: correct 
+Flag flag-1 · memory lambo/49e5492c-3276-4779-83c5-76554984372b · changed patients-v1.yaml → patients-v2q.yaml · 1 change(s) GET /patients returns every patient in a single response allowing full clinic export in one call review settled Proposal: correct 
+Flag flag-2 · memory muse-code/old-records-service.md#0 · changed patients-v1.yaml → patients-v2q.yaml · 1 change(s) Doyle review page · decisions are recorded in Doyle's state and written back to each memory system shown.
+(decision form present: False)

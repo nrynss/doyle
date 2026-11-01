@@ -1,0 +1,2 @@
+{"id":"proposal-1","flag_id":"flag-1","action":{"correct":{"new_text":"GET /patients returns an array of Patient objects limited to 100 items per 200 response, so large clinics span multiple responses."}},"rationale":"200 response now limits array to maxItems 100.","proposed_by":"muse-spark-1.3"}
+{"id":"proposal-2","flag_id":"flag-2","action":{"correct":{"new_text":"The GET /patients operation returns an array of Patient objects with at most 100 entries per response."}},"rationale":"New 200 response schema adds maxItems 100.","proposed_by":"muse-spark-1.3"}

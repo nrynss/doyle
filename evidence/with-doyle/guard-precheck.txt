@@ -1,0 +1,19 @@
+## doyle cite
+recorded citation
+exit=0
+## doyle check V1 V2Q --no-recheck
+# doyle check
+
+Old: ~/work/doyle/.claude/worktrees/agent-ac5e63a24d50bb4dc/testdata/contracts/patients-v1.yaml
+New: ~/work/doyle/.claude/worktrees/agent-ac5e63a24d50bb4dc/testdata/contracts/patients-v2q.yaml
+
+## Flags (1)
+
+### flag-1 — M1 (muse-code) — review
+- Changes: vc2_85021e37503afa3aec3d4b868cd65c691c52ee246db06e7d115220e58b9f9025
+- Evidence: GET /patients returns every patient in one response; one call exports the whole clinic
+
+exit=1
+## doyle guard (curl /patients)
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"DOYLE-GUARD: memory muse-code/M1 is stale (\"GET /patients returns every patient in one response; one call exports the whole clinic\"). Matched GET /patients (listPatients). Changed ~/work/doyle/.claude/worktrees/agent-ac5e63a24d50bb4dc/testdata/contracts/patients-v1.yaml -> ~/work/doyle/.claude/worktrees/agent-ac5e63a24d50bb4dc/testdata/contracts/patients-v2q.yaml (review). A person reviews this flag on Doyle's review page; this session cannot settle it."}}
+exit=0

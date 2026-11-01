@@ -1,0 +1,2 @@
+cited: muse-code/old-records-service.md#0 "GET /patients returns every patient in a single response allowing full clinic export in one call" (2 elements)
+exit=0
