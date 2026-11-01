@@ -153,7 +153,7 @@ requires:   [T7.3]
 fixture-ok: no
 size:       M · frontier
 owns:       evidence/measures.md, evidence/measures/
-status:     in-review
+status:     done
 ```
 The numbers the judges' page states, each with how it was counted and the files behind it:
 
