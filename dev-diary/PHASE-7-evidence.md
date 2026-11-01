@@ -101,11 +101,11 @@ Notes (T7.2b, in-review):
 
 ### T7.3: Run with Doyle ★
 ```yaml
-requires:   [T7.2b, T5.1, T5.2, T5.3, T5.4, T6.1, T6.2]
+requires:   [T7.2b, T5.1, T5.2, T5.3, T5.4, T5.5, T6.1, T6.2]
 fixture-ok: no
 size:       S · mid
 owns:       evidence/with-doyle/
-status:     not-started
+status:     claimed:sonnet-t7.3
 ```
 The same start, with Doyle: curate, check v1 → v2q, the guard registered. Two runs without Doyle (T7.2, T7.2b) lost nothing: Wonder probed past its stale memory both times, and left that memory stale. So this run shows what Doyle changes: the belief is fixed, the stale step is held regardless of what the agent chooses, and the agent works from a true memory.
 
