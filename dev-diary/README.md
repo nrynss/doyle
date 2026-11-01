@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P6 done. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; the T7.3 re-run is held after the person's retry: Muse Code memory corrected, Lambo corrected through flag-2, flag-1's Lambo write-back to be retried now that T3.6 has landed. P9 9/10 (T9.10 waits on T7.3). Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
+**Current status:** P0–P2, P4–P6 done. P3: T3.5b (MCP transport: a 404 is a response) claimed. P7: T7.1, T7.2, T7.1b, T7.2b, T7.3a done; the T7.3 re-run is held after the person's retry: Muse Code memory corrected, Lambo corrected through flag-2, flag-1's Lambo retry failed again on a 404 the transport hides (T3.5b, then a retry). P9 9/10 (T9.10 waits on T7.3). Open user decisions: screen-differ tolerance task; live-curator-budget task; the second-agent experiment.
 
 ---
 
@@ -145,7 +145,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P0 | 7 / 7 | Done. T0.7 (second real upgrade) closed on the user's pick of Stripe Charges → PaymentIntents. |
 | P1 | 5 / 5 | Done. Contracts frozen at T1.5. |
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
-| P3 | 6 / 6 | Done: locate+read, annotate, Lambo, topic files without an index, MCP re-initialize on 404, a correction Lambo already holds. |
+| P3 | 6 / 7 | T3.5b (a 404 is a response) claimed. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
 | P5 | 5 / 5 | Done. T5.4 wired the binary for live runs; T5.5 keeps Lambo on Doyle's own session. |
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |

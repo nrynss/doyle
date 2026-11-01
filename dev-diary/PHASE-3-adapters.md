@@ -152,6 +152,23 @@ Build:
 **Notes (T3.6).** Probe on `doyle-probe` (recordings 16-31). A derive with `against` on a correction that already exists creates nothing and lists the existing concept in the receipt's `matched`. If that concept was not yet linked, the same receipt reads `1 contradiction(s) recorded`, so the contradiction is recorded by the matched re-derive itself. If it was already linked it reads `0 created, 1 matched existing` with no contradiction and no duplicate edge. So `supersede` now takes `created[0]`, else `matched[0]`, and no extra call is needed; the receipt names the id, so no recall fallback was built. Surprise: `lambo_inspect` on the stale concept carries no `Contradicted` line, only a `Contradicts` edge from the correction in `focus.levels`, so the old early check never fired live. It now reads that edge too (matching its label to the correction text), which makes a repeated supersede a true no-op with no derive. Errors and the other paths are unchanged. No README in `testdata/lambo/`, so the recordings are listed in the report only.
 ---
 
+### T3.5b: MCP transport: a 404 is a response ★
+```yaml
+requires:   [T3.5]
+fixture-ok: yes
+size:       S · mid
+owns:       src/mcp.rs
+status:     claimed:sonnet-t3.5b
+```
+
+Found by the T7.3 re-run, after T3.5 and T3.6 landed: the person's retry of flag-1 failed again with `lambo: backend error: http://127.0.0.1:7700/mcp/s/doyle-t73: http status: 404`. Lambo answered 404 for serve's expired session, as the MCP transport prescribes, but `UreqTransport::with_timeout` builds its agent without `http_status_as_error(false)`, so ureq returns the 404 as a transport error and T3.5's re-initialize (which checks `resp.status`) never runs. T3.5's tests used the fake transport, which returns 404 as a response, so they could not see it; the orchestrator validated on them alone. The model clients' transport (`src/models/http.rs`) already sets the option.
+
+Build: `UreqTransport` returns every HTTP status as a response (`http_status_as_error(false)`), so `McpClient` sees 4xx and 5xx statuses itself. Every non-200 path in `McpClient` keeps erroring as it does now, with its existing message.
+
+**Done when:** the gate passes with no key; a test runs the real `UreqTransport` against a local `std::net::TcpListener` on 127.0.0.1 that answers 404, and gets a response with status 404, not an error; a test drives `McpClient::call_tool` over the real transport against a local listener that answers the first `tools/call` with 404 and the rest normally, and the call re-initializes and succeeds; the existing tests pass unchanged.
+
+---
+
 ## Exit Criteria
 
 - [x] Muse Code memory is read from both scopes with stable references (T3.1).
