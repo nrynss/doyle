@@ -116,7 +116,7 @@ requires:   [T3.3]
 fixture-ok: yes
 size:       S · mid
 owns:       src/mcp.rs
-status:     in-review
+status:     done
 ```
 
 Found by the T7.3 re-run: `doyle serve` initialized its Lambo MCP session at start, and about 25 minutes later, when the person approved, Lambo answered `404` for that `Mcp-Session-Id`. The client sets `initialized` once and never re-initializes, so both Lambo write-backs failed (`http status: 404`) while Muse Code memory was corrected. The MCP Streamable HTTP transport says a client that gets `404` for a request carrying a session id must start a new session with a fresh `initialize`.
