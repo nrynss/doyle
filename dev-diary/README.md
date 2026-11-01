@@ -145,7 +145,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P0 | 7 / 7 | Done. T0.7 (second real upgrade) closed on the user's pick of Stripe Charges → PaymentIntents. |
 | P1 | 5 / 5 | Done. Contracts frozen at T1.5. |
 | P2 | 4 / 4 | Done: check, cite, flags, index. |
-| P3 | 4 / 4 | Done: locate+read, annotate, Lambo, topic files without an index. |
+| P3 | 4 / 5 | T3.5 (MCP re-initialize on 404) claimed. |
 | P4 | 4 / 4 | Done. Curator: Baseten. |
 | P5 | 5 / 5 | Done. T5.4 wired the binary for live runs; T5.5 keeps Lambo on Doyle's own session. |
 | P6 | 3 / 3 | Done. T6.3 makes a decision a person's only. |
