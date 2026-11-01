@@ -186,7 +186,7 @@ requires:   [T6.2, T7.4]
 fixture-ok: yes
 size:       S · mid
 owns:       src/serve/judges.rs
-status:     not-started
+status:     claimed:t75
 ```
 Under `doyle serve`, "For judges: start here": a table linking the recorded runs with and without Doyle, the measures, the Muse Code session logs, and the review page itself (product.md, For judges). It says plainly what is new (Doyle) and what is an existing dependency (Vimanam, Lambo).
 
