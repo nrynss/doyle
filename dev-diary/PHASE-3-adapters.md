@@ -158,7 +158,7 @@ requires:   [T3.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/mcp.rs
-status:     claimed:sonnet-t3.5b
+status:     in-review
 ```
 
 Found by the T7.3 re-run, after T3.5 and T3.6 landed: the person's retry of flag-1 failed again with `lambo: backend error: http://127.0.0.1:7700/mcp/s/doyle-t73: http status: 404`. Lambo answered 404 for serve's expired session, as the MCP transport prescribes, but `UreqTransport::with_timeout` builds its agent without `http_status_as_error(false)`, so ureq returns the 404 as a transport error and T3.5's re-initialize (which checks `resp.status`) never runs. T3.5's tests used the fake transport, which returns 404 as a response, so they could not see it; the orchestrator validated on them alone. The model clients' transport (`src/models/http.rs`) already sets the option.
@@ -167,6 +167,8 @@ Build: `UreqTransport` returns every HTTP status as a response (`http_status_as_
 
 **Done when:** the gate passes with no key; a test runs the real `UreqTransport` against a local `std::net::TcpListener` on 127.0.0.1 that answers 404, and gets a response with status 404, not an error; a test drives `McpClient::call_tool` over the real transport against a local listener that answers the first `tools/call` with 404 and the rest normally, and the call re-initializes and succeeds; the existing tests pass unchanged.
 
+
+**Notes (T3.5b).** `UreqTransport::with_timeout` now sets `http_status_as_error(false)`, as the model clients do. Paths checked: `initialize` and `call_tool` already error on any non-200 with "... returned HTTP <status>"; `call_tool` retries only a `404` that carried a session id, once. `notifications/initialized` errored only on `>= 400`, which the old transport made unreachable for 4xx and 5xx, so it now errors on any non-2xx so nothing slips through. Four tests run the real transport against 127.0.0.1 listeners on ephemeral ports: a 404 is a response, the live-shaped re-initialize and retry with the new session id, a `500` with no retry, and non-success on `initialize` and `notifications/initialized`. Surprise: none beyond the brief; the fake-transport tests could not see this because they bypass ureq's status handling.
 ---
 
 ## Exit Criteria

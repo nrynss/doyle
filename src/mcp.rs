@@ -66,6 +66,9 @@ impl UreqTransport {
     pub fn with_timeout(timeout: Duration) -> Self {
         let config = ureq::config::Config::builder()
             .timeout_global(Some(timeout))
+            // Every HTTP status is a response: McpClient reads 404 to renew
+            // an expired session and reports other non-success statuses itself.
+            .http_status_as_error(false)
             .build();
         let agent: ureq::Agent = config.into();
         Self { agent }
@@ -337,7 +340,7 @@ impl McpClient {
             "method": "notifications/initialized"
         });
         let nresp = self.post(&notif.to_string(), &[])?;
-        if nresp.status >= 400 {
+        if !(200..300).contains(&nresp.status) {
             return Err(McpError {
                 url: self.url.clone(),
                 message: format!("notifications/initialized returned HTTP {}", nresp.status),
@@ -603,5 +606,162 @@ mod tests {
         let e = c.call_tool("t", serde_json::json!({})).unwrap_err();
         assert!(e.message.contains("HTTP 500"), "{e}");
         assert_eq!(fake.recorded().len(), 3);
+    }
+
+    // ---- real UreqTransport over a local listener ----
+
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::{Arc, Mutex};
+
+    /// One scripted reply: (status line, extra headers, body).
+    type Reply = (&'static str, Vec<(&'static str, String)>, String);
+
+    /// Serves `replies` in order, one connection per request, and records each
+    /// raw request. The thread ends after the last reply or on a read timeout.
+    fn serve(replies: Vec<Reply>) -> (String, Arc<Mutex<Vec<String>>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/mcp", listener.local_addr().unwrap());
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let log = seen.clone();
+        std::thread::spawn(move || {
+            for (status, headers, body) in replies {
+                let Ok((mut s, _)) = listener.accept() else {
+                    return;
+                };
+                s.set_read_timeout(Some(Duration::from_secs(5))).ok();
+                let mut buf = Vec::new();
+                let mut chunk = [0u8; 4096];
+                loop {
+                    let Ok(n) = s.read(&mut chunk) else { return };
+                    if n == 0 {
+                        break;
+                    }
+                    buf.extend_from_slice(&chunk[..n]);
+                    let text = String::from_utf8_lossy(&buf).to_string();
+                    if let Some(i) = text.find("\r\n\r\n") {
+                        let len = text[..i]
+                            .lines()
+                            .find_map(|l| {
+                                let l = l.to_ascii_lowercase();
+                                l.strip_prefix("content-length:")
+                                    .map(|v| v.trim().parse::<usize>().unwrap_or(0))
+                            })
+                            .unwrap_or(0);
+                        if buf.len() >= i + 4 + len {
+                            break;
+                        }
+                    }
+                }
+                log.lock()
+                    .unwrap()
+                    .push(String::from_utf8_lossy(&buf).to_string());
+                let mut out = format!(
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n",
+                    body.len()
+                );
+                for (k, v) in headers {
+                    out.push_str(&format!("{k}: {v}\r\n"));
+                }
+                out.push_str("\r\n");
+                out.push_str(&body);
+                s.write_all(out.as_bytes()).ok();
+            }
+        });
+        (url, seen)
+    }
+
+    fn init_reply(sid: &str) -> Reply {
+        (
+            "200 OK",
+            vec![("Mcp-Session-Id", sid.to_string())],
+            "data: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n".to_string(),
+        )
+    }
+    fn accepted_reply() -> Reply {
+        ("202 Accepted", vec![], String::new())
+    }
+
+    #[test]
+    fn ureq_transport_returns_404_as_a_response() {
+        let (url, _) = serve(vec![("404 Not Found", vec![], "gone".into())]);
+        let t = UreqTransport::with_timeout(Duration::from_secs(5));
+        let r = t
+            .post(&url, &[], "{}")
+            .expect("404 is a response, not an error");
+        assert_eq!(r.status, 404);
+        assert_eq!(r.body, "gone");
+    }
+
+    #[test]
+    fn real_transport_call_tool_404_reinitializes_and_retries_with_new_session() {
+        let result = "data: {\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"fresh\"}]}}\n\n";
+        let (url, seen) = serve(vec![
+            init_reply("old"),
+            accepted_reply(),
+            ("404 Not Found", vec![], "expired".into()),
+            init_reply("new"),
+            accepted_reply(),
+            ("200 OK", vec![], result.to_string()),
+        ]);
+        let mut c = McpClient::new(
+            url,
+            Box::new(UreqTransport::with_timeout(Duration::from_secs(5))),
+        );
+        let r = c.call_tool("t", serde_json::json!({})).unwrap();
+        assert_eq!(r.text, "fresh");
+        let reqs = seen.lock().unwrap().clone();
+        assert_eq!(reqs.len(), 6);
+        let has = |req: &str, sid: &str| {
+            req.to_ascii_lowercase()
+                .contains(&format!("mcp-session-id: {sid}"))
+        };
+        assert!(has(&reqs[2], "old"));
+        assert!(!reqs[3].to_ascii_lowercase().contains("mcp-session-id"));
+        assert!(has(&reqs[4], "new"));
+        assert!(reqs[5].contains("tools/call") && has(&reqs[5], "new"));
+        assert_eq!(c.session_id(), Some("new"));
+    }
+
+    #[test]
+    fn real_transport_call_tool_500_errors_naming_500_without_retry() {
+        let (url, seen) = serve(vec![
+            init_reply("s"),
+            accepted_reply(),
+            ("500 Internal Server Error", vec![], "boom".into()),
+        ]);
+        let mut c = McpClient::new(
+            url,
+            Box::new(UreqTransport::with_timeout(Duration::from_secs(5))),
+        );
+        let e = c.call_tool("t", serde_json::json!({})).unwrap_err();
+        assert!(e.message.contains("HTTP 500"), "{e}");
+        assert_eq!(seen.lock().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn real_transport_initialize_and_initialized_non_success_error() {
+        let (url, _) = serve(vec![("503 Service Unavailable", vec![], String::new())]);
+        let mut c = McpClient::new(
+            url,
+            Box::new(UreqTransport::with_timeout(Duration::from_secs(5))),
+        );
+        let e = c.initialize().unwrap_err();
+        assert!(e.message.contains("initialize returned HTTP 503"), "{e}");
+
+        let (url, _) = serve(vec![
+            init_reply("s"),
+            ("500 Internal Server Error", vec![], String::new()),
+        ]);
+        let mut c = McpClient::new(
+            url,
+            Box::new(UreqTransport::with_timeout(Duration::from_secs(5))),
+        );
+        let e = c.initialize().unwrap_err();
+        assert!(
+            e.message
+                .contains("notifications/initialized returned HTTP 500"),
+            "{e}"
+        );
     }
 }
