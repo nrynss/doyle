@@ -186,11 +186,20 @@ requires:   [T6.2, T7.4]
 fixture-ok: yes
 size:       S · mid
 owns:       src/serve/judges.rs
-status:     claimed:t75
+status:     in-review
 ```
 Under `doyle serve`, "For judges: start here": a table linking the recorded runs with and without Doyle, the measures, the Muse Code session logs, and the review page itself (product.md, For judges). It says plainly what is new (Doyle) and what is an existing dependency (Vimanam, Lambo).
 
 **Done when:** the page serves from a fresh clone with the evidence committed, and every link resolves.
+
+Notes (T7.5, in-review):
+- Built `src/serve/judges.rs`: `GET /judges` is the start-here table (the four runs with measured outcomes and headline session-log links, the at-most numbers, the review list with one link per flag in this serving state, the recorded state as committed files, and the new-vs-existing section). `/judges/measures` quotes `evidence/measures.md` whole (escaped, never reworded); `/judges/runs/<run>` describes one run and lists every file in its folder; `/judges/file/<run>/<file…>` streams one committed file as plain text (32 MiB cap, `..`/decoded-separator escapes refused). Evidence resolves relative to serve's working directory (the provenance fallback convention); when it is absent the pages name the path looked for instead of linking nowhere.
+- Wiring in `src/serve/mod.rs`, the T9.9 shape: `mod judges;` plus one route arm (`["judges", rest @ ..]`, dispatched inside judges.rs). One further line changed: the unknown-routes test pinned `GET /judges` to 404 (from the T6.2 build, before the route existed); it now pins the `/judge` typo instead, keeping the test's refused-unknown-routes intent. No other file touched.
+- Claims discipline: the at-most box is a constant quoted from measures.md, and a test pins the two to each other (whitespace-normalized contains), so the page cannot claim more. Run outcomes are one paragraph each from the run READMEs; T7.3a is marked self-approved and excluded from every claim.
+- Tests (8, all through `ReviewServer::handle` or the page functions, no model calls, no keys, no network): the index links everything the brief names; every link on the index, the measures page and all four run pages resolves 200 against the committed evidence (the fresh-clone proof); the recorded `with-doyle/state` loads as a store and both flag pages serve (change facts by ID, since the recorded contract paths are absolute run paths); run pages list only committed files and stream them byte-equal; a temp miniature layout proves the pages read files rather than assuming them; missing evidence and escapes explain themselves. Full gate passes.
+- Verified live by hand (not in tests): `doyle serve` from the checkout root with an empty state serves `/judges` with no flags and all 33 index hrefs plus 95 sub-page hrefs resolving; serving a copy of `evidence/with-doyle/state` shows both recorded flags and serves both flag pages. Screenshots in headless Chrome at 1280 and 390 widths: desktop reads straight through; phone reflows to one column and the runs table scrolls sideways with intact filenames (needed a table min-width plus nowrap log names, since the shared `break-all`/`anywhere` rules otherwise shredded the columns — kept inside judges.rs as inline styles, `render.rs` untouched).
+- Surprises: (1) killing a background serve with `pkill -f` from a shell whose own command line names the serve binary kills the shell too — keep the pkill pattern self-excluding and never combine it with the serve command in one line. (2) The committed `with-doyle/state` serves as-is for reading, so the page recommends copying it first: deciding from the copy cannot touch the committed files (all recorded flags are settled, so decide routes answer 409 there anyway). (3) `Store::open` on a fresh clone creates an empty state, so the judges' page must (and does) read well with zero flags.
+- For the orchestrator: discoverability needs a header/nav touch in `render.rs` (outside this task's owns) — `/judges` is currently reached by URL and from the startup banner suggestion only. Handoff text in the task report.
 
 ---
 

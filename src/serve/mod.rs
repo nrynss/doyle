@@ -40,6 +40,7 @@
 //! cwd that holds the memories or point `--project` at it.
 
 mod evidence;
+mod judges;
 pub mod logo;
 mod render;
 
@@ -377,6 +378,7 @@ impl ReviewServer {
             ("POST", ["flag", id, "decide"]) => self.decide(&url_decode(id), body),
             ("POST", ["flag", id, "retry"]) => self.retry(&url_decode(id)),
             ("GET", ["flag", id, "evidence", "video"]) => self.evidence_video(&url_decode(id)),
+            ("GET", ["judges", rest @ ..]) => self.judges_route(rest),
             ("GET", ["flag", ..]) | ("POST", ["flag", ..]) => Response::html(
                 404,
                 page(
@@ -2813,7 +2815,7 @@ mod tests {
     fn unknown_routes_and_bad_actions_are_refused() {
         let mut demo = demo_server();
         assert_eq!(demo.server.handle("GET", "/flag/nope", "").status, 404);
-        assert_eq!(demo.server.handle("GET", "/judges", "").status, 404);
+        assert_eq!(demo.server.handle("GET", "/judge", "").status, 404);
         assert_eq!(demo.server.handle("DELETE", "/", "").status, 404);
         let flag_path = format!("/flag/{}", demo.flag_id);
         let bad = demo
