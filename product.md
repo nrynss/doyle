@@ -2,7 +2,7 @@
 
 *Truth maintenance for agent memory.*
 
-**Doyle keeps what Muse Wonder remembers true, from API specs to legacy COBOL to the screens it watched.** A careful agent re-checks its memory before it acts, but it never fixes that memory, so the next session inherits the wrong belief and every session pays to re-check it. Doyle fixes the memory once, with a person's sign-off, and guards the one step where a stale belief would do damage. Wonder does the migration. Doyle makes its memory worth trusting, so Wonder's safety rests on certainty rather than on luck.
+**Doyle keeps what Muse Wonder remembers true, from API specs to legacy COBOL to the screens it watched.** A careful agent may re-check a stale memory before it acts, but it never fixes that memory, so the wrong belief outlives the session that caught it. Doyle fixes the memory once, with a person's sign-off the agent cannot give itself, and holds the one step where a stale belief would do damage, whatever the agent chooses. Wonder does the migration. Doyle makes its memory worth trusting, so Wonder's safety rests on certainty rather than on luck.
 
 Entry for the Meta Global AI Developer Hackathon (Cerebral Valley), Indie track, Build for Your World theme. Build 26 Oct 21:30 IST → submit by 5 Nov, 07:30 IST.
 
@@ -24,11 +24,17 @@ Doyle can. It:
 We ran it without Doyle, twice: once against a v2 that changed its response shape, once against a quiet v2 that keeps the same shape and pages through a `Link` header. Both times Wonder did not lose a record. It read its stale memory, probed the endpoint anyway, paged all 49 pages and verified them. What the runs show instead:
 
 - **The belief survives the agent that caught it.** After both runs, Wonder's memory still says one response returns everyone. The next session, a cheaper model, or another agent reading the shared scope starts from the wrong belief.
-- **Distrust has a cost.** With a memory it could not trust, Wonder re-derived the API from scratch: in the quiet run, about 6 minutes and 300 tool approvals to page, verify and import (part of that count is a flaky sandbox proxy). The run with Doyle gives the comparison.
-- **Muse Code's own reviewer guards the last step, on the plan's evidence.** In both runs its automated safety review escalated the decommission for a person's approval until the counts were proven. If Wonder had trusted the memory, that evidence would have agreed with itself (export, repeat and import all 100). Doyle checks what the reviewer cannot: whether a belief behind the plan is still true. That a reviewer would pass a 100 = 100 decommission is our inference, not something a run has shown.
 - **Its safety was a choice it happened to make.** Nothing made Wonder probe. Another run, model or plan might not.
+- **Muse Code's own reviewer guards the last step, on the plan's evidence.** In both runs its automated safety review escalated the decommission for a person's approval until the counts were proven. If Wonder had trusted the memory, that evidence would have agreed with itself (export, repeat and import all 100). Doyle checks what the reviewer cannot: whether a belief behind the plan is still true. That a reviewer would pass a 100 = 100 decommission is our inference, not something a run has shown.
 
-With Doyle, the contract change flags that memory before the run. The guard holds any action on `GET /patients` until a person signs the correction and sees which agent sessions relied on it. The correction lands in the agent's built-in memory and in Lambo, and Wonder starts from a true memory and pages straight through. Both runs without Doyle are published as they happened.
+Then we ran it with Doyle:
+
+- **The stale step is held, whatever the agent chooses.** The contract change flagged the memory, in Muse Code's memory and in Lambo, before the run. The guard denied Wonder's first call on `GET /patients` six seconds in, naming both copies, and denied five more attempts after it. Wonder paused and asked for a person.
+- **The sign-off is a person's, and the agent cannot give it.** In our first run with Doyle, Wonder followed the guard's pointer to the review page and approved its own correction, because nothing stopped it. We published that run and fixed it: a decision now needs a reviewer link only the person holds, and the guard blocks the agent from Doyle's routes, binary and records. In the next run Wonder touched none of them.
+- **The memory is fixed once, in every system.** After the person approved, the correction landed in Muse Code memory and in Lambo, with the stale note marked superseded. The next session started from the true memory and moved all 4,812 patients.
+- **Doyle buys certainty, not speed.** Wonder still checked the endpoint before trusting even the corrected memory, and reached the decommission request in about the same time and approvals as without Doyle (331 s and 136 approval requests, against 350 s and 149).
+
+Every run is published as it happened, the failures included: the self-approval, and the faults in Doyle the runs exposed and we fixed.
 
 ## Beyond the spec: legacy code and screens
 
@@ -81,7 +87,7 @@ One Rust binary, `doyle`, two modes: `check` (CLI and CI step) and `serve` (revi
 
 ## For judges (to build)
 
-A live page with a "For judges: start here" table: the recorded runs with and without Doyle, the measured numbers (memories flagged, stale memories left behind without Doyle, the cost of re-checking, false alarms), the Muse Code session logs, and the review page itself.
+A live page with a "For judges: start here" table: the recorded runs with and without Doyle, the measured numbers (memories flagged, stale memories left behind without Doyle, denials, time and approvals to the decommission request with and without Doyle, false alarms), the Muse Code session logs, and the review page itself.
 
 ## Hackathon rules that shape the build
 
