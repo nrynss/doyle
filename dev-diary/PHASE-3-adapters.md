@@ -136,7 +136,7 @@ requires:   [T3.3, T3.5]
 fixture-ok: yes
 size:       S · mid
 owns:       src/adapters/lambo.rs (supersede and its tests), testdata/lambo/ (new recordings only, from the doyle-probe session)
-status:     in-review
+status:     done
 ```
 
 Found by the T7.3 re-run. After T6.4, the person retried both flags' Lambo write-backs. flag-2's landed: its correction is recorded `against` the stale concept and recall warns. flag-1's failed with `lambo_stats returned no created node id`, yet its correction text is in Lambo (`df979a15`) and is not recorded against the stale concept. Serve logged two `os error 11` request failures, so the retry was likely sent twice: the first derive created the node, the second was matched to it by Lambo's de-duplication and the receipt listed nothing as created. The adapter treats an empty `created` as failure, so every later retry fails the same way.
