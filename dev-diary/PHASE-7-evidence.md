@@ -153,7 +153,7 @@ requires:   [T7.3]
 fixture-ok: no
 size:       M · frontier
 owns:       evidence/measures.md, evidence/measures/
-status:     claimed:t74
+status:     in-review
 ```
 The numbers the judges' page states, each with how it was counted and the files behind it:
 
@@ -170,6 +170,13 @@ The numbers the judges' page states, each with how it was counted and the files 
 Measured on the demo, and on the second upgrade if T0.7 chose one.
 
 **Done when:** `evidence/measures.md` states each number with its method, its files and its confounds, and nothing on the judges' page claims more than these numbers do.
+
+Notes (T7.4, in-review):
+- Built: `evidence/measures.md` (every T7.4 number with method, files, confounds, plus the at-most claim list for T7.5) and `evidence/measures/` (`recompute.py` + `recomputed.json`).
+- Method: `recompute.py` parses only committed session exports (no live runs, keys, network). Session start = earliest recorded event; tool calls = `assistant_tool_calls_committed` entries (decommission call itself counts); approvals = distinct `requested` pending actions strictly before the decommission request; waits = requested → `decision_applied`; escalations = `automated_review_completed` with outcome escalate; denials = `tool blocked by hook` tool-result batches. Reproduces `session-two-measures.txt` exactly (T7.2b 20/149/236.2/114.2; session two 26/136/219.0/111.7).
+- Numbers: 2 flags (same change, review); 2 stale memories left behind (1 per no-Doyle run, 0 markers); 0 records lost in every run (never "averted"); 6 denials in session one (5 stale + 1 self-protection, never "prevented"); cost about even with confounds named (proxy retries, limit spent on escalation waits, model variance, the 300→150 request correction); escalations 1 (T7.2, then approved after counts proven) / 2 (T7.2b) / 0 (T7.3a) / 0+3 (T7.3); 0 false alarms (2 denials swept a fresh endpoint into the same denied call — tool-call granularity, disclosed); citations 2/2; proposals accepted unedited 2/2 by `reviewer` (T7.3a 0/2, excluded).
+- Surprises: (1) T7.2b/T7.3s2 each had an early non-decommission escalation (loopback probes at t+67/t+65.2) — all escalations in every run ended abort/deny; only T7.2's and T7.3a's decommissions were ever approved. (2) My first strict-before pass missed by ~1 s on waits because I rounded timestamps before subtracting; fixed to full precision internally, round only on output.
+- Scope: demo only. T0.7 chose Stripe but committed fixtures, not a measured run — no second-upgrade numbers exist. Nothing private in the diary; gate passes.
 
 ---
 
