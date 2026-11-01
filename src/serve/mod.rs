@@ -56,7 +56,8 @@ use crate::adapters::muse_code::MuseCodeAdapter;
 use crate::cli;
 use crate::contract::ContractIndex;
 use crate::core::decide::{
-    AdapterOutcome, DecisionReport, PerAdapterResult, Target, apply_decision, retry_failed,
+    AdapterOutcome, DecisionReport, PerAdapterResult, RETIRED_MARKER, RETIREMENT_TEXT, Target,
+    apply_decision, correction_warning, retry_failed,
 };
 use crate::core::{Citation, Decision, DecisionVerdict, Flag, Proposal, ProposalAction, Store};
 
@@ -558,21 +559,19 @@ impl ReviewServer {
             );
         };
         let Some(report) = self.reports.get(&proposal.id).cloned() else {
-            return Response::html(
-                409,
-                page(
-                    "Nothing to retry here",
-                    &format!(
-                        "<section class=\"card\"><h1>The write-back results are not in this process</h1><p>The decision was recorded before this page last started, so there is no failed write-back here to retry. Read the memories on <a href=\"/flag/{}\">the flag's page</a> to see their current state.</p></section>",
-                        esc(&flag.id)
-                    ),
-                ),
-            );
+            // Restart path (T6.4): no in-process report, so work out the
+            // write-back state from the systems themselves and retry what is
+            // not yet corrected. Stateless: the next GET re-reads the systems.
+            return self.retry_after_restart(&flag, &proposal, &decision);
         };
         let failed: Vec<(String, String)> = report
             .results
             .iter()
-            .filter(|r| matches!(r.outcome, AdapterOutcome::Failed { .. }))
+            // Retryable only: a terminal failure (not found, unsupported) is
+            // the adapter's final answer, and re-issuing it would annotate a
+            // duplicate warning on the `annotate` path (decide.rs documents
+            // the same rule for `retry_failed` targets).
+            .filter(|r| r.outcome.needs_retry())
             .map(|r| (r.adapter.clone(), r.memory_id.clone()))
             .collect();
         if failed.is_empty() {
@@ -630,6 +629,104 @@ impl ReviewServer {
             }
         }
         Response::redirect(format!("/flag/{}", flag.id))
+    }
+
+    // ----- restart-tolerant retry (T6.4): state from the systems -----
+
+    /// Retry after a restart: no in-process report, so resolve the copies the
+    /// way decide time does and retry the ones whose correction is not in
+    /// place. Uses the recorded decision's verdict, so the identical text is
+    /// re-issued and the adapters' supersede no-ops make a repeated retry
+    /// converge. Stateless: nothing is stored; the next GET re-reads the
+    /// systems and shows whether every copy is now corrected.
+    fn retry_after_restart(
+        &mut self,
+        flag: &Flag,
+        proposal: &Proposal,
+        decision: &Decision,
+    ) -> Response {
+        let Some(expected) = effective_correction(proposal, &decision.verdict) else {
+            // Keep: nothing was ever written, so nothing can be retried.
+            return Response::redirect(format!("/flag/{}", flag.id));
+        };
+        let resolved = self.resolve_copies(flag);
+        let targets: Vec<Target> = resolved
+            .copies
+            .iter()
+            .filter_map(|c| {
+                let index = c.adapter_index?;
+                let adapter = self.adapters[index].as_ref();
+                if is_copy_corrected(adapter, &c.memory_id, &expected) {
+                    None
+                } else {
+                    Some(Target {
+                        adapter,
+                        memory_id: c.memory_id.clone(),
+                    })
+                }
+            })
+            .collect();
+        if targets.is_empty() {
+            if !resolved.unsearchable.is_empty() {
+                // No correctable copy is known, but an adapter could not be
+                // searched: a copy may still be held there. Pretending the
+                // retry is done would lie, so say so instead. Nothing is
+                // recorded; a retry re-searches by the cited text.
+                let names: Vec<String> = resolved
+                    .unsearchable
+                    .iter()
+                    .map(|u| format!("{} ({})", u.adapter, u.message))
+                    .collect();
+                return Response::html(
+                    409,
+                    page(
+                        "Cannot retry yet",
+                        &format!(
+                            "<section class=\"card\"><h1>Cannot retry yet</h1><p>{} could not be searched, so no copy is known to retry. Heal the connection and retry again: a retry re-searches by the cited text. Nothing was recorded. <a href=\"/flag/{}\">Back to the flag</a>.</p></section>",
+                            esc(&names.join("; ")),
+                            esc(&flag.id)
+                        ),
+                    ),
+                );
+            }
+            // Every resolved copy already holds the correction (or no copy is
+            // writable from here): nothing to retry.
+            return Response::redirect(format!("/flag/{}", flag.id));
+        }
+        // Stateless: nothing is stored in the reports map. On full success
+        // the next GET re-reads corrected copies; any failure is shown now
+        // instead of a bare redirect that would read as done.
+        let results = retry_failed(proposal, &decision.verdict, &targets);
+        let failures: Vec<&PerAdapterResult> = results
+            .iter()
+            .filter(|r| matches!(r.outcome, AdapterOutcome::Failed { .. }))
+            .collect();
+        if failures.is_empty() {
+            return Response::redirect(format!("/flag/{}", flag.id));
+        }
+        let mut items = String::new();
+        for result in &failures {
+            let message = match &result.outcome {
+                AdapterOutcome::Failed { message, .. } => message.clone(),
+                _ => unreachable!("filtered to Failed above"),
+            };
+            items.push_str(&format!(
+                "<li><strong>{}</strong> · <span class=\"mono\">{}</span>: {}</li>",
+                esc(&result.adapter),
+                esc(&result.memory_id),
+                esc(&message),
+            ));
+        }
+        Response::html(
+            502,
+            page(
+                "Retry did not land everywhere",
+                &format!(
+                    "<section class=\"card\"><h1>Retry did not land everywhere</h1><p>The retry wrote nothing to Doyle's store. What failed:</p><ul>{items}</ul><p><a href=\"/flag/{}\">Back to the flag</a> and retry again.</p></section>",
+                    esc(&flag.id)
+                ),
+            ),
+        )
     }
 
     // ----- store lookups -----
@@ -919,7 +1016,7 @@ impl ReviewServer {
         body.push_str("</div>");
 
         if let Some((proposal, decision)) = &settled {
-            body.push_str(&self.settled_section(flag, proposal, decision, copies));
+            body.push_str(&self.settled_section(flag, proposal, decision, &resolved));
         } else if !self.reviewer_request {
             body.push_str(&render::reviewer_only_section());
         } else if let Some(proposal) = self.actionable_proposal(flag) {
@@ -1221,7 +1318,7 @@ impl ReviewServer {
         flag: &Flag,
         proposal: &Proposal,
         decision: &Decision,
-        copies: &[Copy],
+        resolved: &Resolved,
     ) -> String {
         let mut out =
             String::from("<section class=\"card wide\"><h2>Settled — what was written where</h2>");
@@ -1248,12 +1345,10 @@ impl ReviewServer {
                     ));
                 }
                 out.push_str("</table>");
-                if report.needs_retry()
-                    || report
-                        .results
-                        .iter()
-                        .any(|r| matches!(r.outcome, AdapterOutcome::Failed { .. }))
-                {
+                // Retryable failures only: a terminal failure (not found,
+                // unsupported) is the adapter's final answer, and `retry()`
+                // refuses to re-issue it, so the button must not promise one.
+                if report.needs_retry() {
                     if !self.reviewer_request {
                         out.push_str(&render::reviewer_only_section());
                     } else {
@@ -1265,22 +1360,132 @@ impl ReviewServer {
                 }
             }
             None => {
-                out.push_str("<p>This decision was recorded before this page last started, so the per-system write results are not in this process. Each memory above is read back as its system now holds it: a superseded note names its correction, and a contradicted memory warns on recall.</p>");
-                for copy in copies {
-                    if let Some(index) = copy.adapter_index
-                        && let Ok(memory) = self.adapters[index].read(&copy.memory_id)
-                    {
-                        out.push_str(&format!(
-                            "<p class=\"small\"><strong>{}</strong> <span class=\"mono\">{}</span> now reads: {}</p>",
-                            esc(&copy.adapter),
-                            esc(&copy.memory_id),
-                            esc(&memory.text)
-                        ));
-                    }
-                }
+                // Restart path (T6.4): no in-process report, so the page works
+                // out each system's write-back state from the systems
+                // themselves: the copies the way decide time resolves them,
+                // each asked whether the correction is in place. No new state
+                // file: the check uses only `read` and `list`, and a check
+                // that cannot be made (read/list fails) counts as not
+                // corrected, so a down system stays retryable.
+                out.push_str(&self.settled_live_html(flag, proposal, decision, resolved));
             }
         }
         out.push_str("</section>");
+        out
+    }
+
+    /// The settled view after a restart: each configured copy read back from
+    /// its own system, marked corrected or not corrected, with a retry when
+    /// something is still missing. A copy counts as corrected when the stale
+    /// memory is superseded or annotated by the correction, or the correction
+    /// is present; keep decisions need no write, so every copy counts as
+    /// settled and no retry is offered.
+    fn settled_live_html(
+        &self,
+        flag: &Flag,
+        proposal: &Proposal,
+        decision: &Decision,
+        resolved: &Resolved,
+    ) -> String {
+        let copies = &resolved.copies;
+        let unsearchable: Vec<String> = resolved
+            .unsearchable
+            .iter()
+            .map(|u| u.adapter.clone())
+            .collect();
+        let Some(expected) = effective_correction(proposal, &decision.verdict) else {
+            let mut out = String::from(
+                "<p>Kept by the decision: nothing was written, so every copy below is as the decision left it.</p>",
+            );
+            out.push_str("<table><tr><th>System</th><th>Memory</th><th>What was done</th></tr>");
+            for copy in copies {
+                out.push_str(&format!(
+                    "<tr><td>{}</td><td><span class=\"mono\">{}</span></td><td><span class=\"ok\">Kept</span>; nothing was written, by the decision.</td></tr>",
+                    esc(&copy.adapter),
+                    esc(&copy.memory_id),
+                ));
+            }
+            out.push_str("</table>");
+            if !unsearchable.is_empty() {
+                out.push_str("<p class=\"small muted\">A configured system could not be searched, so a copy held there, if any, is not shown. Nothing needs writing under a keep decision, so no retry is offered.</p>");
+            }
+            return out;
+        };
+        let mut out = String::from(
+            "<p>Read back from each memory system now (this page last started after the decision, so no write-back results of its own).</p>",
+        );
+        out.push_str("<table><tr><th>System</th><th>Memory</th><th>What was done</th></tr>");
+        let mut missing = false;
+        // Copies Doyle cannot check: the system is not configured in this
+        // process, so retry cannot reach them either. They stay disclosed,
+        // but the "every copy" claim below must not cover them.
+        let mut uncheckable: Vec<String> = Vec::new();
+        for copy in copies {
+            let Some(index) = copy.adapter_index else {
+                uncheckable.push(copy.adapter.clone());
+                out.push_str(&format!(
+                    "<tr><td>{}</td><td><span class=\"mono\">{}</span></td><td>Held by <strong>{}</strong>, which is not configured here, so Doyle cannot check it or retry it from this page.</td></tr>",
+                    esc(&copy.adapter),
+                    esc(&copy.memory_id),
+                    esc(&copy.adapter),
+                ));
+                continue;
+            };
+            let adapter = self.adapters[index].as_ref();
+            if let Some(actual) = corrected_display(adapter, &copy.memory_id, &expected) {
+                out.push_str(&format!(
+                    "<tr><td>{}</td><td><span class=\"mono\">{}</span></td><td><span class=\"ok\">Correction in place</span>; the stale memory names its correction and the correction reads back with the decided text.<pre>{}</pre></td></tr>",
+                    esc(&copy.adapter),
+                    esc(&copy.memory_id),
+                    esc(&actual),
+                ));
+            } else {
+                missing = true;
+                out.push_str(&format!(
+                    "<tr><td>{}</td><td><span class=\"mono\">{}</span></td><td><span class=\"failed\">Not corrected — marked for retry</span>: the correction is not yet in place there.</td></tr>",
+                    esc(&copy.adapter),
+                    esc(&copy.memory_id),
+                ));
+            }
+        }
+        // An adapter that cannot be searched may hold a copy this page cannot
+        // see: a retry re-searches it by the cited text, so offer one. The
+        // names come from the resolution above, not a second resolve pass.
+        if !unsearchable.is_empty() {
+            missing = true;
+            out.push_str("<tr><td colspan=\"3\" class=\"small muted\">A configured system could not be searched, so a copy held there, if any, is not shown; a retry re-searches it.</td></tr>");
+        }
+        out.push_str("</table>");
+        if missing {
+            if !self.reviewer_request {
+                out.push_str(&render::reviewer_only_section());
+            } else {
+                out.push_str(&format!(
+                    "<form method=\"post\" action=\"/flag/{}/retry\"><p><button type=\"submit\" class=\"secondary\">Retry the failed write-back</button> <span class=\"small muted\">Retries re-issue the identical text, so a write that already landed is not duplicated.</span></p></form>",
+                    esc(&flag.id)
+                ));
+            }
+        } else if copies.iter().all(|c| c.adapter_index.is_none()) {
+            // No configured copy at all: the vacuous "every" claim would
+            // mislead, so say plainly that nothing could be checked.
+            out.push_str("<p>No configured copy could be checked from this page.</p>");
+            if !uncheckable.is_empty() {
+                out.push_str(&format!(
+                    "<p class=\"small muted\">{} is not configured here, so Doyle cannot check or retry that copy from this page.</p>",
+                    esc(&uncheckable.join(", "))
+                ));
+            }
+        } else if !uncheckable.is_empty() {
+            // Every configured copy holds the correction, but an
+            // unconfigured system may still hold the stale text: retry cannot
+            // reach it, so disclose the gap without offering a retry.
+            out.push_str(&format!(
+                "<p><span class=\"ok\">Every configured copy holds the correction.</span> {} is not configured here, so Doyle cannot check or retry that copy from this page.</p>",
+                esc(&uncheckable.join(", "))
+            ));
+        } else {
+            out.push_str("<p><span class=\"ok\">Every copy holds the correction.</span></p>");
+        }
         out
     }
 
@@ -1320,6 +1525,161 @@ impl ReviewServer {
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Live correction state (T6.4): worked out from the systems, not the process.
+// ---------------------------------------------------------------------------
+
+/// The text the decision requires in each system, or `None` when the verdict
+/// keeps the memory and nothing was ever written.
+fn effective_correction(proposal: &Proposal, verdict: &DecisionVerdict) -> Option<String> {
+    match verdict {
+        DecisionVerdict::Keep => None,
+        DecisionVerdict::Retire => Some(RETIREMENT_TEXT.to_string()),
+        DecisionVerdict::Approve => match &proposal.action {
+            ProposalAction::Correct { new_text } => Some(new_text.clone()),
+            ProposalAction::Retire => Some(RETIREMENT_TEXT.to_string()),
+            ProposalAction::Keep => None,
+        },
+        DecisionVerdict::EditThenApprove { new_text } => Some(new_text.clone()),
+    }
+}
+
+/// Whether the correction is in place for one copy: the stale memory is
+/// superseded or annotated by it, or the correction is present.
+///
+/// Only `read` and `list` are used, so no new state file is needed. A check
+/// that cannot be made (a failed read or search) counts as not corrected, and
+/// the retry re-issues the identical text, so retrying an already-corrected
+/// copy lands on the adapters' supersede no-ops.
+fn is_copy_corrected(
+    adapter: &dyn crate::adapters::MemoryAdapter,
+    stale_id: &str,
+    expected: &str,
+) -> bool {
+    corrected_display(adapter, stale_id, expected).is_some()
+}
+
+/// What the page shows as evidence that the correction is in place: the text
+/// actually read back (the stale note for the annotate path, the correction
+/// note for supersede / write-fallback), not the decided text re-printed.
+fn corrected_display(
+    adapter: &dyn crate::adapters::MemoryAdapter,
+    stale_id: &str,
+    expected: &str,
+) -> Option<String> {
+    let indexed = adapter.supports("supersede") || adapter.supports("annotate");
+    if !indexed {
+        // Write-fallback adapters leave the stale memory unmarked: the
+        // correction present anywhere with exactly the decided text is the
+        // whole check. Exact equality: a note that merely contains the text
+        // as a substring (a longer note quoting it) is not the correction.
+        // Read the candidate back so the displayed evidence comes from the
+        // system, not from the expectation.
+        let found = match adapter.list(expected) {
+            Ok(memories) => memories
+                .into_iter()
+                .find(|m| m.reference.id != stale_id && m.text == expected),
+            Err(_) => return None,
+        }?;
+        return adapter
+            .read(&found.reference.id)
+            .ok()
+            .map(|m| m.text)
+            .filter(|t| t == expected);
+    }
+    // Supersede candidates: separate notes carrying exactly the decided
+    // text. Exact equality, not `contains`: a longer note that quotes the
+    // correction is not the correction itself.
+    // List first: for Lambo the recall warnings that bind the stale memory
+    // to its correction arrive on the recall, so the read below must happen
+    // after a list to see them.
+    let corrections: Vec<crate::core::Memory> = match adapter.list(expected) {
+        Ok(memories) => memories
+            .into_iter()
+            .filter(|m| m.reference.id != stale_id && m.text == expected)
+            .collect(),
+        Err(_) => return None,
+    };
+    let stale = match adapter.read(stale_id) {
+        Ok(m) => m,
+        Err(_) => return None,
+    };
+    // Annotate path: the warning is embedded in the stale note, so require
+    // the marker wrapper the adapters actually write — not a bare substring
+    // of the correction text, which a long stale note could contain by
+    // coincidence. The stale note itself is the read-back evidence.
+    if stale.text.contains(&correction_warning(expected)) {
+        return Some(stale.text);
+    }
+    // Retire-through-annotate writes RETIRED_MARKER, which does not contain
+    // RETIREMENT_TEXT: the annotate-retire check needs its own marker.
+    if expected == RETIREMENT_TEXT && stale.text.contains(RETIRED_MARKER) {
+        return Some(stale.text);
+    }
+    if corrections.is_empty() {
+        return None;
+    }
+    // Supersede path: the stale note names its correction. Only the
+    // correction the stale actually cites counts — not any same-text note.
+    // Residual: a same-text correction the stale does not name (written
+    // outside supersede) reads back as not corrected; the page offers retry,
+    // which converges through the adapters' identical-text no-ops.
+    let cited = corrections
+        .iter()
+        .find(|c| names_correction(&stale.text, &c.reference.id))?;
+    // Read the cited correction back so the evidence is what the system
+    // holds, not the expectation re-printed.
+    adapter
+        .read(&cited.reference.id)
+        .ok()
+        .map(|m| m.text)
+        .filter(|t| t == expected)
+}
+
+/// Whether the stale note cites this correction id: the full id with a
+/// boundary after it (so `MEMORY.md#1` does not match a cite of
+/// `MEMORY.md#10`), or — for Lambo's recall warnings, which cite only the
+/// 8-character short form — the short beside its citation marker. The short
+/// must be 8 hex characters in `(id …)` / `Superseded by …` marker context,
+/// so an unrelated note that happens to contain the same 8 characters does
+/// not count.
+fn names_correction(stale_text: &str, correction_id: &str) -> bool {
+    if contains_id_with_boundary(stale_text, correction_id) {
+        return true;
+    }
+    let short: String = correction_id.chars().take(8).collect();
+    if short.chars().count() != 8 || !short.chars().all(|c| c.is_ascii_hexdigit()) {
+        return false;
+    }
+    stale_text.contains(&format!("(id {short})"))
+        || stale_text.contains(&format!("Superseded by {short}"))
+}
+
+/// `haystack` contains `needle` with a boundary after the match: the next
+/// character must not extend the id (ASCII alphanumeric). Guards the
+/// `MEMORY.md#1` vs `MEMORY.md#10` prefix case.
+fn contains_id_with_boundary(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return false;
+    }
+    let mut start = 0;
+    while let Some(pos) = haystack[start..].find(needle) {
+        let end = start + pos + needle.len();
+        let boundary = haystack[end..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_ascii_alphanumeric());
+        if boundary {
+            return true;
+        }
+        start = start + pos + 1;
+        if start >= haystack.len() {
+            break;
+        }
+    }
+    false
 }
 
 // ---------------------------------------------------------------------------
@@ -1648,8 +2008,10 @@ fn handle_connection(stream: TcpStream, server: &mut ReviewServer) -> std::io::R
     write_response(&mut writer, &response)
 }
 
-fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Result<()> {
-    let reason = match response.status {
+/// Reason phrase for an HTTP status Doyle emits, pinned by test (notably the
+/// 502 a failed restart retry answers with).
+fn status_reason(status: u16) -> &'static str {
+    match status {
         200 => "OK",
         303 => "See Other",
         403 => "Forbidden",
@@ -1657,8 +2019,13 @@ fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Resul
         404 => "Not Found",
         405 => "Method Not Allowed",
         409 => "Conflict",
+        502 => "Bad Gateway",
         _ => "Internal Server Error",
-    };
+    }
+}
+
+fn write_response(writer: &mut TcpStream, response: &Response) -> std::io::Result<()> {
+    let reason = status_reason(response.status);
     let (content_type, payload): (&str, &[u8]) = match &response.media {
         Some((content_type, bytes)) => (content_type.as_str(), bytes.as_slice()),
         None => ("text/html; charset=utf-8", response.body.as_bytes()),
@@ -2482,14 +2849,32 @@ mod tests {
             .server
             .handle("POST", &format!("{flag_path}/decide"), "verdict=approve");
         assert_eq!(r.status, 303);
-        // A fresh serving process over the same store and adapters: no
-        // in-process report, so the page reads each memory back.
+        // A fresh serving process over the same store: no in-process report,
+        // so the page works the state out from the systems themselves. The
+        // Lambo server keeps its concepts and contradiction links across the
+        // restart (only the adapter's process-local caches are lost), so carry
+        // them into the new transport.
         let store = Store::open(demo.root.join(".doyle")).unwrap();
         let muse = MuseCodeAdapter::from_scopes(vec![(
             demo.muse_dir.clone(),
             "personal_project".to_string(),
         )]);
-        let (transport, _state) = scripted_lambo(vec![(LAMBO_M1.to_string(), STALE.to_string())]);
+        let (old_concepts, old_links, old_warnings, old_next) = {
+            let s = demo.lambo_state.lock().unwrap();
+            (
+                s.concepts.clone(),
+                s.links.clone(),
+                s.warnings.clone(),
+                s.next,
+            )
+        };
+        let (transport, new_state) = scripted_lambo(old_concepts);
+        {
+            let mut s = new_state.lock().unwrap();
+            s.links = old_links;
+            s.warnings = old_warnings;
+            s.next = old_next;
+        }
         let mut restarted = ReviewServer::new(
             store,
             vec![Box::new(muse), Box::new(lambo_adapter(transport))],
@@ -2498,14 +2883,499 @@ mod tests {
         assert_eq!(settled.status, 200);
         assert!(settled.body.contains("Settled — what was written where"));
         assert!(
-            settled.body.contains("before this page last started"),
-            "restart disclosed"
+            settled.body.contains("Correction in place"),
+            "both copies read back as corrected: {}",
+            settled.body
         );
         assert!(
-            settled.body.contains("Superseded by"),
-            "Muse note read back with its marker"
+            settled.body.contains("Every copy holds the correction"),
+            "no retry when everything is corrected: {}",
+            settled.body
+        );
+        assert!(
+            !settled.body.contains("Retry the failed write-back"),
+            "no retry offered: {}",
+            settled.body
+        );
+        assert!(
+            !settled.body.contains("before this page last started"),
+            "live state replaces the old notice: {}",
+            settled.body
         );
         let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    // T6.4: a correction that missed one system stays retryable across a
+    // restart. The decision's Lambo write fails, a new server over the same
+    // state dir shows Lambo not corrected with a retry, the retry without the
+    // reviewer cookie is refused, with it the correction lands on Lambo while
+    // Muse Code is untouched, and the page then shows every copy corrected.
+    #[test]
+    fn t64_retry_after_restart_lands_the_missing_correction() {
+        let mut demo = demo_server();
+        let flag_path = format!("/flag/{}", demo.flag_id);
+        // Lambo goes down before the decision: derive fails, Muse lands.
+        demo.lambo_state.lock().unwrap().down = true;
+        let r = demo.server.handle(
+            "POST",
+            &format!("{flag_path}/decide"),
+            "verdict=approve&decided_by=judge",
+        );
+        assert_eq!(r.status, 303);
+        // Muse holds exactly one correction; Lambo holds none with the text.
+        let muse_before = fs::read_to_string(demo.muse_dir.join("MEMORY.md")).unwrap();
+        assert_eq!(
+            demo.lambo_state
+                .lock()
+                .unwrap()
+                .concepts
+                .iter()
+                .filter(|(_, t)| t == &demo.proposal_text)
+                .count(),
+            0,
+            "failed derive wrote nothing"
+        );
+
+        // Restart: a new server over the same state dir, Lambo healed but
+        // holding only the stale memory (the failed derive never landed).
+        let store = Store::open(demo.root.join(".doyle")).unwrap();
+        let muse = MuseCodeAdapter::from_scopes(vec![(
+            demo.muse_dir.clone(),
+            "personal_project".to_string(),
+        )]);
+        let (transport, lambo_state) =
+            scripted_lambo(vec![(LAMBO_M1.to_string(), STALE.to_string())]);
+        let mut restarted = ReviewServer::new(
+            store,
+            vec![Box::new(muse), Box::new(lambo_adapter(transport))],
+        );
+        let settled = restarted.handle("GET", &flag_path, "");
+        assert_eq!(settled.status, 200);
+        assert!(
+            settled.body.contains("Not corrected"),
+            "Lambo shown as not corrected: {}",
+            settled.body
+        );
+        assert!(
+            settled.body.contains("marked for retry"),
+            "retry offered: {}",
+            settled.body
+        );
+        assert!(
+            settled.body.contains("Retry the failed write-back"),
+            "retry button: {}",
+            settled.body
+        );
+        assert!(
+            settled.body.contains("Correction in place"),
+            "Muse shown as corrected: {}",
+            settled.body
+        );
+
+        // Without the reviewer cookie the retry is refused and records nothing.
+        let refused = restarted.handle_request("POST", &format!("{flag_path}/retry"), "", None);
+        assert_eq!(
+            refused.status, 403,
+            "retry needs the reviewer: {}",
+            refused.body
+        );
+        assert_eq!(
+            lambo_state
+                .lock()
+                .unwrap()
+                .concepts
+                .iter()
+                .filter(|(_, t)| t == &demo.proposal_text)
+                .count(),
+            0,
+            "refused retry wrote nothing"
+        );
+
+        // With the cookie the retry lands exactly one Lambo correction and
+        // leaves Muse Code byte-identical (its supersede is a no-op path that
+        // is never even called: only the uncorrected copy is retried).
+        let r = restarted.handle("POST", &format!("{flag_path}/retry"), "");
+        assert_eq!(r.status, 303, "retry redirects: {}", r.body);
+        assert_eq!(
+            lambo_state
+                .lock()
+                .unwrap()
+                .concepts
+                .iter()
+                .filter(|(_, t)| t == &demo.proposal_text)
+                .count(),
+            1,
+            "exactly one Lambo correction"
+        );
+        assert_eq!(
+            fs::read_to_string(demo.muse_dir.join("MEMORY.md")).unwrap(),
+            muse_before,
+            "Muse Code unchanged by the Lambo-only retry"
+        );
+
+        // The page then shows every copy corrected and offers no retry.
+        let settled = restarted.handle("GET", &flag_path, "");
+        assert!(
+            settled.body.contains("Every copy holds the correction"),
+            "all corrected: {}",
+            settled.body
+        );
+        assert!(
+            !settled.body.contains("Not corrected"),
+            "nothing missing: {}",
+            settled.body
+        );
+        assert!(
+            !settled.body.contains("Retry the failed write-back"),
+            "no retry when complete: {}",
+            settled.body
+        );
+
+        // A second retry is a no-op redirect that duplicates nothing on either
+        // system: both adapters' supersede with identical text converges.
+        let r = restarted.handle("POST", &format!("{flag_path}/retry"), "");
+        assert_eq!(r.status, 303);
+        assert_eq!(
+            lambo_state
+                .lock()
+                .unwrap()
+                .concepts
+                .iter()
+                .filter(|(_, t)| t == &demo.proposal_text)
+                .count(),
+            1,
+            "no duplicate Lambo correction"
+        );
+        assert_eq!(
+            fs::read_to_string(demo.muse_dir.join("MEMORY.md")).unwrap(),
+            muse_before,
+            "still no Muse change"
+        );
+
+        // Adapter idempotency through the serve stack, not just the serve
+        // skip above: re-issuing the identical text against both
+        // already-corrected copies converges — the same references twice, a
+        // byte-identical Muse file, and no new Lambo derive.
+        let flag = restarted.store.flag(&demo.flag_id).unwrap();
+        let (proposal, decision) = restarted.settled(&flag).unwrap();
+        let copies = restarted.resolve_copies(&flag);
+        let targets: Vec<crate::core::decide::Target<'_>> = copies
+            .copies
+            .iter()
+            .filter_map(|c| {
+                c.adapter_index.map(|i| crate::core::decide::Target {
+                    adapter: restarted.adapters[i].as_ref(),
+                    memory_id: c.memory_id.clone(),
+                })
+            })
+            .collect();
+        assert_eq!(
+            targets.len(),
+            2,
+            "both corrected copies retried directly: {:?}",
+            copies.copies
+        );
+        let derives_before = lambo_state.lock().unwrap().derives;
+        let first = crate::core::decide::retry_failed(&proposal, &decision.verdict, &targets);
+        let second = crate::core::decide::retry_failed(&proposal, &decision.verdict, &targets);
+        assert_eq!(
+            first, second,
+            "identical text converges to the same references"
+        );
+        for result in &first {
+            assert!(
+                matches!(
+                    result.outcome,
+                    crate::core::decide::AdapterOutcome::Superseded { .. }
+                ),
+                "{} must converge on its no-op, got {:?}",
+                result.adapter,
+                result.outcome
+            );
+        }
+        assert_eq!(
+            fs::read_to_string(demo.muse_dir.join("MEMORY.md")).unwrap(),
+            muse_before,
+            "Muse supersede no-op changed no byte"
+        );
+        assert_eq!(
+            lambo_state.lock().unwrap().derives,
+            derives_before,
+            "Lambo supersede no-op derived nothing"
+        );
+        // Cold-cache Lambo path: a fresh adapter holds empty process-local
+        // caches, so the identical-text supersede must converge through the
+        // inspect-first branch (not the in-memory cache hit above) against
+        // the same server data — same correction id, no new derive.
+        let known_correction = lambo_state
+            .lock()
+            .unwrap()
+            .concepts
+            .iter()
+            .find(|(_, t)| t == &demo.proposal_text)
+            .map(|(id, _)| id.clone())
+            .expect("one Lambo correction");
+        let (cold_concepts, cold_links, cold_warnings, cold_next) = {
+            let s = lambo_state.lock().unwrap();
+            (
+                s.concepts.clone(),
+                s.links.clone(),
+                s.warnings.clone(),
+                s.next,
+            )
+        };
+        let (cold_transport, cold_state) = scripted_lambo(cold_concepts);
+        {
+            let mut s = cold_state.lock().unwrap();
+            s.links = cold_links;
+            s.warnings = cold_warnings;
+            s.next = cold_next;
+        }
+        let cold = lambo_adapter(cold_transport);
+        let cold_ref = cold
+            .supersede(LAMBO_M1, &demo.proposal_text)
+            .expect("cold retry converges");
+        assert_eq!(
+            cold_ref.id, known_correction,
+            "cold-cache inspect-first returns the existing correction"
+        );
+        assert_eq!(
+            cold_state.lock().unwrap().derives,
+            0,
+            "cold-cache retry derived nothing"
+        );
+        let _ = fs::remove_dir_all(&demo.root);
+    }
+
+    #[test]
+    fn status_reason_pins_the_502_wire_phrase() {
+        assert_eq!(status_reason(200), "OK");
+        assert_eq!(status_reason(303), "See Other");
+        assert_eq!(status_reason(403), "Forbidden");
+        assert_eq!(status_reason(404), "Not Found");
+        assert_eq!(status_reason(409), "Conflict");
+        assert_eq!(status_reason(502), "Bad Gateway");
+    }
+
+    #[test]
+    fn correction_id_boundary_rejects_the_prefix_case() {
+        // `MEMORY.md#1` is a string prefix of `MEMORY.md#10`: only the exact
+        // id with a boundary after it counts.
+        assert!(contains_id_with_boundary(
+            "note [Superseded by MEMORY.md#10]",
+            "MEMORY.md#10"
+        ));
+        assert!(!contains_id_with_boundary(
+            "note [Superseded by MEMORY.md#10]",
+            "MEMORY.md#1"
+        ));
+        assert!(contains_id_with_boundary(
+            "note [Superseded by MEMORY.md#5]",
+            "MEMORY.md#5"
+        ));
+        assert!(names_correction(
+            "note [Superseded by MEMORY.md#10]",
+            "MEMORY.md#10"
+        ));
+        assert!(!names_correction(
+            "note [Superseded by MEMORY.md#10]",
+            "MEMORY.md#1"
+        ));
+    }
+
+    #[test]
+    fn keep_view_discloses_an_unsearchable_system_without_retry() {
+        use crate::adapters::{AdapterError, Capabilities, MemoryAdapter};
+        use crate::core::Memory;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        struct ListFailing {
+            inner: FakeAdapter,
+            fail: std::sync::Arc<AtomicBool>,
+        }
+        impl MemoryAdapter for ListFailing {
+            fn name(&self) -> &str {
+                self.inner.name()
+            }
+            fn capabilities(&self) -> Capabilities {
+                self.inner.capabilities()
+            }
+            fn list(&self, query: &str) -> Result<Vec<Memory>, AdapterError> {
+                if self.fail.load(Ordering::SeqCst) {
+                    return Err(AdapterError::Backend {
+                        adapter: self.name().to_string(),
+                        memory: None,
+                        message: "connection refused (test)".to_string(),
+                    });
+                }
+                self.inner.list(query)
+            }
+            fn read(&self, id: &str) -> Result<Memory, AdapterError> {
+                self.inner.read(id)
+            }
+            fn write(
+                &self,
+                text: &str,
+                scope: &str,
+            ) -> Result<crate::core::MemoryRef, AdapterError> {
+                self.inner.write(text, scope)
+            }
+            fn annotate(&self, id: &str, warning: &str) -> Result<(), AdapterError> {
+                self.inner.annotate(id, warning)
+            }
+            fn supersede(
+                &self,
+                stale_id: &str,
+                correction_text: &str,
+            ) -> Result<crate::core::MemoryRef, AdapterError> {
+                self.inner.supersede(stale_id, correction_text)
+            }
+            fn watch(&self) -> Result<Vec<Memory>, AdapterError> {
+                self.inner.watch()
+            }
+        }
+        let root = temp_dir("keep-unsearchable");
+        let state_dir = root.join(".doyle");
+        let mut store = Store::open(&state_dir).unwrap();
+        let good = FakeAdapter::new("good");
+        let flaky_inner = FakeAdapter::new("flaky");
+        let stale_good = good.write(STALE, "s").unwrap();
+        let _ = flaky_inner.write(STALE, "s").unwrap();
+        store
+            .record_citation(Citation {
+                memory: stale_good.clone(),
+                elements: vec![crate::core::ElementId(LIST_PATIENTS.to_string())],
+                claim: M1_CLAIM.to_string(),
+                recorded_by: "test".to_string(),
+                confidence: 1.0,
+                source_text: STALE.to_string(),
+            })
+            .unwrap();
+        let flag_id = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: stale_good.clone(),
+                changes: vec![crate::core::ChangeId("vc2_test".to_string())],
+                severity: crate::core::Severity::Breaking,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: Some(M1_CLAIM.to_string()),
+            })
+            .unwrap();
+        let proposal_id = store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: flag_id.clone(),
+                action: ProposalAction::Keep,
+                rationale: "keep it".to_string(),
+                proposed_by: "test-model".to_string(),
+            })
+            .unwrap();
+        store
+            .record_decision(Decision {
+                id: String::new(),
+                proposal_id,
+                verdict: DecisionVerdict::Keep,
+                decided_by: "judge".to_string(),
+                decided_at: "2026-10-29T12:00:00Z".to_string(),
+            })
+            .unwrap();
+        drop(store);
+        let store = Store::open(&state_dir).unwrap();
+        let fail = std::sync::Arc::new(AtomicBool::new(true));
+        let flaky = ListFailing {
+            inner: flaky_inner,
+            fail: fail.clone(),
+        };
+        let mut server = ReviewServer::new(store, vec![Box::new(good), Box::new(flaky)]);
+        let settled = server.handle("GET", &format!("/flag/{flag_id}"), "");
+        assert_eq!(settled.status, 200);
+        assert!(
+            settled.body.contains("could not be searched"),
+            "unsearchable system disclosed: {}",
+            settled.body
+        );
+        assert!(
+            !settled.body.contains("Retry the failed write-back"),
+            "keep offers no retry: {}",
+            settled.body
+        );
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn settled_view_with_no_configured_copy_says_so() {
+        let root = temp_dir("no-configured");
+        let state_dir = root.join(".doyle");
+        let mut store = Store::open(&state_dir).unwrap();
+        let reference = crate::core::MemoryRef {
+            adapter: "ghost".to_string(),
+            id: "ghost-1".to_string(),
+        };
+        store
+            .record_citation(Citation {
+                memory: reference.clone(),
+                elements: vec![crate::core::ElementId(LIST_PATIENTS.to_string())],
+                claim: M1_CLAIM.to_string(),
+                recorded_by: "test".to_string(),
+                confidence: 1.0,
+                source_text: STALE.to_string(),
+            })
+            .unwrap();
+        let flag_id = store
+            .record_flag(Flag {
+                id: String::new(),
+                memory: reference.clone(),
+                changes: vec![crate::core::ChangeId("vc2_test".to_string())],
+                severity: crate::core::Severity::Breaking,
+                old_version: "v1".to_string(),
+                new_version: "v2".to_string(),
+                evidence: Some(M1_CLAIM.to_string()),
+            })
+            .unwrap();
+        let proposal_id = store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: flag_id.clone(),
+                action: ProposalAction::Correct {
+                    new_text: "paged".to_string(),
+                },
+                rationale: "it pages now".to_string(),
+                proposed_by: "test-model".to_string(),
+            })
+            .unwrap();
+        store
+            .record_decision(Decision {
+                id: String::new(),
+                proposal_id,
+                verdict: DecisionVerdict::Approve,
+                decided_by: "judge".to_string(),
+                decided_at: "2026-10-29T12:00:00Z".to_string(),
+            })
+            .unwrap();
+        drop(store);
+        let store = Store::open(&state_dir).unwrap();
+        // No adapter is configured for "ghost": every copy is uncheckable.
+        let mut server = ReviewServer::new(store, vec![]);
+        let settled = server.handle("GET", &format!("/flag/{flag_id}"), "");
+        assert_eq!(settled.status, 200);
+        assert!(
+            settled.body.contains("No configured copy could be checked"),
+            "zero-configured case named: {}",
+            settled.body
+        );
+        assert!(
+            !settled
+                .body
+                .contains("Every configured copy holds the correction"),
+            "no vacuous every-claim: {}",
+            settled.body
+        );
+        assert!(
+            !settled.body.contains("Every copy holds the correction"),
+            "no every-claim at all: {}",
+            settled.body
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
