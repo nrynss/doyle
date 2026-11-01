@@ -83,6 +83,26 @@ Offline tests replay `testdata/lambo/` through a fake transport.
 
 ---
 
+### T3.4: Muse Code adapter: topic files without an index ★
+```yaml
+requires:   [T3.1, T3.2]
+fixture-ok: yes
+size:       S · mid
+owns:       src/adapters/muse_code/parse.rs, src/adapters/muse_code/write.rs, src/adapters/muse_code/mod.rs (tests, and wiring only if needed)
+status:     claimed:sonnet-t3.4
+```
+
+Found by the T7.3 re-run: Wonder's seed session saved its note as a topic file (`old-records-service.md`, with `type` and `description` frontmatter) and wrote no `MEMORY.md`. `read_folder` returns nothing when `MEMORY.md` is absent, so `doyle curate` could not see the note. product.md names both layouts: a `MEMORY.md` index with short notes inline, or one file per topic.
+
+Build:
+- Read every top-level `*.md` topic file in the folder that carries frontmatter and is not reached from `MEMORY.md`, whether or not `MEMORY.md` exists. Notes reached through the index keep their current ids. A topic file's id is stable and derived from its file name, as indexed notes' ids derive from their source.
+- Write-back for a topic-file note: annotate and supersede in place in that topic file, keeping its frontmatter and id, under the same lock and atomic-rename rules as today. Where the correction is written when there is no `MEMORY.md` is the task's call: follow what Muse Code itself would read (a new topic file with frontmatter, or a `MEMORY.md` index that links every existing topic file so none drops out of recall); say which and why.
+- Ignore Muse's own files (`.muse-memory.lock`, dotfiles, temp files) and files without frontmatter.
+
+**Done when:** the gate passes; tests cover a folder with only a topic file (read, annotate, supersede, retry no-op), a folder with `MEMORY.md` plus an unindexed topic file (both read, ids of indexed notes unchanged), and the existing fixtures unchanged in ids and behaviour.
+
+---
+
 ## Exit Criteria
 
 - [x] Muse Code memory is read from both scopes with stable references (T3.1).
