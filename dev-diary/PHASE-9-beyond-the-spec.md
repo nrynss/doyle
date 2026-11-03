@@ -471,9 +471,30 @@ Build, per `~/work/demo-shoot/README.md`'s layout and the receipts and before-ye
 
 ---
 
+### T9.14: Scrub the scaffolding from what Wonder reads ★
+```yaml
+requires:   [T9.11, T9.11b]
+fixture-ok: no
+size:       S · mid
+owns:       testdata/legacy/story/v1/, testdata/legacy/story/v2/, testdata/legacy/story/rewrite/*.rs (header comments only), testdata/legacy/story/generate-*.py (only where they write these files), testdata/replies/ (re-recordings only, if a replay key changes), tests/ (only assertions on the changed text)
+status:     not-started
+```
+
+Found validating T9.13's review take: the story's COBOL sources label their own traps and name the build's tasks. `v1/patient.cpy` says the vaccination-visit exemption is "Trap A2" and "replaces the T9.1 sample's EXEMPT-FLAG mechanism"; `v1/BILLBATCH.cbl` calls its fee schedule "the rule Trap A turns on"; the v2 files mark "the ONLY legacy change in v2 (Trap B1)"; both name "T9.4 fixtures"; the rewrites' headers say "story fixture, Trap D". In T9.10 Wonder reads these files to rewrite the batch, so the labels tell it where the traps are, and they render on the review page's before/after evidence in the takes.
+
+Build:
+- Remove every trap label, task number, "story"/"fixture"/"planted" word and any other build-process wording from the comments of the files Wonder can read in T9.10: the v1 and v2 programs and copybooks, and the rewrites. Keep the comments a real shop's code would carry (what a field holds, what a paragraph does), in the same voice. Change comment text only, never code, and keep each file's line count so line references hold.
+- Whether the copybook may still say in plain words that vaccination-visit accounts are exempt is the user's decision, not yours. Real code documents its rules, and that comment is what makes L1 checkable from the source. Leave its substance as it is and ask in your report.
+- Prove nothing moved: the legacy parser strips `*>` comments, so the regenerated `elements-v1.json`/`elements-v2.json` and `legacy-diff.json` must be byte-identical, every stable ID unchanged, and v1/v2 must still compile and produce byte-identical reports. If a replay key changes because a prompt quotes the source, say which, and re-record it live within $0.25.
+- The Doyle-side notes (`README.md`, `legacy-diff.json` notes, the generators' docstrings, `memories/`) are Doyle's own record and stay as they are.
+
+**Done when:** `grep -rniE 'trap|T9\.|fixture|story|planted'` over the v1, v2 and rewrite sources finds nothing; element files, IDs and batch reports byte-identical; `tests/story_flags.rs` and the gate pass with no key; the exemption-comment question is put to the user.
+
+---
+
 ### T9.10: Runs, extended ★
 ```yaml
-requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13]
+requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14]
 fixture-ok: no
 size:       S · user
 owns:       evidence/legacy/
