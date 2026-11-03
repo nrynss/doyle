@@ -38,6 +38,13 @@ pub const MODEL: &str = "muse-spark-1.3";
 /// leaves ample room for both.
 pub const MAX_OUTPUT_TOKENS: u32 = 2000;
 
+/// Output-token cap for one evidence (legacy, screen, diffrun) re-check.
+/// The evidence inputs carry frames and mismatch records the contract
+/// inputs do not, and the first live run starved at 2000 (1998 reasoning
+/// tokens, null content): double the contract cap. Separate from
+/// [`MAX_OUTPUT_TOKENS`] so the contract request keys never move.
+pub const EVIDENCE_MAX_OUTPUT_TOKENS: u32 = 4000;
+
 /// Maximum length of replacement text, in characters.
 pub const MAX_REPLACEMENT_CHARS: usize = 280;
 
@@ -545,8 +552,8 @@ pub fn system_prompt_evidence() -> &'static str {
 }
 
 /// Build the [`ModelRequest`](crate::models::ModelRequest) for one
-/// evidence re-check: the same model, schema and budget as the contract
-/// path, with the evidence system prompt.
+/// evidence re-check: the same model and schema as the contract path with
+/// the evidence system prompt and the evidence output cap.
 pub fn build_evidence_request(input: &RecheckInput) -> ModelRequest {
     ModelRequest {
         model: MODEL.to_string(),
@@ -554,7 +561,7 @@ pub fn build_evidence_request(input: &RecheckInput) -> ModelRequest {
         user: build_user_prompt(input),
         schema: response_schema(),
         media: Vec::new(),
-        budget: Budget::tokens(MAX_OUTPUT_TOKENS),
+        budget: Budget::tokens(EVIDENCE_MAX_OUTPUT_TOKENS),
     }
 }
 
