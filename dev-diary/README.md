@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.10 (extended runs, agent-run with live capture) needs T9.11 (legacy and screen flags from the binary), T9.11b (their proposals and citations), T9.12 (operator console) and T9.13 (capture rig), all filed, not started; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.12 (operator console) done; T9.11 (legacy and screen flags from the binary) claimed and running; T9.11b waits on T9.11, T9.13 waits on T9.12, then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 9 / 14 | T9.1–T9.9 + T9.7b done. T9.11, T9.11b, T9.12, T9.13 filed (not started), then T9.10. |
+| P9 | 10 / 14 | T9.1–T9.9 + T9.7b + T9.12 done. T9.11 claimed and running; T9.11b waits on T9.11, T9.13 waits on T9.12, then T9.10. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.12 closed: the Fern operator console.** `demo/console/fern-console` (stdlib-only, executable) reenacts the T9.4 lookup and decommission screens in v1/v2, each printed byte-equal to the fixture ground truth (4/4 independently re-verified), one shell command per operation with the screen named in the subcommand plus a `SCREEN:` header so the T9.11 guard can match it. v1 refuses without the clinic name (exit 2, service untouched) and retires with it; v2 acts at once; both retire through the same POST + token as the curl path so `check.sh` shows count 0. 9/9 console tests green, gate passes. Loop run as the user ordered: implementation (`msc-t9.12`) → separate review worktree (LAND, no load-bearing findings) → no remediation needed. Watch-outs for T9.10/T9.13: prove the console against the real 8091 old service (this machine's 8091 was squatted by an unrelated HTML-answering app, so e2e ran on test ports); the console writes `demo/.run/console-last-result`, cleared by `stop.sh`. T9.13 (capture rig) is now ready to dispatch.
 
 - **T9.10 unblocked on paper only; four tasks filed (orchestrator finding, user decision).** Briefing T9.10 found the binary cannot produce the extended story's flags: `doyle check` diffs contracts only and nothing outside tests calls the legacy, screen or differential-run sources; no re-check proposes for those flags and curate cites against contracts only; the console is still frames; and `muse exec` takes are single frames. User decision: T9.10 is agent-run with real live capture, the person approving only. Filed T9.11 (flags from the binary, guard on the ship and retire steps), T9.11b (proposals and citations, live under $0.50), T9.12 (a drivable v1/v2 console), T9.13 (capture rig: interactive Muse Code in tmux, OBS over obs-websocket, Playwright for the review page). The user dispatches. T8.1 validated by the orchestrator from a fresh clone (offline demo, 34 judges links, guard deny); it waits on the user's read. The T8.2 script fix pass was stopped by the user; the video waits on T9.10's footage.
 - **T7.5 closed: the judges' page.** `src/serve/judges.rs` serves "For judges: start here": runs table with session-log links, the at-most numbers quoted from `evidence/measures.md` (test-pinned), the review list with per-flag links, and the new-vs-existing statement. Validated beyond the report: every index href on the live page (34) resolves 200 over a real socket from the checkout; wiring is module decl + one route arm (the unknown-routes test now pins `/judge`); claims checked against the at-most list (only explicit never-claims); no key material. One follow-up recorded in the task notes: header/nav discoverability touch in `render.rs` (outside T7.5 owns). Validated: scope (owns + status lines only), gate green in worktree and on `main` after the merge.

@@ -395,7 +395,7 @@ requires:   [T9.4]
 fixture-ok: yes
 size:       S · mid
 owns:       demo/console/ (new), demo/scripts/ (start and stop lines for the console only), demo/README.md (a console section)
-status:     in-review:msc-t9.12
+status:     done
 ```
 
 Notes (msc-t9.12): built, gate green, awaiting orchestrator validation.
