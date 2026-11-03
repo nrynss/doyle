@@ -354,7 +354,7 @@ requires:   [T9.6, T9.7, T9.8, T9.9]
 fixture-ok: yes
 size:       M · mid
 owns:       src/check.rs (the evidence-kind dispatch), src/diffrun_cmd.rs (new), src/cli.rs (the options below only, orchestrator-approved), src/main.rs (one dispatch arm for diffrun, orchestrator-approved), src/lib.rs (one module line), src/guard.rs (only if a legacy or screen flag cannot be matched to its step), tests/
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.11): built, gate green except one superseded T9.6 pin (below), awaiting orchestrator validation.

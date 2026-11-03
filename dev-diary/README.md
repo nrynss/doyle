@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.12 (operator console) done; T9.11 (legacy and screen flags from the binary) claimed and running; T9.11b waits on T9.11, T9.13 waits on T9.12, then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.11 (binary flags) and T9.12 (operator console) done; T9.11b (proposals and citations) and T9.13 (capture rig) ready to dispatch; then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 10 / 14 | T9.1–T9.9 + T9.7b + T9.12 done. T9.11 claimed and running; T9.11b waits on T9.11, T9.13 waits on T9.12, then T9.10. |
+| P9 | 11 / 14 | T9.1–T9.9 + T9.7b + T9.11 + T9.12 done. T9.11b and T9.13 ready to dispatch, then T9.10. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.11 closed: legacy and screen flags from the binary.** `doyle check OLD NEW` routes by extension (`.cbl`→legacy via `LegacyIndex`, screens-shaped `.json`→screens, else contracts unchanged) and `doyle diffrun PROGRAM RUN` compares batch vs rewrite reports over recorded paths; both write flags through `flag_citations`. The guard loads versions per path and denies the ship-rewrite step (L1's blamed paragraph as operation ID) and the console-decommission step (S1's screen type, ASCII-case-folded), traps allowed. E2e proof in `tests/story_flags.rs` (6/6 through the built binary): legacy flags L2 alone, screens S1 alone, diffrun L1 alone with exactly the 535 `mismatches.txt` accounts and $8,308.80 overcharge, fixed rewrite clean. One real bug caught by the manual transcript (empty rendered flag IDs) fixed and pinned. Orchestrator exception granted: the T9.6 fail-open pin for loadable `.cbl` versions directly contradicted this task's Done-when, so the same implementer rewrote it as `legacy_versions_match_and_fail_open_only_when_unloadable` (deny on match, fail-open only for genuinely unloadable versions) — the only change outside owns. Loop as ordered: implementation → remediation (pin) → separate review worktree (LAND, no findings). T9.11b (re-check producers, skip notes mark each flag) is now ready.
 
 - **T9.12 closed: the Fern operator console.** `demo/console/fern-console` (stdlib-only, executable) reenacts the T9.4 lookup and decommission screens in v1/v2, each printed byte-equal to the fixture ground truth (4/4 independently re-verified), one shell command per operation with the screen named in the subcommand plus a `SCREEN:` header so the T9.11 guard can match it. v1 refuses without the clinic name (exit 2, service untouched) and retires with it; v2 acts at once; both retire through the same POST + token as the curl path so `check.sh` shows count 0. 9/9 console tests green, gate passes. Loop run as the user ordered: implementation (`msc-t9.12`) → separate review worktree (LAND, no load-bearing findings) → no remediation needed. Watch-outs for T9.10/T9.13: prove the console against the real 8091 old service (this machine's 8091 was squatted by an unrelated HTML-answering app, so e2e ran on test ports); the console writes `demo/.run/console-last-result`, cleared by `stop.sh`. T9.13 (capture rig) is now ready to dispatch.
 
