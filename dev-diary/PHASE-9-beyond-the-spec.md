@@ -469,7 +469,7 @@ requires:   [T9.12]
 fixture-ok: no
 size:       S · mid
 owns:       ~/work/demo-shoot/doyle/capture-rig.md and ~/work/demo-shoot/doyle/tools/ (outside the repository); nothing in the repository
-status:     in-review
+status:     done
 ```
 
 Notes (msc-t9.13): rig built; review take recorded; session take blocked on
@@ -516,6 +516,11 @@ person-only OBS steps, reported to the orchestrator.
   fallback the T7 takes used, while the takes it prescribes are OBS's.
   OBS auto-splits recordings at 15 minutes by profile setting; test takes
   stay short.
+
+Closed by the orchestrator (the session take, with the user's go-ahead to drive OBS):
+- `takes/2026-11-03-t9.13-session-test.mkv`: 1920x1080, 31 s, video only. One harmless prompt to `muse-wonder-1.0` in a `/tmp` scratch repository; frames show the prompt submitted, the model thinking, the answer streaming in and the finished state, each sampled frame different. Muse settings byte-identical, no memory folder written, leak scan clean.
+- What it took on this machine (KDE Wayland, NVIDIA): PipeWire capture of a native-Wayland terminal, X11 window capture and `x11grab` all gave black frames, and a share restored after an OBS restart froze on its first frame. What works: OBS and the rig terminal both as X11 clients, and a fresh portal share of the terminal window after each OBS start (the person's click). Recorded in `capture-rig.md` with a `Doyle rig` scene (`tools/obs-setup.py`); the Receipts scenes are untouched.
+- Rig fixes before any real take: the launch line no longer types a home path or shell-expands the prompt (paths reach the pane as variables, the prompt is read in the pane); the TUI starts on Wonder, not its default model; tmux runs with no user config and no status bar (it showed the host name); takes are remuxed to video only (the profile records the mic); `obs.py record-dir` and `raw` are read-only.
 
 Every take so far is a still frame: `muse exec` prints nothing until it finishes. The extended runs need the session recorded as it happens.
 

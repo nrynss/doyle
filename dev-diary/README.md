@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 13 / 15 | T9.1–T9.9 + T9.7b + T9.11 + T9.11b + T9.12 + T9.14 done. T9.13 in review (live take waits on the user's OBS steps), then T9.10. |
+| P9 | 14 / 15 | Everything but T9.10 done (T9.13 closed with a live session take). T9.10 ready. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.13 closed: capture rig, live.** The session take streams: 1920x1080, 31 s, prompt to Wonder, the answer appearing as it streams, video only, scan clean. On this KDE Wayland + NVIDIA machine only one route gave live frames: OBS and the rig terminal as X11 clients plus a fresh portal share after each OBS start (the person's click); PipeWire on a Wayland window, X11 capture and x11grab were black, and a restored share froze. The orchestrator drove OBS with the user's go-ahead (a `Doyle rig` scene; Receipts scenes untouched) and fixed the rig before any real take: no home path or prompt expansion on the launch line, Wonder as the model, no tmux status bar, takes stripped of audio, `obs.py` read-only. T9.10 is ready.
 
 - **T9.14 closed: the scaffolding is gone from what Wonder reads.** Trap labels, task numbers, story/fixture/planted words, memory/flag mentions, the vaccination-visit exemption and the rewrite's bug are out of the comments of the v1/v2 programs and copybooks plus `wonder-bill.rs` (comment text only, zero non-comment diff lines, line counts held 217/243/11/11/69). The rule survives only in code (`IF VISIT-CODE = "V"`); `VISIT-CODE is "V" for a vaccination visit` stays as a field description per the user decision. Review ruled the three surviving `DISCOUNT-FLAG` comment mentions permitted (field's own identifier, "what a field holds," renaming would be a forbidden code change). Proofs: grep leaves only code-identifier/literal matches; elements regenerate byte-identical with all IDs stable; reports entailed identical with the agent's hand-rebuild `cmp`-clean; story e2e 6/6 and gate green keyless; no replay key moved, $0 of $0.25 spent. Loop as ordered: implementation → separate review (LAND, no findings) → no remediation. Only T9.13's live take stands between P9 and T9.10.
 
