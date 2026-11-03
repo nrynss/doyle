@@ -565,13 +565,33 @@ Notes (msc-t9.14): scrubbed, gate green, awaiting orchestrator validation.
 
 ---
 
+### T9.15: The guard holds the ship step by the rewrite's files ★
+```yaml
+requires:   [T9.11]
+fixture-ok: yes
+size:       S · mid
+owns:       src/guard.rs (the legacy and diffrun matching), src/diffrun_cmd.rs (the manifest's rewrite artifacts, carried onto the flag), src/evidence/diffrun.rs (only if the flag record needs the field), tests/story_flags.rs (the ship-step cases)
+status:     not-started
+```
+
+Found by T9.10's guard pre-check, before any Wonder session: on the story's flags the guard denied the console decommission as it should, but allowed every natural ship step (`rustc -O wonder-bill.rs -o bin/billbatch`, `./deploy/ship-billing.sh`, `cp bin/billbatch /srv/billing/billbatch`, `git tag … && git push`, `./wonder-bill > report.txt`) and denied `grep -n LOG-EXEMPT BILLBATCH.cbl`, a read of the batch's code. L1's flag matched on the blamed paragraph's name in the command text. T9.11's end-to-end test passed only because its ship command was written with the name in it (`deploy wonder-bill to production --fee-path LOG-EXEMPT`).
+
+Build (user decision):
+- A differential-run flag rests on the rewrite, so it guards the rewrite's own files. The run manifest names them (`rewrite_artifacts`: the source, the built binary, the ship target, as paths or file names); `doyle diffrun` carries them onto the flag. While the flag is open, the guard denies a tool call whose command or file argument names one of them, with Doyle's reason naming L1, the blamed paragraph and the mismatch count.
+- Legacy and diffrun flags stop matching COBOL paragraph and field names in free command text, so reading or grepping the batch is allowed. Screen flags keep their screen-type match (the decommission deny is right). Contract flags unchanged.
+- Fail visible: a diffrun flag with no artifacts named warns at `doyle diffrun` time that the guard cannot hold any step for it.
+
+**Done when:** the gate passes with no key; through the built binary, on the story's flags, each natural ship step above is denied naming L1, `grep -n LOG-EXEMPT BILLBATCH.cbl` and `sed -n 1,40p BILLBATCH.cbl` are allowed, the console decommission is still denied naming S1, the traps T9.11 allowed are still allowed, and the contrived ship command is gone from the tests; every T6.x guard test passes unchanged.
+
+---
+
 ### T9.10: Runs, extended ★
 ```yaml
-requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14]
+requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14, T9.15]
 fixture-ok: no
 size:       S · user
 owns:       evidence/legacy/
-status:     claimed:msc-t9.10
+status:     claimed:orchestrator (paused for T9.15)
 ```
 If the user put the extension into the runs (T9.4): the extended migration without and with Doyle, recorded as in T7.2 and T7.3. Without Doyle, Wonder's rewrite carries the wrong rule and the console decommission goes through unconfirmed. With Doyle, the differential run and the re-watched console flag both, the guard stops the step, and the corrections land in Muse Code and Lambo.
 
