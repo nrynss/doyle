@@ -385,7 +385,7 @@ requires:   [T9.11, T5.4]
 fixture-ok: no
 size:       M · mid
 owns:       src/prompts/recheck.rs and src/prompts/curator.rs (the legacy and screen cases), src/check.rs and src/curate.rs (their re-check and curate paths for the new kinds), testdata/replies/ (new recordings only), tests/live_legacy.rs (new)
-status:     in-review:msc-t9.11b
+status:     done
 ```
 
 Notes (msc-t9.11b): built and gate-green (444 lib + story e2e incl. binary replay proofs for L1/L2/S1 + all live suites ignored), awaiting orchestrator validation.

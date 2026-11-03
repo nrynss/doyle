@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.11 (binary flags) and T9.12 (operator console) done; T9.11b (proposals and citations) in progress; T9.13 (capture rig) in review, its live take waiting on the user's OBS steps; T9.14 (fixture scrub) after T9.11b; then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.11 (binary flags), T9.11b (proposals and citations) and T9.12 (operator console) done; T9.13 (capture rig) in review, its live take waiting on the user's OBS steps; T9.14 (fixture scrub) ready to dispatch; then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 11 / 15 | T9.1–T9.9 + T9.7b + T9.11 + T9.12 done. T9.11b in progress, T9.13 in review (live take waits on the user's OBS steps), T9.14 after T9.11b, then T9.10. |
+| P9 | 12 / 15 | T9.1–T9.9 + T9.7b + T9.11 + T9.11b + T9.12 done. T9.13 in review (live take waits on the user's OBS steps), T9.14 ready to dispatch, then T9.10. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.11b closed: proposals and citations for legacy and screen memories.** Curator + re-check producers for all three new kinds with replayed proofs: curate L2/L3/S1 exact, L4/S2 benign extras, L1 at {CALC-LATE-FEE, BALANCE, LOG-EXEMPT} — flag-algebra-perfect, one field short of the story set, accepted by the user and pinned honestly in-test; re-check corrects L1 (exemption-zero-fee), L2 (35-chars-plus-discount-flag), S1 (dropped confirmation, guideline-7 clean after a no-quotation rule + screens-only 8000 cap). Binary wired: `diffrun --live`, default propose-from-recordings, e2e L1/L2/S1 corrections with reruns exit 0. Live spend $0.823 of the $0.875 ceiling ($0.50 + $0.30 + $0.075 across three user-granted rounds); 9 live calls, no cost_usd returned, transcripts keyless in reports. Loop as ordered: implementation → remediation (superseded-pin precedent, none needed here) → review (LAND) → one aligned nit fix (L1 live gate matches the accepted set). T9.14 is now unblocked.
 
 - **T9.14 filed: scrub the scaffolding from what Wonder reads (orchestrator finding, user decision).** Validating T9.13's review take showed the story's COBOL sources labelling their own traps ("Trap A2", "Trap B1", "T9.4 fixtures") and the rewrites' headers saying "Trap D". In T9.10 Wonder reads these to rewrite the batch. T9.14 changes comment text only, proves element files, stable IDs and batch reports byte-identical, and, by the user's decision, leaves no comment stating the vaccination-visit exemption or the planted rewrite's bug (the rule lives only in the code); T9.10 now requires it. Also from the T9.13 check (rig is outside the repository, fixed by the orchestrator): the launch line typed a home path on screen and shell-expanded the prompt; the TUI started on its default model, not Wonder; `obs.py` could set the record directory and send any request. All four fixed; the session take still waits on the user's OBS password file and scene. Header brand and tagline centred on the review page (one CSS line, landed directly at the user's request).
 
