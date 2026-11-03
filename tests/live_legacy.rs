@@ -180,6 +180,20 @@ fn field(path: &str) -> ElementId {
     legacy_ids::element_id(&legacy_ids::field_key("BILLBATCH", path))
 }
 
+/// The accepted L1 citation: the fee path plus the exemption branch, minus
+/// VISIT-CODE. All four live draws missed the field; the user accepted the
+/// 3-element set as flag-algebra-perfect (diffrun flags via LOG-EXEMPT,
+/// legacy silent). Proof of record is the replayed pin
+/// `replayed_l1_cites_fee_path_and_exemption_branch` in
+/// src/prompts/curator.rs, not this live gate.
+fn accepted_l1_elements() -> Vec<ElementId> {
+    vec![
+        para("CALC-LATE-FEE"),
+        field("PATIENT-RECORD.BALANCE"),
+        para("LOG-EXEMPT"),
+    ]
+}
+
 /// The story's citation element sets (T9.4 README, `owns` the truth):
 /// recomputed from the canonical keys, never copied.
 fn story_elements(id: &str) -> Vec<ElementId> {
@@ -447,7 +461,7 @@ fn live_legacy_curate_and_recheck() {
                     ))
                     .0;
                     assert!(!set.contains(&record), "L1 must not cite PATIENT-RECORD");
-                    for want in story_elements("L1") {
+                    for want in accepted_l1_elements() {
                         assert!(set.contains(&want.0), "L1 must cite {}", want.0);
                     }
                 }
@@ -613,7 +627,10 @@ fn live_legacy_curate_and_recheck() {
                 } => {
                     let set: std::collections::HashSet<String> =
                         elements.into_iter().map(|e| e.0).collect();
-                    let expected: std::collections::HashSet<String> = if *id == "S1" {
+                    let expected: std::collections::HashSet<String> = if *id == "L1" {
+                        // Accepted set, not the story set: see accepted_l1_elements.
+                        accepted_l1_elements().into_iter().map(|e| e.0).collect()
+                    } else if *id == "S1" {
                         screen_cite("S1", "decommission", &screens_v1, &texts)
                             .elements
                             .into_iter()
