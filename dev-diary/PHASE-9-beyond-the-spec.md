@@ -348,9 +348,88 @@ Notes (wonder-t9.9): built, gate green, awaiting orchestrator validation.
 
 ---
 
+### T9.11: Legacy and screen flags from the binary ★
+```yaml
+requires:   [T9.6, T9.7, T9.8, T9.9]
+fixture-ok: yes
+size:       M · mid
+owns:       src/check.rs (the evidence-kind dispatch), src/diffrun_cmd.rs (new), src/cli.rs (the options below only, orchestrator-approved), src/main.rs (one dispatch arm for diffrun, orchestrator-approved), src/lib.rs (one module line), src/guard.rs (only if a legacy or screen flag cannot be matched to its step), tests/
+status:     not-started
+```
+
+Found while briefing T9.10: the legacy, screen and differential-run sources exist (`src/evidence/`) and their flags render on the review page (T9.9), but no command produces them. `doyle check` diffs API contracts only (`ContractIndex`), and nothing outside tests calls `LegacyIndex::diff_evidence`, `screens::diff_versions` or `flag_diffrun`. A live run with Doyle could flag M1 and nothing else.
+
+Build:
+- `doyle check OLD NEW` picks the source from what it is given: an API contract as today, a legacy elements file (`elements-v1.json`/`elements-v2.json` or the COBOL sources, whichever T9.6 indexes from), or a screen index (`decomm-v1.json`/`decomm-v2.json` and the training steps). One explicit `--kind contract|legacy|screens` option if detection would be ambiguous. Flags go to the same store through `flag_citations`.
+- `doyle diffrun`: compares the COBOL batch's report with a rewrite's report over the same inputs, with the per-record paths, and writes the flags `flag_diffrun` computes, with their mismatches as evidence.
+- The guard denies the step each new flag guards: shipping or running the rewrite while L1's diffrun flag is open, and the console decommission while S1's screen flag is open, matched through the native location each source fills. Say exactly what each matches.
+- Contract behaviour and every existing test unchanged.
+
+**Done when:** the gate passes with no key; on the T9.4 fixtures the binary reproduces the story's expected-flag table exactly (`testdata/legacy/story/README.md`): the legacy diff flags L2 alone, the screen diff S1 alone, the differential run L1 alone with the 535 vaccination-visit mismatches, the correct rewrite nothing; the guard denies a recorded ship-rewrite step and a console-decommission step with Doyle's reason and allows the traps' steps; each as an end-to-end test of the built binary.
+
+---
+
+### T9.11b: Proposals and citations for legacy and screen memories ★
+```yaml
+requires:   [T9.11, T5.4]
+fixture-ok: no
+size:       M · mid
+owns:       src/prompts/recheck.rs and src/prompts/curator.rs (the legacy and screen cases), src/check.rs and src/curate.rs (their re-check and curate paths for the new kinds), testdata/replies/ (new recordings only), tests/live_legacy.rs (new)
+status:     not-started
+```
+
+T9.9 found no re-check producer for non-contract flags: its tests seeded proposals by hand. Curate cites memories against an API contract only, so in a live run the L and S memories would never be cited.
+
+Build:
+- The re-check proposes a correction, retirement or keep for a legacy, screen or differential-run flag, given the flag's own evidence (the changed elements, the old and new frames' ground truth, or the mismatching records with both outputs). Muse Spark, as for contracts.
+- Curate cites L memories against the legacy elements and S memories against the screens and training spans, through the Baseten curator (T9.3 probed the legacy shape).
+- Replay recordings for every new prompt, so the gate stays keyless.
+
+**Done when:** the gate passes with no key; replayed, curate cites L1–L4 and S1–S2 as the story's citations and the re-check proposes a correction for L1, L2 and S1 matching the story's corrected memories in substance; a `#[ignore]`d live test runs one curate and one re-check per kind on the fixtures under a $0.50 budget, transcript in the report.
+
+---
+
+### T9.12: The operator console ★
+```yaml
+requires:   [T9.4]
+fixture-ok: yes
+size:       S · mid
+owns:       demo/console/ (new), demo/scripts/ (start and stop lines for the console only), demo/README.md (a console section)
+status:     not-started
+```
+
+The extended story's retire step has Wonder follow S1 on the v2 console, but the console exists only as four still frames and a training video (`testdata/legacy/story/screens/`). A run needs a console Wonder can drive.
+
+Build: a small terminal console, v1 and v2, rendering exactly the lookup and decommission screens of the T9.4 fixtures (their ground-truth JSON is the spec), driven from a shell so Wonder can operate it: look up an account; open DECOMMISSION; in v1 the warning, the type-the-clinic-name prompt and PF12 CONFIRM; in v2 no warning, no prompt, PF12 DECOMMISSION acting at once. Decommission marks the old records service retired (the same effect as today's decommission endpoint), so the counts show it. Each operation is one shell command whose text names the screen, so a guard can match it. Standard library only, new code.
+
+**Done when:** the gate passes; each screen as the console renders it equals the fixture's ground truth (a test per screen and version); a v1 decommission without the clinic name is refused and with it succeeds; a v2 decommission succeeds at once; `demo/README.md` documents it.
+
+---
+
+### T9.13: Capture rig ★
+```yaml
+requires:   [T9.12]
+fixture-ok: no
+size:       S · mid
+owns:       ~/work/demo-shoot/doyle/capture-rig.md and ~/work/demo-shoot/doyle/tools/ (outside the repository); nothing in the repository
+status:     not-started
+```
+
+Every take so far is a still frame: `muse exec` prints nothing until it finishes. The extended runs need the session recorded as it happens.
+
+Build, per `~/work/demo-shoot/README.md`'s layout and the receipts and before-yes rigs:
+- Muse Code run interactively (not `muse exec`) in a visible terminal at 1920×1080, driven by `tmux send-keys`, so its output streams on screen. The prompt is typed verbatim; nothing steers the session after it.
+- OBS records that terminal over obs-websocket (connection settings from a file under `~/.config/`, never committed or printed), one take per session into `takes/<date>-<what>.mkv`.
+- The review page recorded with Playwright at 1920×1080 (the `playwright` package in `~/work/lambo/scripts/recording/`), a fresh context, and the reviewer link never shown on screen.
+- Keys stripped from every Muse Code environment, as in T7.2b. How an approval prompt Muse Code raises interactively is handled: nobody but the person answers it, and the rig never sends keys to one.
+
+**Done when:** a short test session (one harmless prompt in a scratch folder) is captured live: its take shows the output appearing as it streams, not a single frame; a review-page take from the offline demo state; `capture-rig.md` lets a later agent run the rig cold; no key, token, reviewer link or private path in any take or file.
+
+---
+
 ### T9.10: Runs, extended ★
 ```yaml
-requires:   [T9.4, T9.7, T9.8, T9.9, T7.3]
+requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13]
 fixture-ok: no
 size:       S · user
 owns:       evidence/legacy/
@@ -358,7 +437,7 @@ status:     not-started
 ```
 If the user put the extension into the runs (T9.4): the extended migration without and with Doyle, recorded as in T7.2 and T7.3. Without Doyle, Wonder's rewrite carries the wrong rule and the console decommission goes through unconfirmed. With Doyle, the differential run and the re-watched console flag both, the guard stops the step, and the corrections land in Muse Code and Lambo.
 
-The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T9.4's fixtures, not observed from Wonder. The recordings, their README and the judges' page say so. What these runs show is detection, by execution and by Wonder's eyes, traced to stable IDs.
+The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T9.4's fixtures, not observed from Wonder. Run by an agent with T9.13's rig (user decision): interactive Muse Code recorded live, the planted rewrite handed to Wonder as its earlier session's work and labelled so in the README, the console from T9.12, the flags from the binary (T9.11, T9.11b). The person's only part is the approval on the review page. The recordings, their README and the judges' page say so. What these runs show is detection, by execution and by Wonder's eyes, traced to stable IDs.
 
 **Done when:** both recordings show what the story in `testdata/legacy/story/` says, with the counts and mismatches in the handoff text.
 
