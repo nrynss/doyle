@@ -180,3 +180,55 @@ in `testdata/muse/hooks/` and a seeded fixture store with M1's flag open.
 Only the host-independent part of a URL is matched: the path (and the
 method around it). The host and port are ignored, so the check does not
 depend on where the service under test happens to listen.
+
+## What a differential-run flag guards
+
+A differential-run flag rests on the rewrite, so it guards the rewrite's
+own files — not the COBOL paragraph names behind the mismatch. The run
+manifest names them as `rewrite_artifacts`: the source, the built binary,
+the ship script/target, as paths or file names. `doyle diffrun` carries
+that list on the flag by way of the flag's `new_version` (the manifest
+path it already records; the flag record itself is unchanged), renders it
+in the markdown and JSON reports, and warns on stderr when it is missing:
+
+`doyle diffrun: warning: run manifest names no rewrite_artifacts; the guard cannot hold any step for it`
+
+While the flag is open, the guard denies a tool call whose command text
+or file/path argument names one artifact. The match is a whole path
+component or whole word: `wonder-bill` matches `./wonder-bill`,
+`wonder-bill.rs` and `bin/wonder-bill`, but not
+`wonder-billing-notes.md`. The denial is Doyle's usual reason — the
+memory, its stale claim, the matched artifact, the blamed paragraph, the
+mismatch count, the versions on either side and the severity — ending with
+the person-reviews sentence:
+
+`DOYLE-GUARD: memory muse-code/L1 is stale ("..."). Matched rewrite artifact wonder-bill.rs (blamed paragraph LOG-EXEMPT; 535 mismatching records). Changed v1/BILLBATCH.cbl -> run-wrong.json (breaking). A person reviews this flag on Doyle's review page; this session cannot settle it.`
+
+What this holds and what it does not:
+
+- Held: compiling, running, copying or shipping the rewrite by any of its
+  named files (`rustc -O wonder-bill.rs -o bin/billbatch`,
+  `./deploy/ship-billing.sh`, `cp bin/billbatch /srv/billing/billbatch`,
+  `./wonder-bill > report.txt`).
+- Allowed: reading or grepping the batch (`grep -n LOG-EXEMPT
+  BILLBATCH.cbl`, `sed -n 1,40p BILLBATCH.cbl`, `cobc -x -o /tmp/b
+  BILLBATCH.cbl`). Legacy and diffrun flags no longer match COBOL
+  paragraph or field names in free command text.
+- Known limit: a step naming none of the rewrite's files is not held.
+  `git tag billing-rust-v1 && git push origin billing-rust-v1` is allowed,
+  as is a release from another folder that never names the artifacts.
+  The artifact list is the hold: name the files the ship step will touch.
+
+Ship-target convention: the manifest names both the bare file names and
+the conventional paths — `wonder-bill.rs` (the source),
+`wonder-bill` (the binary by name), `bin/billbatch` (the built binary at
+its build path) and `deploy/ship-billing.sh` (the ship script). Bare names
+catch a copy, rename or run from another directory; the paths catch the
+natural deploy command (`cp bin/billbatch ...`, `./deploy/ship-billing.sh`)
+exactly as it is typed. A bare directory alone is never listed: the match
+is on file names, not folders.
+
+Screen flags keep their screen-type match (the console decommission still
+denies naming the screen), contract flags are unchanged, and a decided
+flag holds nothing: once a person settles it, the ship steps are allowed
+again.

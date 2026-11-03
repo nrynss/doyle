@@ -425,10 +425,16 @@ run manifest JSON naming the recorded inputs and both reports plus the
 per-record paragraph paths (or a raw trace):
 
   {\"inputs\": \"patients.dat\", \"cobol_report\": \"report.txt\",
-   \"rewrite_report\": \"rewrite.txt\", \"record_paths\": \"paths.txt\"}
+   \"rewrite_report\": \"rewrite.txt\", \"record_paths\": \"paths.txt\",
+   \"rewrite_artifacts\": [\"wonder-bill.rs\", \"wonder-bill\", \"bin/billbatch\"]}
 
 or with \"trace\", \"record_start\" and \"record_end\" instead of
-\"record_paths\". Relative paths resolve beside the manifest. Every
+\"record_paths\". \"rewrite_artifacts\" names the rewrite's own files
+(the source, the built binary, the ship script/target): while the flag
+is open the guard denies a tool call naming one of them. When the
+manifest names no rewrite_artifacts, the flag is still written but
+the guard cannot hold any step for it. Relative paths resolve beside
+the manifest. Every
 compared record must appear in the inputs, both reports and the paths;
 any drift is an error, never a silent pass. The exit code says whether
 anything was flagged, for CI. The flag's old version is PROGRAM and its

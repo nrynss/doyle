@@ -272,7 +272,45 @@ fn screen_citations() -> Vec<Citation> {
 }
 
 /// Write a diffrun manifest beside `dir` naming absolute fixture paths.
+/// The manifest names the rewrite's own files the guard holds while the
+/// flag is open: the source, the built binary, the ship script/target.
 fn write_manifest(dir: &Path, name: &str, rewrite_report: &str) -> String {
+    write_manifest_with_artifacts(
+        dir,
+        name,
+        rewrite_report,
+        &[
+            "wonder-bill.rs",
+            "wonder-bill",
+            "bin/billbatch",
+            "deploy/ship-billing.sh",
+        ],
+    )
+}
+
+/// Write a diffrun manifest with an explicit artifact list (`None` means
+/// the manifest names no `rewrite_artifacts` at all).
+fn write_manifest_with_artifacts(
+    dir: &Path,
+    name: &str,
+    rewrite_report: &str,
+    artifacts: &[&str],
+) -> String {
+    let manifest = serde_json::json!({
+        "inputs": story("v1/patients.dat"),
+        "cobol_report": story("v1/report.txt"),
+        "rewrite_report": rewrite_report,
+        "record_paths": format!("{}/testdata/legacy/diffrun/full-record-paths.txt", env!("CARGO_MANIFEST_DIR")),
+        "rewrite_artifacts": artifacts,
+    });
+    let path = dir.join(name);
+    std::fs::write(&path, serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    path.to_string_lossy().to_string()
+}
+
+/// Write a diffrun manifest naming no `rewrite_artifacts`: the flag is
+/// still written but the guard cannot hold any step for it.
+fn write_manifest_without_artifacts(dir: &Path, name: &str, rewrite_report: &str) -> String {
     let manifest = serde_json::json!({
         "inputs": story("v1/patients.dat"),
         "cobol_report": story("v1/report.txt"),
@@ -500,32 +538,73 @@ fn story_expected_flags_and_guard_from_the_binary() {
         .to_string()
     };
     let bash = |command: &str| hook("bash", serde_json::json!({"command": command}));
+    let deny_reason_for = |command: &str| -> String {
+        let out = run(&["guard", "--state-dir", &state_arg], Some(&bash(command)));
+        assert_eq!(out.status.code(), Some(0), "deny exits 0: {command}");
+        let denial: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+        assert_eq!(
+            denial["hookSpecificOutput"]["permissionDecision"], "deny",
+            "{command}"
+        );
+        denial["hookSpecificOutput"]["permissionDecisionReason"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    };
+    let allow_command = |label: &str, command: &str| {
+        let out = run(&["guard", "--state-dir", &state_arg], Some(&bash(command)));
+        assert_eq!(out.status.code(), Some(0), "{label} exits 0");
+        assert!(stdout(&out).is_empty(), "{label} silent on stdout");
+        assert!(
+            stderr(&out).is_empty(),
+            "{label} silent on stderr: {}",
+            stderr(&out)
+        );
+    };
 
-    // Deny: the ship-rewrite step naming the blamed paragraph.
-    let out = run(
-        &["guard", "--state-dir", &state_arg],
-        Some(&bash(
-            "deploy wonder-bill to production --fee-path LOG-EXEMPT",
-        )),
+    // Deny: each ship step naming one of the rewrite's files. The reason
+    // names the memory, the blamed paragraph and the mismatch count.
+    for command in [
+        "rustc -O wonder-bill.rs -o bin/billbatch",
+        "./deploy/ship-billing.sh",
+        "cp bin/billbatch /srv/billing/billbatch",
+        "./wonder-bill > report.txt",
+    ] {
+        let reason = deny_reason_for(command);
+        assert!(reason.contains("L1"), "names the memory: {reason}");
+        assert!(
+            reason.contains("LOG-EXEMPT"),
+            "names the blamed paragraph: {reason}"
+        );
+        assert!(reason.contains("535"), "names the mismatch count: {reason}");
+        assert!(reason.contains("DOYLE-GUARD"), "Doyle's reason: {reason}");
+        assert!(
+            reason.ends_with(
+                "A person reviews this flag on Doyle's review page; this session cannot settle it."
+            ),
+            "person-reviews sentence: {reason}"
+        );
+    }
+
+    // Allow: the tag push names none of the rewrite's files (a known
+    // limit, documented in docs/guard.md).
+    allow_command(
+        "tag push",
+        "git tag billing-rust-v1 && git push origin billing-rust-v1",
     );
-    assert_eq!(out.status.code(), Some(0), "deny exits 0");
-    let denial: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
-    assert_eq!(denial["hookSpecificOutput"]["permissionDecision"], "deny");
-    let reason = denial["hookSpecificOutput"]["permissionDecisionReason"]
-        .as_str()
-        .unwrap();
-    assert!(reason.contains("L1"), "names the memory: {reason}");
-    assert!(
-        reason.contains("LOG-EXEMPT"),
-        "names the blamed paragraph: {reason}"
-    );
-    assert!(reason.contains("DOYLE-GUARD"), "Doyle's reason: {reason}");
-    assert!(
-        reason.ends_with(
-            "A person reviews this flag on Doyle's review page; this session cannot settle it."
-        ),
-        "person-reviews sentence: {reason}"
-    );
+
+    // Word boundary: a longer name starting with an artifact is not held.
+    allow_command("billing notes", "cat wonder-billing-notes.md");
+
+    // Allow: reads of the batch's code. Paragraph and field names no
+    // longer match in free command text.
+    for (label, command) in [
+        ("grep the batch", "grep -n LOG-EXEMPT BILLBATCH.cbl"),
+        ("sed the batch", "sed -n 1,40p BILLBATCH.cbl"),
+        ("compile the batch", "cobc -x -o /tmp/b BILLBATCH.cbl"),
+    ] {
+        allow_command(label, command);
+    }
 
     // Deny: the console-decommission step naming the screen (T9.12's
     // commands name the screen; here in capitals, matched case-insensitively).
@@ -558,14 +637,46 @@ fn story_expected_flags_and_guard_from_the_binary() {
         ),
         ("ordinary command", "ls -la"),
     ] {
-        let out = run(&["guard", "--state-dir", &state_arg], Some(&bash(command)));
-        assert_eq!(out.status.code(), Some(0), "{label} exits 0");
-        assert!(stdout(&out).is_empty(), "{label} silent on stdout");
-        assert!(
-            stderr(&out).is_empty(),
-            "{label} silent on stderr: {}",
-            stderr(&out)
-        );
+        allow_command(label, command);
+    }
+
+    // Decided: once a person settles the diffrun flag, the ship steps
+    // are allowed again. Seed the proposal + decision the way the store
+    // tests do, then re-run the guard.
+    {
+        use doyle_tms::core::{Decision, DecisionVerdict, Proposal, ProposalAction};
+        let mut store = Store::open(&state).unwrap();
+        let l1_flag = store
+            .open_flags()
+            .into_iter()
+            .find(|f| f.memory.id == "L1")
+            .expect("L1 open before decision");
+        let pid = store
+            .record_proposal(Proposal {
+                id: String::new(),
+                flag_id: l1_flag.id.clone(),
+                action: ProposalAction::Keep,
+                rationale: "settled in test".to_string(),
+                proposed_by: "test".to_string(),
+            })
+            .unwrap();
+        store
+            .record_decision(Decision {
+                id: String::new(),
+                proposal_id: pid,
+                verdict: DecisionVerdict::Keep,
+                decided_by: "test".to_string(),
+                decided_at: "2026-01-01T00:00:00Z".to_string(),
+            })
+            .unwrap();
+    }
+    for command in [
+        "rustc -O wonder-bill.rs -o bin/billbatch",
+        "./deploy/ship-billing.sh",
+        "cp bin/billbatch /srv/billing/billbatch",
+        "./wonder-bill > report.txt",
+    ] {
+        allow_command("decided ship step", command);
     }
 
     let _ = std::fs::remove_dir_all(&root);
@@ -1003,4 +1114,85 @@ fn command_shapes_parse_and_document() {
         doyle_tms::cli::DIFRUN_HELP.contains("record_paths"),
         "diffrun help names the manifest"
     );
+    assert!(
+        doyle_tms::cli::DIFRUN_HELP.contains("rewrite_artifacts"),
+        "diffrun help names the rewrite files"
+    );
+    assert!(
+        doyle_tms::cli::DIFRUN_HELP.contains("the guard cannot hold any step for it"),
+        "diffrun help states the no-artifacts limit"
+    );
+}
+
+/// No artifacts is a loud failure: the flag is still written, the binary
+/// warns on stderr with the documented sentence, and the guard holds no
+/// ship step for it.
+#[test]
+fn diffrun_without_artifacts_warns_and_holds_nothing() {
+    let root = temp_dir("noartifacts");
+    let state = root.join("state");
+    seed(&state, legacy_citations());
+    let wrong_report = format!(
+        "{}/testdata/legacy/diffrun/full-wrong-report.txt",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let manifest = write_manifest_without_artifacts(&root, "run-noart.json", &wrong_report);
+    let v1_cbl = std::path::absolute(story("v1/BILLBATCH.cbl"))
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+    let state_arg = state.to_string_lossy().to_string();
+    let out = run(
+        &[
+            "diffrun",
+            &v1_cbl,
+            &manifest,
+            "--state-dir",
+            &state_arg,
+            "--format",
+            "json",
+            "--no-recheck",
+        ],
+        None,
+    );
+    assert_eq!(out.status.code(), Some(1), "still flags: {}", stderr(&out));
+    assert_eq!(
+        flag_memory_ids(&stdout(&out)),
+        ["L1"],
+        "L1 alone even with no artifacts"
+    );
+    assert!(
+        stderr(&out).contains("the guard cannot hold any step for it"),
+        "warns loudly: {}",
+        stderr(&out)
+    );
+    let report: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    assert_eq!(
+        report["rewrite_artifacts"],
+        serde_json::json!([]),
+        "report carries the empty list"
+    );
+
+    // The guard holds nothing: a ship command is allowed.
+    let cwd = env!("CARGO_MANIFEST_DIR");
+    let hook = |command: &str| {
+        serde_json::json!({
+            "cwd": cwd,
+            "hook_event_name": "PreToolUse",
+            "tool_name": "bash",
+            "tool_input": {"command": command},
+        })
+        .to_string()
+    };
+    let out = run(
+        &["guard", "--state-dir", &state_arg],
+        Some(&hook("rustc -O wonder-bill.rs -o bin/billbatch")),
+    );
+    assert_eq!(out.status.code(), Some(0), "allows with no hold");
+    assert!(
+        stdout(&out).is_empty(),
+        "silent on stdout: {}",
+        stdout(&out)
+    );
+    let _ = std::fs::remove_dir_all(&root);
 }

@@ -57,7 +57,7 @@ pub fn execute(
     };
 
     let index = LegacyIndex::load(&program_path).map_err(|e| format!("doyle diffrun: {e}"))?;
-    let outcome = load_outcome(&run_path)?;
+    let (outcome, artifacts) = load_outcome(&run_path)?;
 
     let dir = cli
         .common
@@ -112,6 +112,7 @@ pub fn execute(
             &program_path,
             &run_path,
             &outcome,
+            &artifacts,
             &diffrun_flags,
             &proposals,
         )
@@ -120,10 +121,17 @@ pub fn execute(
             &program_path,
             &run_path,
             &outcome,
+            &artifacts,
             &diffrun_flags,
             &proposals,
         )
     };
+
+    if artifacts.is_empty() {
+        eprintln!(
+            "doyle diffrun: warning: run manifest names no rewrite_artifacts; the guard cannot hold any step for it"
+        );
+    }
 
     let code = if written.is_empty() {
         ExitCode::SUCCESS
@@ -134,10 +142,14 @@ pub fn execute(
 }
 
 /// Load the recorded run a manifest names: the inputs and both reports plus
-/// the per-record paths (or a raw trace with its record bounds). Relative
-/// paths resolve beside the manifest; any drift between inputs, reports and
-/// paths is an error, never a silent pass.
-fn load_outcome(manifest_path: &str) -> Result<DiffrunOutcome, String> {
+/// the per-record paths (or a raw trace with its record bounds), and the
+/// rewrite's own files (`rewrite_artifacts`: source, built binary, ship
+/// script/target) the guard holds while the flag is open. Missing
+/// `rewrite_artifacts` is no hold, never an error: the flag is still
+/// written and the caller warns. Relative paths resolve beside the
+/// manifest; any drift between inputs, reports and paths is an error,
+/// never a silent pass.
+fn load_outcome(manifest_path: &str) -> Result<(DiffrunOutcome, Vec<String>), String> {
     let manifest = PathBuf::from(manifest_path);
     let text =
         std::fs::read_to_string(&manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
@@ -162,7 +174,18 @@ fn load_outcome(manifest_path: &str) -> Result<DiffrunOutcome, String> {
     let inputs = resolve("inputs")?;
     let cobol = resolve("cobol_report")?;
     let rewrite = resolve("rewrite_report")?;
-    if let Some(raw_paths) = value.get("record_paths").and_then(|v| v.as_str()) {
+    let artifacts: Vec<String> = value
+        .get("rewrite_artifacts")
+        .and_then(|v| v.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let outcome = if let Some(raw_paths) = value.get("record_paths").and_then(|v| v.as_str()) {
         let path = if Path::new(raw_paths).is_absolute() {
             PathBuf::from(raw_paths)
         } else {
@@ -171,7 +194,7 @@ fn load_outcome(manifest_path: &str) -> Result<DiffrunOutcome, String> {
         let text =
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let paths = parse_record_paths(&text).map_err(|e| e.to_string())?;
-        run_diffrun_with_paths(&inputs, &cobol, &rewrite, &paths).map_err(|e| e.to_string())
+        run_diffrun_with_paths(&inputs, &cobol, &rewrite, &paths).map_err(|e| e.to_string())?
     } else {
         let trace = resolve("trace")?;
         let start = value
@@ -182,8 +205,9 @@ fn load_outcome(manifest_path: &str) -> Result<DiffrunOutcome, String> {
             .get("record_end")
             .and_then(|v| v.as_str())
             .unwrap_or("WRITE-DETAIL");
-        run_diffrun(&inputs, &cobol, &rewrite, &trace, start, end).map_err(|e| e.to_string())
-    }
+        run_diffrun(&inputs, &cobol, &rewrite, &trace, start, end).map_err(|e| e.to_string())?
+    };
+    Ok((outcome, artifacts))
 }
 
 fn money(cents: i64) -> String {
@@ -238,6 +262,7 @@ pub fn render_markdown(
     program_path: &str,
     run_path: &str,
     outcome: &DiffrunOutcome,
+    artifacts: &[String],
     flags: &[crate::evidence::diffrun::DiffrunFlag],
     proposals: &[Proposal],
 ) -> String {
@@ -245,7 +270,12 @@ pub fn render_markdown(
     let mut out = String::new();
     out.push_str("# doyle diffrun\n\n");
     out.push_str(&format!("Program: {program_path}\n"));
-    out.push_str(&format!("Run: {run_path}\n\n"));
+    out.push_str(&format!("Run: {run_path}\n"));
+    if artifacts.is_empty() {
+        out.push_str("Rewrite artifacts: none named.\n\n");
+    } else {
+        out.push_str(&format!("Rewrite artifacts: {}.\n\n", artifacts.join(", ")));
+    }
     out.push_str(&format!(
         "Records compared: {}; mismatches: {}; rewrite overcharge: {}.\n",
         outcome.record_count,
@@ -337,6 +367,7 @@ pub fn render_json(
     program_path: &str,
     run_path: &str,
     outcome: &DiffrunOutcome,
+    artifacts: &[String],
     flags: &[crate::evidence::diffrun::DiffrunFlag],
     proposals: &[Proposal],
 ) -> String {
@@ -393,6 +424,7 @@ pub fn render_json(
     let mut value = serde_json::json!({
         "program": program_path,
         "run": run_path,
+        "rewrite_artifacts": artifacts,
         "record_count": outcome.record_count,
         "mismatch_count": outcome.mismatches.len(),
         "overcharge_cents": total_overcharge_cents(outcome),

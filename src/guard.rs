@@ -181,7 +181,10 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         return (ExitCode::SUCCESS, String::new(), String::new());
     }
     let index = build_match_index(&store, &open, call.cwd.as_deref());
-    if index.natives.is_empty() {
+    let mut hits: Vec<(usize, String)> =
+        find_diffrun_artifact_hits(&store, &open, call.cwd.as_deref(), &call.strings);
+    let mut seen_flag: Vec<usize> = hits.iter().map(|(flag, _)| *flag).collect();
+    if hits.is_empty() && index.natives.is_empty() {
         return (
             ExitCode::SUCCESS,
             String::new(),
@@ -193,8 +196,6 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
     }
     let candidates = extract_candidates(&call.strings);
     let joined = call.strings.join("\n");
-    let mut hits: Vec<(usize, String)> = Vec::new();
-    let mut seen_flag: Vec<usize> = Vec::new();
     for native in &index.natives {
         if seen_flag.contains(&native.flag) {
             continue;
@@ -546,8 +547,9 @@ fn resolve_against_cwd(raw: &str, cwd: Option<&str>) -> String {
 /// legacy flag names `.cbl` programs, a screen flag the review page's
 /// version JSON files, a contract flag its contract files, and a
 /// differential-run flag the batch program (old) plus the run manifest
-/// (new, which loads as nothing and is skipped: the program side still
-/// resolves every blamed paragraph).
+/// (new, which loads as nothing and is skipped: the guard holds the
+/// rewrite through the manifest's `rewrite_artifacts`, not through the
+/// program side's paragraph names).
 enum VersionIndex {
     Contract(Box<ContractIndex>),
     Legacy(Box<LegacyIndex>),
@@ -613,11 +615,200 @@ struct MatchIndex {
     problem: String,
 }
 
+/// Which evidence source a flag was written from, by its versions: two
+/// `.cbl` programs are a legacy flag, a `.cbl` program plus a `.json` run
+/// manifest a differential-run flag, two `.json` screens files a screen
+/// flag, anything else a contract flag.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FlagKind {
+    Contract,
+    Legacy,
+    Screens,
+    Diffrun,
+}
+
+fn classify_flag(old_version: &str, new_version: &str) -> FlagKind {
+    if old_version.ends_with(".cbl") && new_version.ends_with(".cbl") {
+        FlagKind::Legacy
+    } else if old_version.ends_with(".cbl") && new_version.ends_with(".json") {
+        FlagKind::Diffrun
+    } else if old_version.ends_with(".json") && new_version.ends_with(".json") {
+        FlagKind::Screens
+    } else {
+        FlagKind::Contract
+    }
+}
+
+/// Whether `name` continues across `byte`: a name character is an ASCII
+/// letter or digit plus `-` and `_`, so `wonder-bill` ends before `.`, `/`
+/// or space but not before `i` (as in `wonder-billing-notes.md`).
+fn is_artifact_char(byte: Option<u8>) -> bool {
+    byte.is_some_and(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+/// Whether `haystack` names `artifact` as a whole path component or whole
+/// word: `wonder-bill` matches `./wonder-bill`, `wonder-bill.rs` and
+/// `bin/wonder-bill`, but not `wonder-billing-notes.md`.
+fn artifact_matches(haystack: &str, artifact: &str) -> bool {
+    let artifact = artifact.strip_prefix("./").unwrap_or(artifact);
+    if artifact.is_empty() {
+        return false;
+    }
+    let bytes = haystack.as_bytes();
+    let mut from = 0;
+    while let Some(found) = haystack[from..].find(artifact) {
+        let start = from + found;
+        let end = start + artifact.len();
+        let before_ok = start == 0 || !is_artifact_char(bytes.get(start - 1).copied());
+        let after_ok = end == haystack.len() || !is_artifact_char(bytes.get(end).copied());
+        if before_ok && after_ok {
+            return true;
+        }
+        from = start + 1;
+        while from < haystack.len() && !haystack.is_char_boundary(from) {
+            from += 1;
+        }
+    }
+    false
+}
+
+/// The rewrite's own files from a diffrun run manifest: the
+/// `rewrite_artifacts` list (source, built binary, ship script/target).
+/// Missing or unparsable is no hold, never an error.
+fn load_rewrite_artifacts(manifest_resolved: &str) -> Vec<String> {
+    let text = match std::fs::read_to_string(manifest_resolved) {
+        Ok(text) => text,
+        Err(_) => return Vec::new(),
+    };
+    let value: serde_json::Value = match serde_json::from_str(&text) {
+        Ok(value) => value,
+        Err(_) => return Vec::new(),
+    };
+    value
+        .get("rewrite_artifacts")
+        .and_then(|v| v.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_string))
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The outcome behind a diffrun manifest, for the deny reason's blamed
+/// paragraphs and mismatch count. `None` when the recordings cannot be
+/// read: the deny still names the artifact, just without the counts.
+fn load_diffrun_outcome_for_guard(
+    manifest_resolved: &str,
+) -> Option<crate::evidence::diffrun::DiffrunOutcome> {
+    use crate::evidence::diffrun::{parse_record_paths, run_diffrun, run_diffrun_with_paths};
+    let text = std::fs::read_to_string(manifest_resolved).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let base = std::path::Path::new(manifest_resolved)
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let read_beside = |key: &str| -> Option<String> {
+        let raw = value.get(key)?.as_str()?;
+        let path = if std::path::Path::new(raw).is_absolute() {
+            std::path::PathBuf::from(raw)
+        } else {
+            base.join(raw)
+        };
+        std::fs::read_to_string(&path).ok()
+    };
+    let inputs = read_beside("inputs")?;
+    let cobol = read_beside("cobol_report")?;
+    let rewrite = read_beside("rewrite_report")?;
+    if let Some(raw_paths) = value.get("record_paths").and_then(|v| v.as_str()) {
+        let path = if std::path::Path::new(raw_paths).is_absolute() {
+            std::path::PathBuf::from(raw_paths)
+        } else {
+            base.join(raw_paths)
+        };
+        let text = std::fs::read_to_string(&path).ok()?;
+        let paths = parse_record_paths(&text).ok()?;
+        run_diffrun_with_paths(&inputs, &cobol, &rewrite, &paths).ok()
+    } else {
+        let trace = read_beside("trace")?;
+        let start = value
+            .get("record_start")
+            .and_then(|v| v.as_str())
+            .unwrap_or("PROCESS-ALL");
+        let end = value
+            .get("record_end")
+            .and_then(|v| v.as_str())
+            .unwrap_or("WRITE-DETAIL");
+        run_diffrun(&inputs, &cobol, &rewrite, &trace, start, end).ok()
+    }
+}
+
+/// Every open diffrun flag whose rewrite file is named by the tool input:
+/// one hit per flag, naming the first matched artifact with the run's
+/// blamed paragraphs and mismatch count. The outcome loads only when an
+/// artifact matched, so reads and greps of the batch stay fast.
+fn find_diffrun_artifact_hits(
+    store: &Store,
+    open: &[crate::core::Flag],
+    cwd: Option<&str>,
+    strings: &[String],
+) -> Vec<(usize, String)> {
+    use crate::evidence::diffrun::exclusive_paragraphs;
+    let mut hits = Vec::new();
+    for (position, flag) in open.iter().enumerate() {
+        if classify_flag(&flag.old_version, &flag.new_version) != FlagKind::Diffrun {
+            continue;
+        }
+        let manifest = resolve_against_cwd(&flag.new_version, cwd);
+        let artifacts = load_rewrite_artifacts(&manifest);
+        if artifacts.is_empty() {
+            continue;
+        }
+        let matched = artifacts
+            .iter()
+            .find(|artifact| strings.iter().any(|text| artifact_matches(text, artifact)));
+        let Some(artifact) = matched else {
+            continue;
+        };
+        let detail = match load_diffrun_outcome_for_guard(&manifest) {
+            Some(outcome) => {
+                let paragraphs = exclusive_paragraphs(&outcome);
+                let blame = if paragraphs.is_empty() {
+                    String::from("no exclusive paragraph")
+                } else {
+                    format!("blamed paragraph {}", paragraphs.join(", "))
+                };
+                format!(
+                    "rewrite artifact {artifact} ({blame}; {} mismatching records)",
+                    outcome.mismatches.len()
+                )
+            }
+            None => format!("rewrite artifact {artifact}"),
+        };
+        // The claim, versions and severity join in `deny_reason` around
+        // this detail; the `_` keeps the helper total while the store
+        // lookup stays in one place.
+        let _ = store.citations_for_memory(&flag.memory).len();
+        hits.push((position, detail));
+    }
+    hits
+}
+
 fn build_match_index(store: &Store, open: &[crate::core::Flag], cwd: Option<&str>) -> MatchIndex {
     let mut natives = Vec::new();
     let mut failures: Vec<String> = Vec::new();
     let mut loaded: Vec<(String, Option<VersionIndex>)> = Vec::new();
     for (position, flag) in open.iter().enumerate() {
+        // Legacy and diffrun flags never match paragraph or field names in
+        // free command text: reading or grepping the batch is allowed. The
+        // diffrun hold is the rewrite's own files (below); legacy holds
+        // nothing at the guard.
+        match classify_flag(&flag.old_version, &flag.new_version) {
+            FlagKind::Legacy | FlagKind::Diffrun => continue,
+            FlagKind::Contract | FlagKind::Screens => {}
+        }
         for version in [&flag.old_version, &flag.new_version] {
             if loaded.iter().any(|(key, _)| key == version) {
                 continue;
