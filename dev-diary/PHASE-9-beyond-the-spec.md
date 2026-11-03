@@ -576,7 +576,9 @@ If the user put the extension into the runs (T9.4): the extended migration witho
 
 The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T9.4's fixtures, not observed from Wonder. Run by an agent with T9.13's rig (user decision): interactive Muse Code recorded live, the planted rewrite handed to Wonder as its earlier session's work and labelled so in the README (`wonder-bill.rs` only; `fixed-bill.rs` and the story's Doyle-side files never enter Wonder's folder), the console from T9.12, the flags from the binary (T9.11, T9.11b). The person's only part is the approval on the review page. The recordings, their README and the judges' page say so. What these runs show is detection, by execution and by Wonder's eyes, traced to stable IDs.
 
-**Done when:** both recordings show what the story in `testdata/legacy/story/` says, with the counts and mismatches in the handoff text.
+Filmed for the demo video (user decision): every beat is a live OBS take with the rig, as it happens, from the planted setup through Wonder's sessions, Doyle's flags and guard, the review page with the person's approval (a browser window with no address bar, so the reviewer link never shows), the corrected memory and the final counts. `evidence/legacy/SHOTS.md` lists each shot and its take.
+
+**Done when:** both recordings show what the story in `testdata/legacy/story/` says, or their READMEs say plainly where they did not, with the counts and mismatches in the handoff text; every shot in `SHOTS.md` is a live 1920×1080 take, video only, scan clean, or marked missing with the reason.
 
 ---
 
