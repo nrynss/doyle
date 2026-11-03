@@ -469,8 +469,53 @@ requires:   [T9.12]
 fixture-ok: no
 size:       S · mid
 owns:       ~/work/demo-shoot/doyle/capture-rig.md and ~/work/demo-shoot/doyle/tools/ (outside the repository); nothing in the repository
-status:     claimed:msc-t9.13
+status:     in-review
 ```
+
+Notes (msc-t9.13): rig built; review take recorded; session take blocked on
+person-only OBS steps, reported to the orchestrator.
+- `~/work/demo-shoot/doyle/capture-rig.md` + `tools/` (new): `obs.py`
+  (obs-websocket v5, password from a person-named file under `~/.config/`,
+  never printed), `strip-env.sh` (the T7.2b key-stripping rule, count-only
+  output, refuses to run with credentials present), `take-session.sh`
+  (record-start, launch the key-stripped TUI with the prompt verbatim as its
+  initial argument, pane-stability wait, record-stop, move the take, drop
+  the tmux session; sends nothing after launch), `seed-review-state.py`
+  (copies fixtures to scratch, writes the story citations, runs the binary
+  keyless and asserts L2-alone / S1-alone / L1-alone-535-$8,308.80 before
+  anything records), `record-review.mjs` (Playwright 1920x1080, fresh
+  cookie-less context, list then each flag page), `scan-take.sh` (values via
+  `grep -l` from a 0600 patterns file only; structural patterns report
+  counts; fails on any value hit).
+- Findings, all verified by running, not assumed. obs-websocket is enabled
+  on 127.0.0.1:4455 with auth required (settings path in the rig doc);
+  canvas already 1920x1080@30, MKV. `send-keys -l ... Enter` sends the word
+  Enter literally — the key needs its own send-keys. A bare TUI in a fresh
+  dir raises the workspace-trust prompt, so the rig passes
+  `--trust-workspace` (run-only, saves nothing). Inside the TUI Enter is a
+  newline; the rig passes the prompt as the initial argument, which the TUI
+  submits itself (verified on 1.4.14 with the echo provider: prompt
+  submitted, reply streamed, pane stable, wait loop exited; no memory folder
+  written, global settings byte-identical). `obs.py` status/record/scenes
+  and the missing-password exit were exercised against a fake
+  obs-websocket server asserting the challenge-response; the one real
+  `scenes` parse bug this caught (missing-key assumption) is fixed.
+- Takes: `takes/2026-11-03-t9.13-review.mkv` (1920x1080, ~26 s, VP8): the
+  flag list (L2, S1, L1 open), the S1 screen flag's before/after frames with
+  the decommission procedure change, the L1 diffrun flag's 535-row mismatch
+  table; read-only view throughout, reviewer link never shown. The session
+  take is unmet: OBS is not running and the rig's password file
+  (`~/.config/doyle-shoot/obs.env`) does not exist, and both plus the scene
+  and the approval answers are person-only. Exact asks are in the report.
+- Scan: the take, all six tools and the rig doc carry no key value, no
+  reviewer token, no `auth.json` content and no private path; the only scan
+  hits are the doc's own reviewed rule text. The scan caught one real leak
+  first (a hardcoded `/home/` path in the recorder, rebuilt from `$HOME`).
+- Surprises: the earlier takes in `takes/` are 1280-wide pane-sampling
+  assemblies, not OBS captures — the rig doc records that method as the
+  fallback the T7 takes used, while the takes it prescribes are OBS's.
+  OBS auto-splits recordings at 15 minutes by profile setting; test takes
+  stay short.
 
 Every take so far is a still frame: `muse exec` prints nothing until it finishes. The extended runs need the session recorded as it happens.
 
