@@ -42,10 +42,18 @@ fn detect_kind(old_path: &str, new_path: &str) -> SourceKind {
     }
 }
 
-/// Load one screens version file: the review page's version shape
+/// One parsed screens version file: the raw screens, steps and recording
+/// the review page and the re-check read.
+struct ScreenFile {
+    screens: Vec<RawScreen>,
+    steps: Vec<RawStep>,
+    recording: Option<RecordingMeta>,
+}
+
+/// Parse one screens version file: the review page's version shape
 /// (`console`, `screens`, `steps`, `recording`), shared with the guard so
 /// both resolve the same stable IDs.
-pub fn load_screen_version(path: &str) -> Result<(ScreenIndex, Option<RecordingMeta>), String> {
+fn parse_screen_file(path: &str) -> Result<(String, ScreenFile), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
     let value: serde_json::Value =
         serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
@@ -134,13 +142,40 @@ pub fn load_screen_version(path: &str) -> Result<(ScreenIndex, Option<RecordingM
             .to_string(),
         duration_s: r.get("duration_s").and_then(|v| v.as_f64()).unwrap_or(0.0),
     });
+    Ok((
+        console.to_string(),
+        ScreenFile {
+            screens,
+            steps,
+            recording,
+        },
+    ))
+}
+
+/// Load one screens version file: the review page's version shape
+/// (`console`, `screens`, `steps`, `recording`), shared with the guard so
+/// both resolve the same stable IDs.
+pub fn load_screen_version(path: &str) -> Result<(ScreenIndex, Option<RecordingMeta>), String> {
+    let (console, file) = parse_screen_file(path)?;
     let raw = RawVersion {
-        screens,
-        steps,
+        screens: file.screens,
+        steps: file.steps,
         warnings: Vec::new(),
     };
-    let (index, _warnings) = ScreenIndex::from_raw(console, &raw, recording.as_ref());
-    Ok((index, recording))
+    let (index, _warnings) = ScreenIndex::from_raw(&console, &raw, file.recording.as_ref());
+    Ok((index, file.recording))
+}
+
+/// Load one screens version file's frame ground truth: each screen's name
+/// with its frame rendered by the re-check, for the screens re-check
+/// input. Reads the same version shape [`load_screen_version`] reads.
+pub fn load_screen_frames(path: &str) -> Result<Vec<(String, String)>, String> {
+    let (_, file) = parse_screen_file(path)?;
+    Ok(file
+        .screens
+        .iter()
+        .map(|s| (s.name.clone(), recheck::render_screen_frame(&s.elements)))
+        .collect())
 }
 
 /// Run the `check` command.
@@ -433,26 +468,53 @@ fn execute_evidence(
     }
     let written: Vec<Flag> = store.flags()[before..].to_vec();
 
-    // No re-check producer for these kinds yet: note each flag once on a
-    // default run, stay silent (and model-free) under --no-recheck.
+    // The re-check producer for the new kinds (T9.11b): under --live each
+    // open proposal-less flag gets a real proposal from Muse Spark through
+    // the evidence input builders, the way contract flags propose by
+    // default. A default run stays keyless and model-free: each new-kind
+    // flag gets the one-line stderr note naming the later task, and
+    // --no-recheck stays silent.
+    let mut proposals: Vec<Proposal> = Vec::new();
     if !no_recheck {
-        let origin = match kind {
-            SourceKind::Legacy => "legacy",
-            SourceKind::Screens => "screens",
-            SourceKind::Contract => "contract",
-        };
-        for f in &written {
-            eprintln!(
-                "doyle check: flag {} ({}/{}) got no proposal: re-check for {} flags is not built yet (a later task); rerun with --no-recheck to silence",
-                f.id, f.memory.adapter, f.memory.id, origin,
-            );
+        if cli.common.live {
+            let client: Box<dyn ModelClient> = live_recheck_client()?;
+            proposals = match &pair {
+                OldNew::Legacy(old, new) => {
+                    propose_legacy_flags(&mut store, &citations, client.as_ref(), old, new)
+                }
+                OldNew::Screens(old, new) => {
+                    let old_frames = load_screen_frames(old_path)?;
+                    let new_frames = load_screen_frames(new_path)?;
+                    propose_screen_flags(
+                        &mut store,
+                        &citations,
+                        client.as_ref(),
+                        old,
+                        new,
+                        &old_frames,
+                        &new_frames,
+                    )
+                }
+            };
+        } else {
+            let origin = match kind {
+                SourceKind::Legacy => "legacy",
+                SourceKind::Screens => "screens",
+                SourceKind::Contract => "contract",
+            };
+            for f in &written {
+                eprintln!(
+                    "doyle check: flag {} ({}/{}) got no proposal: re-check for {} flags is not built yet (a later task); rerun with --no-recheck to silence",
+                    f.id, f.memory.adapter, f.memory.id, origin,
+                );
+            }
         }
     }
 
     let report = if format == "json" {
-        render_json(old_path, new_path, &written, &[])
+        render_json(old_path, new_path, &written, &proposals)
     } else {
-        render_markdown(old_path, new_path, &written, &[])
+        render_markdown(old_path, new_path, &written, &proposals)
     };
 
     let code = if written.is_empty() {
@@ -461,6 +523,154 @@ fn execute_evidence(
         ExitCode::from(1)
     };
     Ok((code, report))
+}
+
+/// Run the evidence re-check for one flag: complete the request, parse
+/// the reply, record the proposal. Diagnostics mirror the contract path
+/// (same `doyle check: flag ... got no proposal` shape) so operators see
+/// one failure vocabulary for every source.
+fn run_evidence_recheck(
+    store: &mut Store,
+    flag: &Flag,
+    request: &crate::models::ModelRequest,
+    client: &dyn ModelClient,
+) -> Option<Proposal> {
+    match client.complete(request) {
+        Ok(resp) => match recheck::parse_response(&resp.value) {
+            Ok(parsed) => {
+                let proposal = Proposal {
+                    id: String::new(),
+                    flag_id: flag.id.clone(),
+                    action: parsed.action,
+                    rationale: parsed.rationale,
+                    proposed_by: recheck::MODEL.to_string(),
+                };
+                let pid = store
+                    .record_proposal(proposal.clone())
+                    .map_err(|e| e.to_string())
+                    .ok()?;
+                if let Some(p) = store.proposal(&pid) {
+                    Some(p)
+                } else {
+                    Some(Proposal {
+                        id: pid,
+                        ..proposal
+                    })
+                }
+            }
+            Err(e) => {
+                eprintln!(
+                    "doyle check: flag {} ({}/{}) got no proposal: parse failure: {} (model {}, changes {})",
+                    flag.id,
+                    flag.memory.adapter,
+                    flag.memory.id,
+                    e,
+                    recheck::MODEL,
+                    flag.changes
+                        .iter()
+                        .map(|c| c.0.as_str())
+                        .collect::<Vec<_>>()
+                        .join(",")
+                );
+                None
+            }
+        },
+        Err(ModelError::ReplayMiss { key }) => {
+            eprintln!(
+                "doyle check: flag {} ({}/{}) got no proposal: replay miss (key {}) (model {}, changes {})",
+                flag.id,
+                flag.memory.adapter,
+                flag.memory.id,
+                key,
+                recheck::MODEL,
+                flag.changes
+                    .iter()
+                    .map(|c| c.0.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            None
+        }
+        Err(other) => {
+            eprintln!(
+                "doyle check: flag {} ({}/{}) got no proposal: model error: {} (model {}, changes {})",
+                flag.id,
+                flag.memory.adapter,
+                flag.memory.id,
+                other,
+                recheck::MODEL,
+                flag.changes
+                    .iter()
+                    .map(|c| c.0.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            );
+            None
+        }
+    }
+}
+
+/// Propose for legacy-diff flags: every open proposal-less flag is
+/// re-checked against both program versions. Once a proposal is recorded
+/// it is skipped on reruns; a flag that gets no proposal stays
+/// proposal-less so the next run retries it.
+fn propose_legacy_flags(
+    store: &mut Store,
+    citations: &[Citation],
+    client: &dyn ModelClient,
+    old: &crate::evidence::legacy::LegacyIndex,
+    new: &crate::evidence::legacy::LegacyIndex,
+) -> Vec<Proposal> {
+    let targets: Vec<Flag> = store
+        .open_flags()
+        .into_iter()
+        .filter(|f| store.proposals_for_flag(&f.id).is_empty())
+        .collect();
+    let mut proposals = Vec::new();
+    for f in &targets {
+        let citation = citations.iter().find(|c| c.memory == f.memory).cloned();
+        let input = recheck::build_legacy_recheck_input(f, citation.as_ref(), old, new);
+        let request = recheck::build_evidence_request(&input);
+        if let Some(p) = run_evidence_recheck(store, f, &request, client) {
+            proposals.push(p);
+        }
+    }
+    proposals
+}
+
+/// Propose for screen-diff flags: the same loop over both console
+/// versions, with each version's frame ground truth beside the verdict.
+fn propose_screen_flags(
+    store: &mut Store,
+    citations: &[Citation],
+    client: &dyn ModelClient,
+    old: &ScreenIndex,
+    new: &ScreenIndex,
+    old_frames: &[(String, String)],
+    new_frames: &[(String, String)],
+) -> Vec<Proposal> {
+    let targets: Vec<Flag> = store
+        .open_flags()
+        .into_iter()
+        .filter(|f| store.proposals_for_flag(&f.id).is_empty())
+        .collect();
+    let mut proposals = Vec::new();
+    for f in &targets {
+        let citation = citations.iter().find(|c| c.memory == f.memory).cloned();
+        let input = recheck::build_screens_recheck_input(
+            f,
+            citation.as_ref(),
+            old,
+            new,
+            old_frames,
+            new_frames,
+        );
+        let request = recheck::build_evidence_request(&input);
+        if let Some(p) = run_evidence_recheck(store, f, &request, client) {
+            proposals.push(p);
+        }
+    }
+    proposals
 }
 
 fn model_for_run(live: bool) -> Result<Box<dyn ModelClient>, String> {
@@ -1419,5 +1629,79 @@ mod tests {
             crate::models::ModelError::ReplayMiss { .. } => {}
             other => panic!("expected ReplayMiss, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod frames_tests {
+    use super::*;
+
+    fn write_screens_version(dir: &std::path::Path) -> (String, String) {
+        let screen_doc = |file: &str| -> serde_json::Value {
+            let value: serde_json::Value = serde_json::from_str(
+                &std::fs::read_to_string(format!(
+                    "{}/testdata/legacy/story/screens/{file}.json",
+                    env!("CARGO_MANIFEST_DIR")
+                ))
+                .unwrap(),
+            )
+            .unwrap();
+            serde_json::json!({
+                "name": value["screen"],
+                "elements": value["elements"],
+            })
+        };
+        let v1 = serde_json::json!({
+            "console": "fernwhistle",
+            "screens": [screen_doc("lookup-v1"), screen_doc("decomm-v1")],
+            "steps": [],
+        });
+        let v2 = serde_json::json!({
+            "console": "fernwhistle",
+            "screens": [screen_doc("lookup-v2"), screen_doc("decomm-v2")],
+            "steps": [],
+        });
+        let v1_path = dir.join("screens-v1.json");
+        let v2_path = dir.join("screens-v2.json");
+        std::fs::write(&v1_path, serde_json::to_string_pretty(&v1).unwrap()).unwrap();
+        std::fs::write(&v2_path, serde_json::to_string_pretty(&v2).unwrap()).unwrap();
+        (
+            v1_path.to_string_lossy().to_string(),
+            v2_path.to_string_lossy().to_string(),
+        )
+    }
+
+    #[test]
+    fn screen_frames_render_both_versions_ground_truth() {
+        let dir = std::env::temp_dir().join(format!(
+            "doyle-frames-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (v1_path, v2_path) = write_screens_version(&dir);
+        let old_frames = load_screen_frames(&v1_path).expect("frames load");
+        let new_frames = load_screen_frames(&v2_path).expect("frames load");
+        assert_eq!(old_frames.len(), 2);
+        let decomm_old = old_frames
+            .iter()
+            .find(|(name, _)| name == "decommission")
+            .expect("decomm frame");
+        assert!(decomm_old.1.contains("CONFIRM"), "{}", decomm_old.1);
+        let decomm_new = new_frames
+            .iter()
+            .find(|(name, _)| name == "decommission")
+            .expect("decomm frame");
+        assert!(decomm_new.1.contains("DECOMMISSION"), "{}", decomm_new.1);
+        let lookup_new = new_frames
+            .iter()
+            .find(|(name, _)| name == "lookup")
+            .expect("lookup frame");
+        assert!(lookup_new.1.contains("SAVE"), "{}", lookup_new.1);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -33,7 +33,11 @@ use crate::adapters::{FakeAdapter, MemoryAdapter};
 use crate::cli;
 use crate::contract::ContractIndex;
 use crate::core::{Citation, ElementId, Memory, MemoryRef, Store};
+use crate::evidence::EvidenceSource;
+use crate::evidence::legacy::LegacyIndex;
+use crate::evidence::screens::ScreenIndex;
 use crate::models::ModelClient;
+use crate::models::ModelRequest;
 use crate::models::ReplayClient;
 use crate::models::baseten::BasetenModelClient;
 use crate::prompts::curator::{self, CuratorVerdict};
@@ -65,6 +69,29 @@ pub type CurateResult = CurateItem;
 /// otherwise.
 pub const DEFAULT_CONTRACT: &str = "testdata/contracts/patients-v1.yaml";
 
+/// Which evidence source a `curate` run cites against, picked from the
+/// `--contract` path's extension the way `check` picks its diff source:
+/// a `.cbl` program cites against the legacy elements, a `.json` screens
+/// version against the console screens and training steps, anything else
+/// against the API contract as before.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CurateSource {
+    Contract,
+    Legacy,
+    Screens,
+}
+
+/// Pick the curate source from the contract path: see [`CurateSource`].
+fn detect_source(contract_path: &str) -> CurateSource {
+    if contract_path.ends_with(".cbl") {
+        CurateSource::Legacy
+    } else if contract_path.ends_with(".json") {
+        CurateSource::Screens
+    } else {
+        CurateSource::Contract
+    }
+}
+
 /// Run the `curate` command.
 pub fn run(cli: &cli::Cli) -> ExitCode {
     let dry_run = cli.common.dry_run;
@@ -75,13 +102,7 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         .contract
         .clone()
         .unwrap_or_else(|| DEFAULT_CONTRACT.to_string());
-    let index = match ContractIndex::load(&contract_path) {
-        Ok(i) => i,
-        Err(e) => {
-            eprintln!("doyle curate: {e}");
-            return ExitCode::from(2);
-        }
-    };
+    let source = detect_source(&contract_path);
 
     let dir = cli
         .common
@@ -142,7 +163,39 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
         }
     };
 
-    let items = match curate(&adapters, model.as_ref(), &index, &mut store, dry_run) {
+    let items = match source {
+        CurateSource::Contract => {
+            let index = match ContractIndex::load(&contract_path) {
+                Ok(i) => i,
+                Err(e) => {
+                    eprintln!("doyle curate: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            curate(&adapters, model.as_ref(), &index, &mut store, dry_run)
+        }
+        CurateSource::Legacy => {
+            let index = match LegacyIndex::load(&contract_path) {
+                Ok(i) => i,
+                Err(e) => {
+                    eprintln!("doyle curate: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            curate_legacy(&adapters, model.as_ref(), &index, &mut store, dry_run)
+        }
+        CurateSource::Screens => {
+            let (index, _) = match crate::check::load_screen_version(&contract_path) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("doyle curate: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            curate_screens(&adapters, model.as_ref(), &index, &mut store, dry_run)
+        }
+    };
+    let items = match items {
         Ok(v) => v,
         Err(e) => {
             eprintln!("doyle curate: {e}");
@@ -244,20 +297,163 @@ pub fn curate_refs(
     dry_run: bool,
 ) -> Result<Vec<CurateItem>, String> {
     let allowed = curator::allowed_ids(index);
+    let queries: Vec<String> = index
+        .entities()
+        .iter()
+        .map(|e| query_for_entity(e, index))
+        .collect();
+    curate_generic(
+        adapters,
+        model,
+        store,
+        dry_run,
+        &allowed,
+        &queries,
+        &|text| curator::build_curator_request(text, index, CURATOR_MODEL),
+    )
+}
+
+/// Curate L-memories against a legacy index: the same candidate passes
+/// and the same citation writes, with the legacy element list and the
+/// legacy curator prompt.
+pub fn curate_legacy(
+    adapters: &[Box<dyn MemoryAdapter>],
+    model: &dyn ModelClient,
+    index: &LegacyIndex,
+    store: &mut Store,
+    dry_run: bool,
+) -> Result<Vec<CurateItem>, String> {
+    let refs: Vec<&dyn MemoryAdapter> = adapters.iter().map(|a| a.as_ref()).collect();
+    curate_legacy_refs(&refs, model, index, store, dry_run)
+}
+
+/// Curate L-memories against a legacy index through adapter references.
+pub fn curate_legacy_refs(
+    adapters: &[&dyn MemoryAdapter],
+    model: &dyn ModelClient,
+    index: &LegacyIndex,
+    store: &mut Store,
+    dry_run: bool,
+) -> Result<Vec<CurateItem>, String> {
+    let allowed = curator::allowed_legacy_ids(index);
+    let queries = legacy_queries(index);
+    curate_generic(
+        adapters,
+        model,
+        store,
+        dry_run,
+        &allowed,
+        &queries,
+        &|text| curator::build_legacy_curator_request(text, index, CURATOR_MODEL),
+    )
+}
+
+/// Curate S-memories against a console index: the same candidate passes
+/// and the same citation writes, with the screens and training spans and
+/// the screens curator prompt.
+pub fn curate_screens(
+    adapters: &[Box<dyn MemoryAdapter>],
+    model: &dyn ModelClient,
+    index: &ScreenIndex,
+    store: &mut Store,
+    dry_run: bool,
+) -> Result<Vec<CurateItem>, String> {
+    let refs: Vec<&dyn MemoryAdapter> = adapters.iter().map(|a| a.as_ref()).collect();
+    curate_screens_refs(&refs, model, index, store, dry_run)
+}
+
+/// Curate S-memories against a console index through adapter references.
+pub fn curate_screens_refs(
+    adapters: &[&dyn MemoryAdapter],
+    model: &dyn ModelClient,
+    index: &ScreenIndex,
+    store: &mut Store,
+    dry_run: bool,
+) -> Result<Vec<CurateItem>, String> {
+    let allowed = curator::allowed_screen_ids(index);
+    let queries = screen_queries(index);
+    curate_generic(
+        adapters,
+        model,
+        store,
+        dry_run,
+        &allowed,
+        &queries,
+        &|text| curator::build_screens_curator_request(text, index, CURATOR_MODEL),
+    )
+}
+
+/// One search query per legacy element, from its native name: paragraphs,
+/// sections and files name the operation-ID slot, programs and records the
+/// type-name slot, fields their record and themselves.
+fn legacy_queries(index: &LegacyIndex) -> Vec<String> {
+    index
+        .elements()
+        .iter()
+        .filter_map(|e| index.native_location(&e.id))
+        .map(|loc| {
+            if let Some(op) = loc.operation_id
+                && !op.is_empty()
+            {
+                return op;
+            }
+            if let Some(tn) = loc.type_name
+                && !tn.is_empty()
+            {
+                if let Some(field) = loc.field_name
+                    && !field.is_empty()
+                {
+                    return format!("{tn} {field}");
+                }
+                return tn;
+            }
+            String::new()
+        })
+        .collect()
+}
+
+/// One search query per console element that names something: screen and
+/// recording names. Steps are sentences, not identifiers, so they carry
+/// no query of their own; the unfiltered pass still surfaces them.
+fn screen_queries(index: &ScreenIndex) -> Vec<String> {
+    index
+        .elements()
+        .iter()
+        .filter(|e| {
+            e.kind == crate::evidence::EvidenceElementKind::Type
+                || e.kind == crate::evidence::EvidenceElementKind::Other("recording".to_string())
+        })
+        .filter_map(|e| e.native.type_name.clone())
+        .collect()
+}
+
+/// The shared curate loop behind every source: one search per query plus
+/// one unfiltered pass, skip memories already cited at their text, run the
+/// curator for the rest, write citations. `build_request` renders the
+/// source's curator request for a memory's text; citations name the
+/// Baseten curator model, the same model every source curates through.
+fn curate_generic(
+    adapters: &[&dyn MemoryAdapter],
+    model: &dyn ModelClient,
+    store: &mut Store,
+    dry_run: bool,
+    allowed: &HashSet<String>,
+    queries: &[String],
+    build_request: &dyn Fn(&str) -> ModelRequest,
+) -> Result<Vec<CurateItem>, String> {
     let mut out: Vec<CurateItem> = Vec::new();
 
     for adapter in adapters {
-        // Collect candidate memories: one search per contract element, plus one
+        // Collect candidate memories: one search per query, plus one
         // unfiltered pass so enumerable adapters surface token-disjoint
         // memories (empty query returns everything per the adapter contract).
         let mut candidates: Vec<Memory> = Vec::new();
         let mut seen: HashSet<MemoryRef> = HashSet::new();
-        for entity in index.entities() {
-            let q = query_for_entity(entity, index);
+        for q in queries {
             if q.trim().is_empty() {
                 continue;
             }
-            match adapter.list(&q) {
+            match adapter.list(q) {
                 Ok(mems) => {
                     for m in mems {
                         if seen.insert(m.reference.clone()) {
@@ -292,9 +488,9 @@ pub fn curate_refs(
                 continue;
             }
 
-            let request = curator::build_curator_request(&memory.text, index, CURATOR_MODEL);
+            let request = build_request(&memory.text);
             let response = model.complete(&request).map_err(|e| e.to_string())?;
-            let verdict = curator::parse_curator_value(&response.value, &allowed)
+            let verdict = curator::parse_curator_value(&response.value, allowed)
                 .map_err(|e| e.to_string())?;
 
             match verdict {
@@ -1145,5 +1341,84 @@ mod tests {
             }
         }
         let _ = fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+
+    #[test]
+    fn detect_source_picks_legacy_screens_or_contract() {
+        assert_eq!(detect_source("v1/BILLBATCH.cbl"), CurateSource::Legacy);
+        assert_eq!(detect_source("screens-v1.json"), CurateSource::Screens);
+        assert_eq!(
+            detect_source("testdata/contracts/patients-v1.yaml"),
+            CurateSource::Contract
+        );
+        assert_eq!(detect_source(""), CurateSource::Contract);
+    }
+
+    #[test]
+    fn legacy_queries_name_every_searchable_element() {
+        let index = LegacyIndex::load(format!(
+            "{}/testdata/legacy/story/v1/BILLBATCH.cbl",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .expect("v1 loads");
+        let queries = legacy_queries(&index);
+        assert!(!queries.is_empty());
+        assert!(queries.iter().all(|q| !q.trim().is_empty()));
+        for name in [
+            "BILLBATCH",
+            "CALC-LATE-FEE",
+            "PATIENT-RECORD",
+            "BALANCE",
+            "ACCT-FILE",
+        ] {
+            assert!(
+                queries.iter().any(|q| q.contains(name)),
+                "query names {name}: {queries:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn screen_queries_name_screens_and_recording() {
+        let dir = std::env::temp_dir().join(format!(
+            "doyle-cur-src-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let lookup: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(format!(
+                "{}/testdata/legacy/story/screens/lookup-v1.json",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+        let path = dir.join("screens-v1.json");
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "console": "fernwhistle",
+                "screens": [{"name": lookup["screen"], "elements": lookup["elements"]}],
+                "steps": [],
+                "recording": {"name": "training-v1", "duration_s": 45.0},
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let (index, _) = crate::check::load_screen_version(path.to_str().unwrap()).expect("loads");
+        let queries = screen_queries(&index);
+        assert!(queries.contains(&"lookup".to_string()), "{queries:?}");
+        assert!(queries.contains(&"training-v1".to_string()), "{queries:?}");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

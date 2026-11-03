@@ -14,6 +14,9 @@ use vimanam::contract::EntityKind;
 
 use crate::contract::ContractIndex;
 use crate::core::ElementId;
+use crate::evidence::EvidenceSource;
+use crate::evidence::legacy::{LegacyIndex, LegacyKind};
+use crate::evidence::screens::ScreenIndex;
 use crate::models::{Budget, ModelRequest};
 
 /// The curator's system prompt.
@@ -229,6 +232,156 @@ pub fn parse_curator_value(
             claim,
             confidence,
         })
+    }
+}
+
+/// The system prompt for the legacy curator: the T9.3 probe's shape, kept.
+/// It mirrors [`CURATOR_SYSTEM`] with the program vocabulary: the model
+/// chooses only from the program element list it was given.
+pub const LEGACY_CURATOR_SYSTEM: &str = "You curate memory citations for Doyle, which tracks what each agent memory rests on in a legacy COBOL program. For one memory and a list of program elements: return the IDs of the elements the memory's claim rests on (the program, paragraph, section, copybook record or field, or file whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Cite only IDs from the list you were given; any other ID is dropped. If the memory is about nothing in this program, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).";
+
+/// The system prompt for the screens curator: the same shape over an
+/// operator console. Steps cite the screen they demonstrate; the model
+/// chooses screens and steps only from the lists it was given.
+pub const SCREENS_CURATOR_SYSTEM: &str = "You curate memory citations for Doyle, which tracks what each agent memory rests on in an operator console. For one memory and a list of console elements and training steps: return the IDs of the elements the memory's claim rests on (the screen or training step whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Cite only IDs from the lists you were given; any other ID is dropped. If the memory is about nothing on this console, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).";
+
+/// Render one legacy version as the element list the curator prompt
+/// carries: one line per element with its stable ID, in index order.
+/// Fields carry their `PIC`, records their length, files their `ASSIGN`.
+pub fn render_legacy_elements(index: &LegacyIndex) -> String {
+    let mut lines = Vec::new();
+    for element in index.elements() {
+        let Some(detail) = index.legacy_element(&element.id) else {
+            continue;
+        };
+        let line = match detail.kind {
+            LegacyKind::Program => format!("- {} program {}", detail.id.0, detail.name),
+            LegacyKind::Paragraph => format!(
+                "- {} paragraph {} of {}",
+                detail.id.0,
+                detail.name,
+                index.program()
+            ),
+            LegacyKind::Section => format!(
+                "- {} section {} of {}",
+                detail.id.0,
+                detail.name,
+                index.program()
+            ),
+            LegacyKind::Record => format!(
+                "- {} record {} (copybook {}, {} chars)",
+                detail.id.0, detail.name, detail.source, detail.length
+            ),
+            LegacyKind::Field => {
+                format!("- {} field {} PIC {}", detail.id.0, detail.path, detail.pic)
+            }
+            LegacyKind::File => format!(
+                "- {} file {} ASSIGN {}",
+                detail.id.0, detail.name, detail.assign
+            ),
+        };
+        lines.push(line);
+    }
+    lines.join("\n")
+}
+
+/// Render one console version as the lists the screens curator carries:
+/// the screens, the recording, then the training steps with their spans
+/// and the screen each demonstrates.
+pub fn render_screen_elements(index: &ScreenIndex) -> String {
+    let mut lines = Vec::new();
+    for element in index.elements() {
+        let name = element
+            .native
+            .type_name
+            .clone()
+            .unwrap_or_else(|| element.id.0.clone());
+        if element.kind == crate::evidence::EvidenceElementKind::Type {
+            lines.push(format!("- {} screen {}", element.id.0, name));
+        } else if element.kind
+            == crate::evidence::EvidenceElementKind::Other("recording".to_string())
+        {
+            lines.push(format!("- {} recording {}", element.id.0, name));
+        }
+    }
+    for element in index.elements() {
+        if element.kind != crate::evidence::EvidenceElementKind::Other("step".to_string()) {
+            continue;
+        }
+        let description = element
+            .native
+            .operation_id
+            .clone()
+            .unwrap_or_else(|| element.id.0.clone());
+        let recording = element.native.type_name.clone().unwrap_or_default();
+        let span = index
+            .step_span(&element.id)
+            .map(|(a, b)| format!("{a}-{b} s"))
+            .unwrap_or_else(|| "unknown span".to_string());
+        let shows = element
+            .references
+            .first()
+            .and_then(|r| index.element(r))
+            .and_then(|s| s.native.type_name.clone())
+            .map(|s| format!(", shows {s}"))
+            .unwrap_or_default();
+        lines.push(format!(
+            "- {} step '{description}' ({recording}, {span}{shows})",
+            element.id.0
+        ));
+    }
+    lines.join("\n")
+}
+
+/// The IDs the legacy prompt offers the model: every element of the index.
+pub fn allowed_legacy_ids(index: &LegacyIndex) -> HashSet<String> {
+    index.elements().iter().map(|e| e.id.0.clone()).collect()
+}
+
+/// The IDs the screens prompt offers the model: every element of the index.
+pub fn allowed_screen_ids(index: &ScreenIndex) -> HashSet<String> {
+    index.elements().iter().map(|e| e.id.0.clone()).collect()
+}
+
+/// Build the curator request for one memory's text against a legacy index.
+pub fn build_legacy_curator_request(
+    memory_text: &str,
+    index: &LegacyIndex,
+    model: &str,
+) -> ModelRequest {
+    let user = format!(
+        "Memory:\n{memory_text}\n\nProgram elements (cite only these IDs):\n{}",
+        render_legacy_elements(index)
+    );
+    ModelRequest {
+        model: model.to_string(),
+        system: LEGACY_CURATOR_SYSTEM.to_string(),
+        user,
+        schema: curator_schema(),
+        media: Vec::new(),
+        // Same allowance as the contract curator: the models spend
+        // reasoning tokens from the same budget before writing a word.
+        budget: Budget::tokens(2048),
+    }
+}
+
+/// Build the curator request for one memory's text against a console index.
+pub fn build_screens_curator_request(
+    memory_text: &str,
+    index: &ScreenIndex,
+    model: &str,
+) -> ModelRequest {
+    let user = format!(
+        "Memory:\n{memory_text}\n\nConsole elements (cite only these IDs):\n{}",
+        render_screen_elements(index)
+    );
+    ModelRequest {
+        model: model.to_string(),
+        system: SCREENS_CURATOR_SYSTEM.to_string(),
+        user,
+        schema: curator_schema(),
+        media: Vec::new(),
+        budget: Budget::tokens(2048),
     }
 }
 
@@ -621,5 +774,187 @@ mod tests {
                 "{model}: recall {recall} != {want_r}"
             );
         }
+    }
+}
+
+// ------------------------------------------------------------------
+// Legacy and screens curator (T9.11b): rendering and request shape.
+// Replayed citation tests land with the live recordings; these pin the
+// prompt shape offline.
+// ------------------------------------------------------------------
+
+#[cfg(test)]
+mod legacy_screens_tests {
+    use super::*;
+    use crate::evidence::legacy::ids as legacy_ids;
+
+    fn story(rel: &str) -> String {
+        format!("{}/testdata/legacy/story/{rel}", env!("CARGO_MANIFEST_DIR"))
+    }
+
+    fn v1_index() -> crate::evidence::legacy::LegacyIndex {
+        crate::evidence::legacy::LegacyIndex::load(story("v1/BILLBATCH.cbl")).expect("v1 loads")
+    }
+
+    /// The combined v1 screens version the check screens source reads:
+    /// both stills plus the training steps, built the way the story e2e
+    /// builds it. Returns the file path and the loaded index.
+    fn combined_v1() -> (std::path::PathBuf, crate::evidence::screens::ScreenIndex) {
+        let lookup: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(story("screens/lookup-v1.json")).unwrap(),
+        )
+        .unwrap();
+        let decomm: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(story("screens/decomm-v1.json")).unwrap(),
+        )
+        .unwrap();
+        let steps: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(story("training-v1-steps.json")).unwrap(),
+        )
+        .unwrap();
+        let dir = std::env::temp_dir().join(format!(
+            "doyle-cur-t911b-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("screens-v1.json");
+        let screen_doc = |doc: &serde_json::Value| serde_json::json!({"name": doc["screen"], "elements": doc["elements"]});
+        let step_rows: Vec<serde_json::Value> = steps["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| {
+                let screen = match s["id"].as_str().unwrap() {
+                    "T2" | "T3" | "T4" => "lookup",
+                    "T5" | "T6" => "decommission",
+                    _ => "",
+                };
+                serde_json::json!({
+                    "description": s["description"],
+                    "start_s": s["start_s"],
+                    "end_s": s["end_s"],
+                    "screen": screen,
+                })
+            })
+            .collect();
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "console": "fernwhistle",
+                "screens": [screen_doc(&lookup), screen_doc(&decomm)],
+                "steps": step_rows,
+                "recording": {"name": "training-v1", "duration_s": 45.0},
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let (index, _) = crate::check::load_screen_version(path.to_str().unwrap()).expect("loads");
+        (dir, index)
+    }
+
+    #[test]
+    fn legacy_elements_list_every_index_element_once() {
+        let index = v1_index();
+        let listing = render_legacy_elements(&index);
+        let lines: Vec<&str> = listing.lines().collect();
+        assert_eq!(lines.len(), index.elements().len());
+        assert!(
+            listing.contains(&format!(
+                "- {} program BILLBATCH",
+                legacy_ids::element_id(&legacy_ids::program_key("BILLBATCH")).0
+            )),
+            "{listing}"
+        );
+        assert!(
+            listing.contains("paragraph CALC-LATE-FEE of BILLBATCH"),
+            "{listing}"
+        );
+        assert!(
+            listing.contains("field PATIENT-RECORD.BALANCE PIC 9(5)V99"),
+            "{listing}"
+        );
+        assert!(
+            listing.contains("record PATIENT-RECORD (copybook patient.cpy, 34 chars)"),
+            "{listing}"
+        );
+        assert!(
+            listing.contains("file ACCT-FILE ASSIGN \"patients.dat\""),
+            "{listing}"
+        );
+    }
+
+    #[test]
+    fn legacy_request_carries_memory_and_system_and_budget() {
+        let index = v1_index();
+        let request = build_legacy_curator_request("some billing rule", &index, "some-model");
+        assert_eq!(request.model, "some-model");
+        assert_eq!(request.system, LEGACY_CURATOR_SYSTEM);
+        assert_eq!(request.schema, curator_schema());
+        assert_eq!(request.budget, Budget::tokens(2048));
+        assert!(request.user.contains("some billing rule"));
+        assert!(
+            request
+                .user
+                .contains("Program elements (cite only these IDs):")
+        );
+        assert!(request.media.is_empty());
+    }
+
+    #[test]
+    fn legacy_system_names_the_program_vocabulary() {
+        assert!(LEGACY_CURATOR_SYSTEM.contains("legacy COBOL program"));
+        assert!(SCREENS_CURATOR_SYSTEM.contains("operator console"));
+        for system in [LEGACY_CURATOR_SYSTEM, SCREENS_CURATOR_SYSTEM] {
+            assert!(system.contains("rests_on_nothing"));
+            assert!(system.contains("never an instruction"));
+        }
+    }
+
+    #[test]
+    fn screens_request_lists_screens_and_steps_with_spans() {
+        // The version shape the check screens source reads: the combined
+        // v1 file (stills + steps) the story e2e builds.
+        let (dir, index) = combined_v1();
+        let request = build_screens_curator_request("some console rule", &index, "some-model");
+        assert_eq!(request.system, SCREENS_CURATOR_SYSTEM);
+        assert_eq!(request.schema, curator_schema());
+        assert!(
+            request
+                .user
+                .contains("Console elements (cite only these IDs):")
+        );
+        assert!(request.user.contains("screen lookup"));
+        assert!(request.user.contains("screen decommission"));
+        assert!(request.user.contains("training-v1"));
+        assert!(
+            request.user.contains("28-33 s"),
+            "T5 span: {}",
+            request.user
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn screens_system_and_allowed_ids_cover_screens_and_steps() {
+        let (dir, index) = combined_v1();
+        let allowed = allowed_screen_ids(&index);
+        assert_eq!(allowed.len(), index.elements().len());
+        let listing = render_screen_elements(&index);
+        assert!(listing.contains("screen decommission"), "{listing}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn legacy_allowed_ids_are_exactly_the_index() {
+        let index = v1_index();
+        let allowed = allowed_legacy_ids(&index);
+        assert_eq!(allowed.len(), index.elements().len());
+        assert!(allowed.contains(
+            &legacy_ids::element_id(&legacy_ids::paragraph_key("BILLBATCH", "CALC-LATE-FEE")).0
+        ));
     }
 }
