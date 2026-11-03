@@ -237,12 +237,8 @@ pub fn parse_curator_value(
 
 /// The system prompt for the legacy curator: the T9.3 probe's shape, kept.
 /// It mirrors [`CURATOR_SYSTEM`] with the program vocabulary: the model
-/// chooses only from the program element list it was given. The final
-/// sentence is the T9.11b specificity rule: the story's flag algebra needs
-/// the deciding paragraph, record or field (the exemption branch, not the
-/// dispatcher; the layout record, not only its fields), never a caller,
-/// container or the program itself.
-pub const LEGACY_CURATOR_SYSTEM: &str = "You curate memory citations for Doyle, which tracks what each agent memory rests on in a legacy COBOL program. For one memory and a list of program elements: return the IDs of the elements the memory's claim rests on (the program, paragraph, section, copybook record or field, or file whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Prefer the paragraph, record or field that decides the claim over the program and over paragraphs that merely route to it. Cite only IDs from the list you were given; any other ID is dropped. If the memory is about nothing in this program, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).";
+/// chooses only from the program element list it was given.
+pub const LEGACY_CURATOR_SYSTEM: &str = "You curate memory citations for Doyle, which tracks what each agent memory rests on in a legacy COBOL program. For one memory and a list of program elements: return the IDs of the elements the memory's claim rests on (the program, paragraph, section, copybook record or field, or file whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Cite only IDs from the list you were given; any other ID is dropped. If the memory is about nothing in this program, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).";
 
 /// The system prompt for the screens curator: the same shape over an
 /// operator console. Steps cite the screen they demonstrate; the model
