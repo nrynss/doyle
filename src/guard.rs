@@ -182,7 +182,7 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
     }
     let index = build_match_index(&store, &open, call.cwd.as_deref());
     let mut hits: Vec<(usize, String)> =
-        find_diffrun_artifact_hits(&store, &open, call.cwd.as_deref(), &call.strings);
+        find_diffrun_artifact_hits(&open, call.cwd.as_deref(), &call.strings);
     let mut seen_flag: Vec<usize> = hits.iter().map(|(flag, _)| *flag).collect();
     if hits.is_empty() && index.natives.is_empty() {
         return (
@@ -750,7 +750,6 @@ fn load_diffrun_outcome_for_guard(
 /// blamed paragraphs and mismatch count. The outcome loads only when an
 /// artifact matched, so reads and greps of the batch stay fast.
 fn find_diffrun_artifact_hits(
-    store: &Store,
     open: &[crate::core::Flag],
     cwd: Option<&str>,
     strings: &[String],
@@ -787,10 +786,6 @@ fn find_diffrun_artifact_hits(
             }
             None => format!("rewrite artifact {artifact}"),
         };
-        // The claim, versions and severity join in `deny_reason` around
-        // this detail; the `_` keeps the helper total while the store
-        // lookup stays in one place.
-        let _ = store.citations_for_memory(&flag.memory).len();
         hits.push((position, detail));
     }
     hits
@@ -2220,5 +2215,46 @@ paths:
         std::fs::write(&missing, "not a directory").unwrap();
         self_protection_deny(&missing, &bash_hook("doyle serve"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn artifact_matches_respects_component_boundaries() {
+        // A longer name containing the artifact does not match.
+        assert!(!artifact_matches("wonder-billing-notes.md", "wonder-bill"));
+        assert!(!artifact_matches("sbin/billbatch", "bin/billbatch"));
+        // A trailing extension or directory prefix still matches.
+        assert!(artifact_matches("bin/billbatch.o", "bin/billbatch"));
+        assert!(artifact_matches("./bin/billbatch", "bin/billbatch"));
+        assert!(artifact_matches("./bin/billbatch", "./bin/billbatch"));
+        assert!(artifact_matches(
+            "see bin/billbatch for the run",
+            "bin/billbatch"
+        ));
+        // Matching is case-sensitive.
+        assert!(!artifact_matches("bin/billbatch", "Bin/BillBatch"));
+        // Empty artifacts never match.
+        assert!(!artifact_matches("bin/billbatch", ""));
+        assert!(!artifact_matches("bin/billbatch", "./"));
+    }
+
+    #[test]
+    fn artifact_char_covers_name_characters_only() {
+        assert!(is_artifact_char(Some(b'a')));
+        assert!(is_artifact_char(Some(b'Z')));
+        assert!(is_artifact_char(Some(b'0')));
+        assert!(is_artifact_char(Some(b'-')));
+        assert!(is_artifact_char(Some(b'_')));
+        assert!(!is_artifact_char(Some(b'.')));
+        assert!(!is_artifact_char(Some(b'/')));
+        assert!(!is_artifact_char(Some(b' ')));
+        assert!(!is_artifact_char(None));
+    }
+
+    #[test]
+    fn flag_kind_follows_version_extensions() {
+        assert_eq!(classify_flag("a.cbl", "b.cbl"), FlagKind::Legacy);
+        assert_eq!(classify_flag("a.cbl", "run.json"), FlagKind::Diffrun);
+        assert_eq!(classify_flag("a.json", "b.json"), FlagKind::Screens);
+        assert_eq!(classify_flag("a.yaml", "b.yaml"), FlagKind::Contract);
     }
 }
