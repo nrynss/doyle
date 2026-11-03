@@ -84,7 +84,7 @@ const CSS: &str = r#"
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink);
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-header { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+header { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
   padding: .7rem 1rem; border-bottom: 1px solid var(--line); background: var(--panel); }
 .brand { display: inline-flex; align-items: center; gap: .45rem; color: var(--ink);
   text-decoration: none; font-weight: 700; font-size: 1.25rem; }
