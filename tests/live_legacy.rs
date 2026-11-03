@@ -29,6 +29,11 @@
 //! cost, so spend is estimated from input + output tokens on the T9.2/T9.7
 //! basis (~$15 per million tokens). The cheapest curate call (L1) runs and
 //! is checked first; the total is asserted at the end.
+//!
+//! To re-run after a prompt change without re-spending the unchanged
+//! kind: `DOYLE_LIVE_REUSE_SCREENS=<dir>` reuses that dir's keyed S1/S2
+//! replies (same requests, same keys, no model calls) instead of calling
+//! Baseten again. The transcript says when reuse happens.
 
 use std::cell::Cell;
 
@@ -474,61 +479,83 @@ fn live_legacy_curate_and_recheck() {
     run_group(&["L2", "L3"], &v1, &mut responses);
     run_group(&["L4"], &v2, &mut responses);
 
-    // Screens curate through the real screens path.
-    let screens_adapter = FakeAdapter::new("fake");
-    let mut screens_refs = Vec::new();
-    for id in ["S1", "S2"] {
-        screens_refs.push(
-            screens_adapter
-                .write(&texts[id], "s")
-                .expect("fake adapter takes the memory"),
-        );
-    }
-    let screens_adapters: Vec<Box<dyn MemoryAdapter>> = vec![Box::new(screens_adapter)];
-    let mut screens_store = doyle_tms::core::Store::open(temp_dir("store-s")).expect("store opens");
-    let screens_items = doyle_tms::curate::curate_screens(
-        &screens_adapters,
-        &retry,
-        &screens_v1,
-        &mut screens_store,
-        true,
-    )
-    .expect("screens curate runs");
-    assert_eq!(screens_items.len(), 2, "S1 and S2 cite");
-    for (id, item) in ["S1", "S2"].iter().map(|id| {
-        let position = ["S1", "S2"]
-            .iter()
-            .position(|other| other == id)
-            .expect("known id");
-        let item = screens_items
-            .iter()
-            .find(|item| item.memory == screens_refs[position])
-            .expect("one item per memory");
-        (id, item)
-    }) {
-        let request = curator::build_screens_curator_request(
-            &texts[*id],
-            &screens_v1,
-            curator::BASETEN_CURATOR_MODEL,
-        );
-        let key = request_key(&request);
-        let response: ModelResponse = serde_json::from_slice(
-            &std::fs::read(rec_dir.join(format!("{key}.json"))).expect("recording written"),
-        )
-        .expect("recording parses");
-        assert_eq!(
-            item.elements.len(),
-            match curator::parse_curator_value(
-                &response.value,
-                &curator::allowed_screen_ids(&screens_v1)
+    // Screens curate through the real screens path — or reuse a previous
+    // run's keyed replies when the screens prompt is unchanged (same
+    // requests, same keys, no model calls).
+    let reuse_dir_opt = std::env::var("DOYLE_LIVE_REUSE_SCREENS").ok();
+    if let Some(reuse_dir) = &reuse_dir_opt {
+        for id in ["S1", "S2"] {
+            let request = curator::build_screens_curator_request(
+                &texts[id],
+                &screens_v1,
+                curator::BASETEN_CURATOR_MODEL,
+            );
+            let key = request_key(&request);
+            let response: ModelResponse = serde_json::from_slice(
+                &std::fs::read(std::path::Path::new(&reuse_dir).join(format!("{key}.json")))
+                    .expect("reused recording reads"),
             )
-            .expect("parses")
-            {
-                CuratorVerdict::Cited { elements, .. } => elements.len(),
-                CuratorVerdict::RestsOnNothing { .. } => 0,
-            }
-        );
-        responses.push((id.to_string(), request, response));
+            .expect("recording parses");
+            eprintln!("reusing {id} from {reuse_dir} (no spend)");
+            responses.push((id.to_string(), request, response));
+        }
+    } else {
+        let screens_adapter = FakeAdapter::new("fake");
+        let mut screens_refs = Vec::new();
+        for id in ["S1", "S2"] {
+            screens_refs.push(
+                screens_adapter
+                    .write(&texts[id], "s")
+                    .expect("fake adapter takes the memory"),
+            );
+        }
+        let screens_adapters: Vec<Box<dyn MemoryAdapter>> = vec![Box::new(screens_adapter)];
+        let mut screens_store =
+            doyle_tms::core::Store::open(temp_dir("store-s")).expect("store opens");
+        let screens_items = doyle_tms::curate::curate_screens(
+            &screens_adapters,
+            &retry,
+            &screens_v1,
+            &mut screens_store,
+            true,
+        )
+        .expect("screens curate runs");
+        assert_eq!(screens_items.len(), 2, "S1 and S2 cite");
+        for (id, item) in ["S1", "S2"].iter().map(|id| {
+            let position = ["S1", "S2"]
+                .iter()
+                .position(|other| other == id)
+                .expect("known id");
+            let item = screens_items
+                .iter()
+                .find(|item| item.memory == screens_refs[position])
+                .expect("one item per memory");
+            (id, item)
+        }) {
+            let request = curator::build_screens_curator_request(
+                &texts[*id],
+                &screens_v1,
+                curator::BASETEN_CURATOR_MODEL,
+            );
+            let key = request_key(&request);
+            let response: ModelResponse = serde_json::from_slice(
+                &std::fs::read(rec_dir.join(format!("{key}.json"))).expect("recording written"),
+            )
+            .expect("recording parses");
+            assert_eq!(
+                item.elements.len(),
+                match curator::parse_curator_value(
+                    &response.value,
+                    &curator::allowed_screen_ids(&screens_v1)
+                )
+                .expect("parses")
+                {
+                    CuratorVerdict::Cited { elements, .. } => elements.len(),
+                    CuratorVerdict::RestsOnNothing { .. } => 0,
+                }
+            );
+            responses.push((id.to_string(), request, response));
+        }
     }
 
     // Every curate reply cites the story's sets: expected IDs present,
@@ -573,7 +600,14 @@ fn live_legacy_curate_and_recheck() {
                     eprintln!("note: {id} cites {extra:?} beyond the story set");
                 }
                 assert!(!claim.trim().is_empty(), "{id}: empty claim");
-                total_usd += print_usage(&format!("curate {id}"), &response.usage);
+                if reuse_dir_opt.is_some() && id.starts_with('S') {
+                    eprintln!(
+                        "reused {id}: no spend (run-1 usage in={:?} out={:?})",
+                        response.usage.input_tokens, response.usage.output_tokens
+                    );
+                } else {
+                    total_usd += print_usage(&format!("curate {id}"), &response.usage);
+                }
             }
             other => panic!("{id}: must cite, got {other:?}"),
         }
