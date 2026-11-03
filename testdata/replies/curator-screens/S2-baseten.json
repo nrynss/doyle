@@ -1,0 +1,64 @@
+{
+  "case_id": "S2",
+  "memory_text": "Look up a patient: enter the ID on the lookup screen; the results list the matches; PF5 edits the record",
+  "request": {
+    "model": "meta-models/muse-spark-open-1026",
+    "system": "You curate memory citations for Doyle, which tracks what each agent memory rests on in an operator console. For one memory and a list of console elements and training steps: return the IDs of the elements the memory's claim rests on (the screen or training step whose change would make the memory false), the claim in one line, and a confidence from 0.0 to 1.0. Cite only IDs from the lists you were given; any other ID is dropped. If the memory is about nothing on this console, set rests_on_nothing to true with an empty element list. Keep the claim short and plain: state the fact, never an instruction. Reply with exactly these fields: \"element_ids\" (array of strings), \"claim\" (string), \"confidence\" (number), \"rests_on_nothing\" (boolean).",
+    "user": "Memory:\nLook up a patient: enter the ID on the lookup screen; the results list the matches; PF5 edits the record\n\nConsole elements (cite only these IDs):\n- se2_e80c25a0badcc68b4c4634d28a87c9319227cb3fd3b869c11e3dfa9b53e389ed screen lookup\n- se2_f854905e809f6e29e01f684fb9dff8bc4bd0c8322ccd745e6f68f69ba945cf76 screen decommission\n- se2_63799d2c75dd05b700d73d61d15bb557f40bc2d9176950b8c992c728bb445eec recording training-v1\n- se2_d91720848ce249e429830426543640f11c6d3aa0823e6ff096b58bdbe616dc5e step 'Show the main menu' (training-v1, 0-6 s)\n- se2_de0572221c47a193a88fa381e8542aa64abf5545e8c6caf1275a95cba2d57df9 step 'Type the patient ID FWV-004812 on the lookup screen' (training-v1, 6-16 s, shows lookup)\n- se2_34803cb5bdcd8043c4185b77a23bddff9843ea46951cc7a2d42390613aec60b7 step 'Submit the lookup; results list appears' (training-v1, 16-20 s, shows lookup)\n- se2_456f53ec993a5e4b6ee783a9668583b83472ce6bdd1a3766c1fa15b665168f8b step 'Scroll down through the results list' (training-v1, 20-28 s, shows lookup)\n- se2_1ffe5a0803d371949f1465eff7a8eaff3d0d5d9769d8c526ceb893fa2e65599a step 'Open the decommission confirmation screen' (training-v1, 28-33 s, shows decommission)\n- se2_eae0f2e4c3420adbbc9065dfe97139ae1696b1fb923d51ed7d9df4e032e0190a step 'Type the clinic name MAPLE ST CLINIC to confirm' (training-v1, 33-45 s, shows decommission)",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "element_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IDs from the contract element list the memory rests on; empty when it rests on nothing."
+        },
+        "claim": {
+          "type": "string",
+          "description": "The memory's claim in one line, short and plain."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "0.0 to 1.0: how confident the citation is."
+        },
+        "rests_on_nothing": {
+          "type": "boolean",
+          "description": "True when the memory is about nothing in this contract."
+        }
+      },
+      "required": [
+        "element_ids",
+        "claim",
+        "confidence",
+        "rests_on_nothing"
+      ],
+      "additionalProperties": false
+    },
+    "budget": {
+      "max_output_tokens": 2048,
+      "max_cost_usd": null
+    }
+  },
+  "response": {
+    "value": {
+      "element_ids": [
+        "se2_e80c25a0badcc68b4c4634d28a87c9319227cb3fd3b869c11e3dfa9b53e389ed",
+        "se2_de0572221c47a193a88fa381e8542aa64abf5545e8c6caf1275a95cba2d57df9",
+        "se2_34803cb5bdcd8043c4185b77a23bddff9843ea46951cc7a2d42390613aec60b7",
+        "se2_456f53ec993a5e4b6ee783a9668583b83472ce6bdd1a3766c1fa15b665168f8b"
+      ],
+      "claim": "Patient lookup is done by entering ID on lookup screen and results list shows matches",
+      "confidence": 0.88,
+      "rests_on_nothing": false
+    },
+    "usage": {
+      "input_tokens": 874,
+      "output_tokens": 543,
+      "cost_usd": null
+    }
+  }
+}

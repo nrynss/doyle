@@ -1601,4 +1601,161 @@ mod evidence_tests {
         assert!(system.contains("keep"));
         assert!(system.contains("280 characters"));
     }
+
+    /// The story's memory texts, read from the fixture (provenance.json
+    /// holds the same texts the notes carry), keyed by memory id. The live
+    /// test reads the same file: one source of truth, no drift.
+    fn story_texts() -> std::collections::HashMap<String, String> {
+        let raw = std::fs::read_to_string(format!(
+            "{}/testdata/legacy/story/memories/provenance.json",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .expect("provenance reads");
+        let value: serde_json::Value = serde_json::from_str(&raw).expect("parses");
+        value["memories"]
+            .as_array()
+            .expect("memories")
+            .iter()
+            .map(|m| {
+                (
+                    m["id"].as_str().expect("id").to_string(),
+                    m["text"].as_str().expect("text").to_string(),
+                )
+            })
+            .collect()
+    }
+
+    /// The story's L citation sets (README expected-flag table), with the
+    /// fixture texts as claims — the same citations the live test builds.
+    fn story_l_citation(id: &str, texts: &std::collections::HashMap<String, String>) -> Citation {
+        let elements = match id {
+            "L1" => vec![
+                para("CALC-LATE-FEE"),
+                field("PATIENT-RECORD.BALANCE"),
+                para("LOG-EXEMPT"),
+                field("PATIENT-RECORD.VISIT-CODE"),
+            ],
+            "L2" => vec![
+                legacy_ids::element_id(&legacy_ids::record_key("BILLBATCH", "PATIENT-RECORD")),
+                field("PATIENT-RECORD.ACCT-NO"),
+                field("PATIENT-RECORD.ACCT-NAME"),
+                field("PATIENT-RECORD.BALANCE"),
+                field("PATIENT-RECORD.VISIT-CODE"),
+            ],
+            _ => panic!("no story set for {id}"),
+        };
+        cite(id, &texts[id], elements)
+    }
+
+    /// Replay one committed live re-check reply: rebuild the input from
+    /// the fixtures exactly as the live test does, read the recording by
+    /// its request key, and assert the proposal.
+    fn replayed_evidence_proposal(name: &str, input: &RecheckInput) -> RecheckProposal {
+        use crate::models::{ModelClient, ReplayClient, request_key};
+        let request = build_evidence_request(input);
+        let key = request_key(&request);
+        let dir =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata/replies/recheck");
+        let client = ReplayClient::new(dir);
+        let response = client.complete(&request).unwrap_or_else(|e| {
+            panic!("no recording for {name} (key {key}): {e}");
+        });
+        parse_response(&response.value).unwrap_or_else(|e| {
+            panic!("{name}: recorded reply does not parse: {e}");
+        })
+    }
+
+    #[test]
+    fn replay_diffrun_l1_proposes_the_exemption_correction() {
+        use crate::evidence::diffrun::{flag_diffrun, parse_record_paths, run_diffrun_with_paths};
+        let texts = story_texts();
+        let index = v1_legacy();
+        let citation = story_l_citation("L1", &texts);
+        let read = |rel: &str| {
+            std::fs::read_to_string(format!(
+                "{}/testdata/legacy/diffrun/{rel}",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap()
+        };
+        let story_read = |rel: &str| {
+            std::fs::read_to_string(format!(
+                "{}/testdata/legacy/story/{rel}",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap()
+        };
+        let paths = parse_record_paths(&read("full-record-paths.txt")).expect("paths parse");
+        let outcome = run_diffrun_with_paths(
+            &story_read("v1/patients.dat"),
+            &story_read("v1/report.txt"),
+            &read("full-wrong-report.txt"),
+            &paths,
+        )
+        .expect("full run compares");
+        assert_eq!(outcome.mismatches.len(), 535);
+        let flags = flag_diffrun(
+            std::slice::from_ref(&citation),
+            &index,
+            &outcome,
+            &[],
+            "v1/BILLBATCH.cbl",
+            "wrong-rewrite.json",
+        );
+        assert_eq!(flags.len(), 1, "L1 alone flags");
+        let input = build_diffrun_recheck_input(&flags[0], Some(&citation), &index);
+        let got = replayed_evidence_proposal("L1", &input);
+        match &got.action {
+            ProposalAction::Correct { new_text } => {
+                check_replacement_text(new_text).expect("recorded text obeys guideline 7");
+                let lowered = new_text.to_lowercase();
+                assert!(
+                    lowered.contains("exempt"),
+                    "correction states the exemption truth: {new_text}"
+                );
+                assert!(
+                    lowered.contains("zero") || lowered.contains("no fee"),
+                    "correction states the zero fee: {new_text}"
+                );
+            }
+            other => panic!("L1 must propose correct, got {other:?}"),
+        }
+        assert!(!got.rationale.trim().is_empty());
+    }
+
+    #[test]
+    fn replay_legacy_l2_proposes_the_35_char_correction() {
+        let texts = story_texts();
+        let old = v1_legacy();
+        let new = v2_legacy();
+        let citation = story_l_citation("L2", &texts);
+        let facts = old.diff_evidence(&new).expect("diff works");
+        let flags = flag_citations(
+            std::slice::from_ref(&citation),
+            &facts,
+            &old,
+            &[],
+            "v1/BILLBATCH.cbl",
+            "v2/BILLBATCH.cbl",
+        );
+        assert_eq!(flags.len(), 1, "L2 alone flags");
+        let input = build_legacy_recheck_input(&flags[0], Some(&citation), &old, &new);
+        let got = replayed_evidence_proposal("L2", &input);
+        match &got.action {
+            ProposalAction::Correct { new_text } => {
+                check_replacement_text(new_text).expect("recorded text obeys guideline 7");
+                let lowered = new_text.to_lowercase();
+                assert!(
+                    lowered.contains("35"),
+                    "correction states the 35-char record: {new_text}"
+                );
+                assert!(
+                    lowered.contains("discount"),
+                    "correction names the added field: {new_text}"
+                );
+            }
+            other => panic!("L2 must propose correct, got {other:?}"),
+        }
+        assert!(!got.rationale.trim().is_empty());
+    }
 }

@@ -957,4 +957,217 @@ mod legacy_screens_tests {
             &legacy_ids::element_id(&legacy_ids::paragraph_key("BILLBATCH", "CALC-LATE-FEE")).0
         ));
     }
+
+    /// Replayed live citations (T9.11b): the committed Baseten replies for
+    /// the story memories, served from disk with no network. Each case
+    /// file holds the live request; the test rebuilds the request from the
+    /// fixtures and pins it byte-equal (prompt stability), then asserts
+    /// the story's citation sets. L1 has no recording: both live draws
+    /// missed the exemption branch (diary), so there is no passing reply
+    /// to commit.
+    fn replayed_curator_case(
+        dir: &str,
+        id: &str,
+    ) -> (
+        crate::models::ModelRequest,
+        crate::models::ModelResponse,
+        String,
+    ) {
+        let raw = std::fs::read_to_string(format!(
+            "{}/testdata/replies/{dir}/{id}-baseten.json",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .expect("recording reads");
+        let record: serde_json::Value = serde_json::from_str(&raw).expect("parses");
+        assert_eq!(record["case_id"].as_str(), Some(id));
+        let memory_text = record["memory_text"].as_str().expect("memory text");
+        let req = &record["request"];
+        let request = crate::models::ModelRequest {
+            model: req["model"].as_str().expect("model").to_string(),
+            system: req["system"].as_str().expect("system").to_string(),
+            user: req["user"].as_str().expect("user").to_string(),
+            schema: req["schema"].clone(),
+            media: Vec::new(),
+            budget: crate::models::Budget {
+                max_output_tokens: req["budget"]["max_output_tokens"]
+                    .as_u64()
+                    .map(|n| n as u32),
+                max_cost_usd: req["budget"]["max_cost_usd"].as_f64(),
+            },
+        };
+        let response: crate::models::ModelResponse =
+            serde_json::from_value(record["response"].clone()).expect("response parses");
+        (request, response, memory_text.to_string())
+    }
+
+    /// The story's L citation sets (README expected-flag table), recomputed
+    /// from the canonical keys, never copied.
+    fn story_l_elements(id: &str, v2: bool) -> Vec<String> {
+        let para =
+            |name: &str| legacy_ids::element_id(&legacy_ids::paragraph_key("BILLBATCH", name)).0;
+        let field =
+            |path: &str| legacy_ids::element_id(&legacy_ids::field_key("BILLBATCH", path)).0;
+        let _ = v2;
+        match id {
+            "L2" => vec![
+                legacy_ids::element_id(&legacy_ids::record_key("BILLBATCH", "PATIENT-RECORD")).0,
+                field("PATIENT-RECORD.ACCT-NO"),
+                field("PATIENT-RECORD.ACCT-NAME"),
+                field("PATIENT-RECORD.BALANCE"),
+                field("PATIENT-RECORD.VISIT-CODE"),
+            ],
+            "L3" => vec![para("CALC-LATE-FEE"), field("PATIENT-RECORD.BALANCE")],
+            "L4" => vec![
+                para("APPLY-PROMPT-DISCOUNT"),
+                field("PATIENT-RECORD.DISCOUNT-FLAG"),
+            ],
+            _ => panic!("no story set for {id}"),
+        }
+    }
+
+    fn assert_cited_set(
+        id: &str,
+        request: &crate::models::ModelRequest,
+        response: &crate::models::ModelResponse,
+        index: &crate::evidence::legacy::LegacyIndex,
+        expected: &[String],
+        extra_ok: &[String],
+    ) {
+        let allowed = allowed_legacy_ids(index);
+        match parse_curator_value(&response.value, &allowed).expect("parses") {
+            CuratorVerdict::Cited {
+                elements, claim, ..
+            } => {
+                assert!(!claim.trim().is_empty(), "{id}: empty claim");
+                let set: std::collections::HashSet<String> =
+                    elements.into_iter().map(|e| e.0).collect();
+                let want: std::collections::HashSet<String> = expected.iter().cloned().collect();
+                assert!(
+                    want.is_subset(&set),
+                    "{id}: missing {:?}",
+                    want.difference(&set).collect::<Vec<_>>()
+                );
+                let extra: std::collections::HashSet<String> =
+                    set.difference(&want).cloned().collect();
+                let ok: std::collections::HashSet<String> = extra_ok.iter().cloned().collect();
+                assert_eq!(extra, ok, "{id}: unexpected extras");
+                let _ = request;
+            }
+            other => panic!("{id}: must cite, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn replayed_l2_cites_the_record_exactly() {
+        let (request, response, memory_text) = replayed_curator_case("curator-legacy", "L2");
+        let index = v1_index();
+        let rebuilt = build_legacy_curator_request(&memory_text, &index, BASETEN_CURATOR_MODEL);
+        assert_eq!(rebuilt, request, "L2 prompt is stable");
+        assert_cited_set(
+            "L2",
+            &request,
+            &response,
+            &index,
+            &story_l_elements("L2", false),
+            &[],
+        );
+    }
+
+    #[test]
+    fn replayed_l3_cites_the_computation_exactly() {
+        let (request, response, memory_text) = replayed_curator_case("curator-legacy", "L3");
+        let index = v1_index();
+        let rebuilt = build_legacy_curator_request(&memory_text, &index, BASETEN_CURATOR_MODEL);
+        assert_eq!(rebuilt, request, "L3 prompt is stable");
+        assert_cited_set(
+            "L3",
+            &request,
+            &response,
+            &index,
+            &story_l_elements("L3", false),
+            &[],
+        );
+    }
+
+    #[test]
+    fn replayed_l4_cites_the_discount_with_benign_caller() {
+        let (request, response, memory_text) = replayed_curator_case("curator-legacy", "L4");
+        let index = crate::evidence::legacy::LegacyIndex::load(story("v2/BILLBATCH.cbl"))
+            .expect("v2 loads");
+        let rebuilt = build_legacy_curator_request(&memory_text, &index, BASETEN_CURATOR_MODEL);
+        assert_eq!(rebuilt, request, "L4 prompt is stable");
+        // The live reply adds CALC-LATE-FEE (the computation the discount
+        // follows). Benign: CALC-LATE-FEE is unchanged in v2 and runs only
+        // clean paths, so L4 stays silent everywhere the story requires.
+        assert_cited_set(
+            "L4",
+            &request,
+            &response,
+            &index,
+            &story_l_elements("L4", true),
+            &[legacy_ids::element_id(&legacy_ids::paragraph_key("BILLBATCH", "CALC-LATE-FEE")).0],
+        );
+    }
+
+    /// Replayed S-citations: the committed Baseten replies against the v1
+    /// console. S1 is the story set exactly; S2 adds the T4 scroll step
+    /// (same lookup screen, no new flag reach — the lookup diff is
+    /// cosmetic, so S2 stays silent as the story requires).
+    fn assert_screen_set(
+        id: &str,
+        screen: &str,
+        expected_spans: &[(f64, f64)],
+        index: &crate::evidence::screens::ScreenIndex,
+    ) {
+        let (request, response, memory_text) = replayed_curator_case("curator-screens", id);
+        let rebuilt = build_screens_curator_request(&memory_text, index, BASETEN_CURATOR_MODEL);
+        assert_eq!(rebuilt.model, request.model);
+        assert_eq!(rebuilt.system, request.system);
+        assert_eq!(rebuilt.user, request.user);
+        assert_eq!(rebuilt.budget, request.budget);
+        let allowed = allowed_screen_ids(index);
+        match parse_curator_value(&response.value, &allowed).expect("parses") {
+            CuratorVerdict::Cited {
+                elements, claim, ..
+            } => {
+                assert!(!claim.trim().is_empty(), "{id}: empty claim");
+                let screen_id = crate::evidence::screens::ids::screen_id("fernwhistle", screen);
+                assert!(
+                    elements.iter().any(|e| e == &screen_id),
+                    "{id}: must cite the {screen} screen"
+                );
+                let mut step_spans: Vec<(f64, f64)> = elements
+                    .iter()
+                    .filter(|e| *e != &screen_id)
+                    .map(|e| {
+                        index
+                            .step_span(e)
+                            .unwrap_or_else(|| panic!("{id}: every non-screen cite is a step"))
+                    })
+                    .collect();
+                step_spans.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                assert_eq!(step_spans, expected_spans, "{id}: cited spans");
+            }
+            other => panic!("{id}: must cite, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn replayed_s1_cites_decommission_and_t5_t6() {
+        let (dir, index) = combined_v1();
+        assert_screen_set("S1", "decommission", &[(28.0, 33.0), (33.0, 45.0)], &index);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn replayed_s2_cites_lookup_and_t2_t3_t4() {
+        let (dir, index) = combined_v1();
+        assert_screen_set(
+            "S2",
+            "lookup",
+            &[(6.0, 16.0), (16.0, 20.0), (20.0, 28.0)],
+            &index,
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

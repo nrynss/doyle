@@ -1,0 +1,12 @@
+{
+  "value": {
+    "action": "correct",
+    "new_text": "BILLBATCH includes a LOG-EXEMPT path that sets the late fee to zero and increments the exempt count, so exempt accounts pay no fee while other balances incur the 1.5 percent charge.",
+    "rationale": "LOG-EXEMPT zeroes the fee and COBOL comparison shows $0 fee for exempt accounts."
+  },
+  "usage": {
+    "input_tokens": 1024,
+    "output_tokens": 2706,
+    "cost_usd": null
+  }
+}
