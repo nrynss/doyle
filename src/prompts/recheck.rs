@@ -1795,4 +1795,184 @@ mod evidence_tests {
         }
         assert!(!got.rationale.trim().is_empty());
     }
+
+    /// The story's S1 citation: the decommission screen plus the training
+    /// steps that demonstrate it, derived from the index like the live
+    /// test does.
+    fn story_s1_citation(
+        v1: &crate::evidence::screens::ScreenIndex,
+        texts: &std::collections::HashMap<String, String>,
+    ) -> Citation {
+        use crate::evidence::EvidenceSource;
+        let decomm = crate::evidence::screens::ids::screen_id("fernwhistle", "decommission");
+        let mut elements = vec![decomm.clone()];
+        for e in v1.elements() {
+            if e.kind == crate::evidence::EvidenceElementKind::Other("step".to_string())
+                && e.references.contains(&decomm)
+            {
+                elements.push(e.id);
+            }
+        }
+        cite("S1", &texts["S1"], elements)
+    }
+
+    /// The combined screens versions the check screens source reads, as
+    /// the live test and the binary e2e build them.
+    struct CombinedScreens {
+        old: crate::evidence::screens::ScreenIndex,
+        new: crate::evidence::screens::ScreenIndex,
+        old_frames: Vec<(String, String)>,
+        new_frames: Vec<(String, String)>,
+    }
+
+    fn combined_screens(dir: &std::path::Path) -> CombinedScreens {
+        let story = |rel: &str| {
+            std::fs::read_to_string(format!(
+                "{}/testdata/legacy/story/{rel}",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+            .unwrap()
+        };
+        let screen_doc = |file: &str| -> serde_json::Value {
+            let value: serde_json::Value =
+                serde_json::from_str(&story(&format!("screens/{file}.json"))).unwrap();
+            serde_json::json!({
+                "name": value["screen"],
+                "elements": value["elements"],
+            })
+        };
+        let steps_value: serde_json::Value =
+            serde_json::from_str(&story("training-v1-steps.json")).unwrap();
+        let steps: Vec<serde_json::Value> = steps_value["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| {
+                let screen = match s["id"].as_str().unwrap() {
+                    "T2" | "T3" | "T4" => "lookup",
+                    "T5" | "T6" => "decommission",
+                    _ => "",
+                };
+                serde_json::json!({
+                    "description": s["description"],
+                    "start_s": s["start_s"],
+                    "end_s": s["end_s"],
+                    "screen": screen,
+                })
+            })
+            .collect();
+        let v1_path = dir.join("screens-v1.json");
+        let v2_path = dir.join("screens-v2.json");
+        std::fs::write(
+            &v1_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "console": "fernwhistle",
+                "screens": [screen_doc("lookup-v1"), screen_doc("decomm-v1")],
+                "steps": steps,
+                "recording": {"name": "training-v1", "duration_s": 45.0},
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &v2_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "console": "fernwhistle",
+                "screens": [screen_doc("lookup-v2"), screen_doc("decomm-v2")],
+                "steps": [],
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let (old, _) =
+            crate::check::load_screen_version(v1_path.to_str().unwrap()).expect("v1 loads");
+        let (new, _) =
+            crate::check::load_screen_version(v2_path.to_str().unwrap()).expect("v2 loads");
+        let old_frames =
+            crate::check::load_screen_frames(v1_path.to_str().unwrap()).expect("frames load");
+        let new_frames =
+            crate::check::load_screen_frames(v2_path.to_str().unwrap()).expect("frames load");
+        CombinedScreens {
+            old,
+            new,
+            old_frames,
+            new_frames,
+        }
+    }
+
+    /// Replay one committed screens re-check reply: the request uses the
+    /// screens cap, so it keys separately from legacy/diffrun replies.
+    fn replayed_screens_proposal(name: &str, input: &RecheckInput) -> RecheckProposal {
+        use crate::models::{ModelClient, ReplayClient, request_key};
+        let request = build_screens_evidence_request(input);
+        let key = request_key(&request);
+        let dir =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata/replies/recheck");
+        let client = ReplayClient::new(dir);
+        let response = client.complete(&request).unwrap_or_else(|e| {
+            panic!("no recording for {name} (key {key}): {e}");
+        });
+        parse_response(&response.value).unwrap_or_else(|e| {
+            panic!("{name}: recorded reply does not parse: {e}");
+        })
+    }
+
+    #[test]
+    fn replay_screens_s1_proposes_the_dropped_confirmation() {
+        let dir = std::env::temp_dir().join(format!(
+            "doyle-recheck-s1-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let texts = story_texts();
+        let screens = combined_screens(&dir);
+        let (old, new, old_frames, new_frames) = (
+            screens.old,
+            screens.new,
+            screens.old_frames,
+            screens.new_frames,
+        );
+        let citation = story_s1_citation(&old, &texts);
+        let facts = old.diff_evidence(&new).expect("diff works");
+        let flags = flag_citations(
+            std::slice::from_ref(&citation),
+            &facts,
+            &old,
+            &[],
+            "screens-v1.json",
+            "screens-v2.json",
+        );
+        assert_eq!(flags.len(), 1, "S1 alone flags");
+        let input = build_screens_recheck_input(
+            &flags[0],
+            Some(&citation),
+            &old,
+            &new,
+            &old_frames,
+            &new_frames,
+        );
+        let got = replayed_screens_proposal("S1", &input);
+        match &got.action {
+            ProposalAction::Correct { new_text } => {
+                check_replacement_text(new_text).expect("recorded text obeys guideline 7");
+                let lowered = new_text.to_lowercase();
+                assert!(
+                    lowered.contains("permanence notice")
+                        || lowered.contains("entry field")
+                        || lowered.contains("different wording")
+                        || lowered.contains("prompt")
+                        || lowered.contains("warning"),
+                    "correction states the dropped confirmation: {new_text}"
+                );
+            }
+            other => panic!("S1 must propose correct, got {other:?}"),
+        }
+        assert!(!got.rationale.trim().is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

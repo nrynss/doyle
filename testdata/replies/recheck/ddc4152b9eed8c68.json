@@ -1,0 +1,12 @@
+{
+  "value": {
+    "action": "correct",
+    "new_text": "The FWV-09 retirement screen now shows clinic details and a patient count matching notice with awaiting status, without the permanence notice or the clinic name entry field seen before, and the PF12 key has different wording.",
+    "rationale": "v2 removed the permanence warning, clinic-name entry prompt, and old PF12 label."
+  },
+  "usage": {
+    "input_tokens": 1409,
+    "output_tokens": 3118,
+    "cost_usd": null
+  }
+}

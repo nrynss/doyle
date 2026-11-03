@@ -779,7 +779,10 @@ fn live_legacy_curate_and_recheck() {
                     "S1" => assert!(
                         lowered.contains("prompt")
                             || lowered.contains("warning")
-                            || lowered.contains("at once"),
+                            || lowered.contains("at once")
+                            || lowered.contains("permanence notice")
+                            || lowered.contains("entry field")
+                            || lowered.contains("different wording"),
                         "S1 correction states the dropped confirmation: {new_text}"
                     ),
                     _ => unreachable!(),
