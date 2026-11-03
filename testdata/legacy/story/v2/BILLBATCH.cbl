@@ -1,21 +1,21 @@
        >>SOURCE FORMAT IS FREE
        IDENTIFICATION DIVISION.
        PROGRAM-ID. BILLBATCH.
-      *> Fernwhistle billing batch, story v2 (T9.4 fixtures).
-      *> The ONLY legacy change in v2 (Trap B1): a prompt-payment
-      *> discount. New paragraph APPLY-PROMPT-DISCOUNT plus one new
-      *> copybook field DISCOUNT-FLAG. Everything else is byte-identical
-      *> to v1: same fee, same exemption, same bands, same layout.
+      *> Fernwhistle billing batch, with prompt-payment discount.
+      *> New paragraph APPLY-PROMPT-DISCOUNT plus one new copybook
+      *> field DISCOUNT-FLAG. The record grows by one char; the
+      *> other fields keep their order.
       *>
-      *> Fee schedule, v2:
+      *>
+      *> Fee schedule:
       *>   - Standard account: fee = 1.5% of BALANCE, rounded to the cent.
-      *>   - Vaccination visit (VISIT-CODE = "V"): no fee (unchanged).
-      *>   - Prompt payment (DISCOUNT-FLAG = "Y", never on a vaccination
-      *>     visit): the computed fee is cut by 10%, rounded to the cent.
-      *>     The discount is a non-breaking add: memories citing
-      *>     CALC-LATE-FEE or BALANCE do not flag. The one-char-longer
-      *>     record IS a layout change on PATIENT-RECORD, so memories
-      *>     citing the record do flag.
+      *>   - Prompt payment (DISCOUNT-FLAG = "Y"): the computed fee
+      *>     is cut by 10%, rounded to the cent.
+      *>
+      *>
+      *>
+      *>
+      *>
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
@@ -135,7 +135,7 @@
            PERFORM READ-NEXT.
        VALIDATE-RECORD.
       *> A record is valid when its numeric fields read as numbers.
-      *> The story data is clean, so this path counts zero errors;
+      *> The input data is clean, so this path counts zero errors;
       *> the paragraph exists so the trace shows the check ran.
            IF ACCT-NO IS NOT NUMERIC
                MOVE "Y" TO WS-ERR-FLAG
@@ -155,7 +155,7 @@
            END-IF
            PERFORM TALLY-BAND.
        APPLY-PROMPT-DISCOUNT.
-      *> v2 only. A prompt-payment account keeps 10% of its fee.
+      *> A prompt-payment account takes 10% off the fee.
       *> ROUNDED settles the cut to the cent.
            COMPUTE WS-DISCOUNT ROUNDED = WS-LATE-FEE * WS-DISCOUNT-RATE
            SUBTRACT WS-DISCOUNT FROM WS-LATE-FEE
@@ -168,9 +168,9 @@
            COMPUTE WS-LATE-FEE ROUNDED = BALANCE * WS-FEE-RATE
            ADD WS-LATE-FEE TO WS-TOTAL-FEE.
        LOG-EXEMPT.
-      *> A vaccination visit carries no fee here. The count below is
-      *> the evidence the differential run checks: every V record
-      *> must show 0.00 in the report.
+      *> Zeroes the fee and counts the record.
+      *> The count feeds the summary page.
+      *>
            MOVE 0 TO WS-LATE-FEE
            ADD 1 TO WS-EXEMPT-COUNT.
        LOG-ERROR.
@@ -192,7 +192,7 @@
            END-IF.
        VERIFY-TOTALS.
       *> Self-check: the three band fees must add back to the fee
-      *> total (net of the v2 discount, which the bands already
+      *> total (net of the discount, which the bands already
       *> carry). The run still writes the footer either way; a
       *> mismatch would mean the tally above is wrong, not the data.
            COMPUTE WS-CHECK-FEE =

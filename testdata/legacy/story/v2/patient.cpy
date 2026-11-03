@@ -1,6 +1,6 @@
-      *> Copybook for the T9.4 story batch, v2.
+      *> Copybook for the Fernwhistle billing batch.
       *> One fixed-width record per line: 6 + 20 + 7 + 1 + 1 = 35 chars.
-      *> Adds DISCOUNT-FLAG (Trap B1): "Y" marks a prompt-payment account,
+      *> DISCOUNT-FLAG: "Y" marks a prompt-payment account,
       *> whose late fee is cut by 10%. The record grows by one char, so
       *> every field after BALANCE moves: a layout change on PATIENT-RECORD.
        01 PATIENT-RECORD.

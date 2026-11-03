@@ -1,14 +1,14 @@
-// Wonder's Rust rewrite of BILLBATCH (story fixture, Trap D).
+// Rust rewrite of BILLBATCH.
 //
-// This is the WRONG rewrite: Wonder ported the batch carrying L1, its
-// remembered rule "1.5% on the whole balance, no exceptions", so it
-// charges every account and never checks VISIT-CODE. Against the v1
-// COBOL run it mismatches exactly the 535 vaccination-visit records.
-//
-// Reads the v1 fixed-width file (34-char records), writes the same
+// Reads the fixed-width file (34-char records), writes the same
 // detail lines and TOTALS line the COBOL report uses. Build with
 // rustc (no crates):  rustc -O wonder-bill.rs -o /tmp/wonder-bill
-// Run in v1/ (filenames are fixed):  /tmp/wonder-bill
+// Run where patients.dat lives (filenames are fixed):  /tmp/wonder-bill
+//
+//
+//
+//
+//
 use std::fs;
 use std::io::Write;
 
@@ -43,7 +43,7 @@ fn main() {
         let acct = &line[0..6];
         let name = &line[6..26];
         let balance: i64 = line[26..33].parse().expect("balance");
-        // BUG (L1): no VISIT-CODE check. Every account pays.
+        //
         let fee = fee_cents(balance);
         total_balance += balance;
         total_fee += fee;

@@ -1,18 +1,18 @@
        >>SOURCE FORMAT IS FREE
        IDENTIFICATION DIVISION.
        PROGRAM-ID. BILLBATCH.
-      *> Fernwhistle billing batch, story v1 (T9.4 fixtures).
+      *> Fernwhistle billing batch.
       *> Reads one fixed-width patient-account record per line through
       *> COPY "patient.cpy" (34 chars: number, name, balance, visit code),
       *> computes a 1.5% late fee with ROUNDED arithmetic, writes one
       *> detail line per record, then totals and a banded summary.
       *>
-      *> Fee schedule (the rule Trap A turns on):
+      *> Fee schedule:
       *>   - Standard account: fee = 1.5% of BALANCE, rounded to the cent.
-      *>   - Vaccination visit (VISIT-CODE = "V"): no fee. The visit, not
-      *>     a flag on the account, decides: rabies and DHPP visits are
-      *>     billed elsewhere, so the batch must not add a fee here.
-      *>   - Prompt-payment discount does not exist in v1 (added in v2).
+      *>
+      *>
+      *>
+      *>
       *>
       *> Report bands (by balance, for the summary page only):
       *>   band 1 under $100, band 2 $100 to $500, band 3 over $500.
@@ -125,7 +125,7 @@
            PERFORM READ-NEXT.
        VALIDATE-RECORD.
       *> A record is valid when its numeric fields read as numbers.
-      *> The story data is clean, so this path counts zero errors;
+      *> The input data is clean, so this path counts zero errors;
       *> the paragraph exists so the trace shows the check ran.
            IF ACCT-NO IS NOT NUMERIC
                MOVE "Y" TO WS-ERR-FLAG
@@ -147,9 +147,9 @@
            COMPUTE WS-LATE-FEE ROUNDED = BALANCE * WS-FEE-RATE
            ADD WS-LATE-FEE TO WS-TOTAL-FEE.
        LOG-EXEMPT.
-      *> A vaccination visit carries no fee here. The count below is
-      *> the evidence the differential run checks: every V record
-      *> must show 0.00 in the report.
+      *> Zeroes the fee and counts the record.
+      *> The count feeds the summary page.
+      *>
            MOVE 0 TO WS-LATE-FEE
            ADD 1 TO WS-EXEMPT-COUNT.
        LOG-ERROR.

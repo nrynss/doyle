@@ -490,7 +490,7 @@ requires:   [T9.11, T9.11b]
 fixture-ok: no
 size:       S · mid
 owns:       testdata/legacy/story/v1/, testdata/legacy/story/v2/, testdata/legacy/story/rewrite/wonder-bill.rs (comments only), testdata/legacy/story/generate-*.py (only where they write these files), testdata/replies/ (re-recordings only, if a replay key changes), tests/ (only assertions on the changed text)
-status:     claimed:msc-t9.14
+status:     in-review
 ```
 
 Found validating T9.13's review take: the story's COBOL sources label their own traps and name the build's tasks. `v1/patient.cpy` says the vaccination-visit exemption is "Trap A2" and "replaces the T9.1 sample's EXEMPT-FLAG mechanism"; `v1/BILLBATCH.cbl` calls its fee schedule "the rule Trap A turns on"; the v2 files mark "the ONLY legacy change in v2 (Trap B1)"; both name "T9.4 fixtures"; the rewrites' headers say "story fixture, Trap D". In T9.10 Wonder reads these files to rewrite the batch, so the labels tell it where the traps are, and they render on the review page's before/after evidence in the takes.
@@ -503,6 +503,14 @@ Build:
 - The Doyle-side notes (`README.md`, `legacy-diff.json` notes, the generators' docstrings, `memories/`) are Doyle's own record and stay as they are.
 
 **Done when:** `grep -rniE 'trap|T9\.|fixture|story|planted|memor|flag|exempt|BUG'` over the v1, v2 sources and `wonder-bill.rs` finds nothing outside code; element files, IDs and batch reports byte-identical; `tests/story_flags.rs` and the gate pass with no key; no comment in those files states the exemption or the rewrite's bug.
+
+Notes (msc-t9.14): scrubbed, gate green, awaiting orchestrator validation.
+- Comment text only, line counts held: v1 217, v2 243, both copybooks 11, wonder-bill.rs 69. Every paragraph's first line still matches generate-elements.py's line_hints (v1 MAIN-PARA 96 through WRITE-SUMMARY 203; v2 MAIN-PARA 106 through WRITE-SUMMARY 225), so the committed elements files regenerate byte-identical (proven by regen + cmp, then restored). legacy-diff.json restored untouched: the script writes 4 facts, the committed file carries the hand-maintained 5th WRITE-SUMMARY fact, so it is compare-only by design.
+- v1 header: "Fernwhistle billing batch." plus the record/fee/report shape; the schedule keeps the standard 1.5% entry, vaccination-visit entries and the v2 mention are blank `*>` lines. v2 header: "with prompt-payment discount", new paragraph + field, "the record grows by one char; the other fields keep their order"; schedule keeps standard + DISCOUNT-FLAG entries; the memories/flags sentences are blank lines. v1 copybook keeps the VISIT-CODE field line ("V" for a vaccination visit, blank otherwise), exemption lines blanked. v2 copybook keeps the DISCOUNT-FLAG + layout note, Trap B1 label dropped. LOG-EXEMPT (both): "Zeroes the fee and counts the record. The count feeds the summary page." VALIDATE-RECORD (both): "story data" -> "input data". v2 APPLY-PROMPT-DISCOUNT: "v2 only" dropped, "keeps 10%" corrected to "takes 10% off the fee". v2 VERIFY-TOTALS: "v2 discount" -> "the discount". wonder-bill.rs header is build/run instructions only; the BUG (L1) line is a blank `//`.
+- Proofs: grep leaves only code-identifier and literal matches (classified in the report); COBOL v1/v2 rebuilt by hand under docs/legacy.md (user-prefix GnuCOBOL 3.2.0) produce byte-identical reports (cmp); wonder-bill.rs rebuilt with rustc -O, TOTALS $72,213.23 as recorded in evidence.txt; tests/story_flags.rs 6/6 and ./tools/check.sh green with no key in the environment (444 lib + 6 story e2e, live suites ignored).
+- No replay key moved: legacy/screens/diffrun recheck and curator prompts render from the parsed index (comments stripped), so every golden key replays unchanged — no live re-recording, $0 of the $0.25 budget spent.
+- fixed-bill.rs, README.md, legacy-diff.json notes, generator docstrings, memories/ untouched. No generator writes these files' comments (generate-data.py writes only patients.dat; generate-elements.py hardcodes paras/fields), so no generator edit was needed.
+- Surprise: one edit round-tripped a blank comment line (v1 -1, v2 +1 with the total unchanged), caught by the line-count check and repaired with blank `*>` lines; paragraph positions re-verified against the generator hints before proving anything else.
 
 ---
 
