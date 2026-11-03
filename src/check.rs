@@ -1,5 +1,12 @@
-//! The `doyle check` command: diff two contracts, flag cited memories, write flags,
-//! run the re-check, write proposals.
+//! The `doyle check` command: diff two versions, flag cited memories, write
+//! flags, run the re-check, write proposals.
+//!
+//! The source is picked from the file extensions: two `.cbl` programs diff
+//! as legacy COBOL, two `.json` screens files diff as console screens,
+//! anything else diffs as API contracts. Every source flags through the
+//! same [`flag_citations`](crate::core::flag_citations) and the same store;
+//! the re-check runs for contract flags only (the legacy, screen and
+//! diffrun re-checks are a later task).
 
 use std::process::ExitCode;
 
@@ -8,17 +15,162 @@ use crate::contract::ContractIndex;
 use crate::core::Store;
 use crate::core::flag_citations;
 use crate::core::{Citation, Flag, Proposal, ProposalAction};
+use crate::evidence::screens::{RecordingMeta, ScreenIndex};
+use crate::evidence::{EvidenceChange, EvidenceSource};
 use crate::models::{ModelClient, ModelError, ReplayClient};
 use crate::prompts::recheck;
+use crate::prompts::vision::{RawElement, RawScreen, RawStep, RawVersion};
+
+/// Which evidence source a `check` run diffs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SourceKind {
+    Contract,
+    Legacy,
+    Screens,
+}
+
+/// Pick the source from what the command is given: two `.cbl` programs are
+/// the legacy COBOL source, two `.json` screens files the screen source,
+/// anything else an API contract pair. Documented in `doyle check --help`.
+fn detect_kind(old_path: &str, new_path: &str) -> SourceKind {
+    if old_path.ends_with(".cbl") && new_path.ends_with(".cbl") {
+        SourceKind::Legacy
+    } else if old_path.ends_with(".json") && new_path.ends_with(".json") {
+        SourceKind::Screens
+    } else {
+        SourceKind::Contract
+    }
+}
+
+/// Load one screens version file: the review page's version shape
+/// (`console`, `screens`, `steps`, `recording`), shared with the guard so
+/// both resolve the same stable IDs.
+pub fn load_screen_version(path: &str) -> Result<(ScreenIndex, Option<RecordingMeta>), String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    let value: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
+    let console = value
+        .get("console")
+        .and_then(|v| v.as_str())
+        .unwrap_or("fernwhistle");
+    let screens_value = value
+        .get("screens")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| format!("{path}: missing screens"))?;
+    let mut screens = Vec::with_capacity(screens_value.len());
+    for screen in screens_value {
+        let name = screen
+            .get("name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| format!("{path}: a screen is missing its name"))?;
+        let elements = screen
+            .get("elements")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| format!("{path}: screen {name} is missing elements"))?;
+        let mut raw_elements = Vec::with_capacity(elements.len());
+        for element in elements {
+            raw_elements.push(RawElement {
+                text: element
+                    .get("text")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("{path}: an element is missing text"))?
+                    .to_string(),
+                row: element
+                    .get("row")
+                    .and_then(|v| v.as_u64())
+                    .and_then(|v| u32::try_from(v).ok())
+                    .ok_or_else(|| format!("{path}: an element is missing row"))?,
+                col: element
+                    .get("col")
+                    .and_then(|v| v.as_u64())
+                    .and_then(|v| u32::try_from(v).ok())
+                    .ok_or_else(|| format!("{path}: an element is missing col"))?,
+                kind: element
+                    .get("kind")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                protected: element
+                    .get("protected")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true),
+            });
+        }
+        screens.push(RawScreen {
+            name: name.to_string(),
+            elements: raw_elements,
+        });
+    }
+    let mut steps = Vec::new();
+    if let Some(rows) = value.get("steps").and_then(|v| v.as_array()) {
+        for step in rows {
+            steps.push(RawStep {
+                description: step
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| format!("{path}: a step is missing description"))?
+                    .to_string(),
+                start_s: step
+                    .get("start_s")
+                    .and_then(|v| v.as_f64())
+                    .ok_or_else(|| format!("{path}: a step is missing start_s"))?,
+                end_s: step
+                    .get("end_s")
+                    .and_then(|v| v.as_f64())
+                    .ok_or_else(|| format!("{path}: a step is missing end_s"))?,
+                screen: step
+                    .get("screen")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+            });
+        }
+    }
+    let recording = value.get("recording").map(|r| RecordingMeta {
+        name: r
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("recording")
+            .to_string(),
+        duration_s: r.get("duration_s").and_then(|v| v.as_f64()).unwrap_or(0.0),
+    });
+    let raw = RawVersion {
+        screens,
+        steps,
+        warnings: Vec::new(),
+    };
+    let (index, _warnings) = ScreenIndex::from_raw(console, &raw, recording.as_ref());
+    Ok((index, recording))
+}
 
 /// Run the `check` command.
 pub fn run(cli: &cli::Cli) -> ExitCode {
-    let (format, no_recheck) = match &cli.command {
+    let (format, no_recheck, old_path, new_path) = match &cli.command {
         cli::Command::Check {
-            format, no_recheck, ..
-        } => (format.clone(), *no_recheck),
-        _ => (String::from("markdown"), false),
+            format,
+            no_recheck,
+            old,
+            new,
+        } => (format.clone(), *no_recheck, old.clone(), new.clone()),
+        _ => (
+            String::from("markdown"),
+            false,
+            String::new(),
+            String::new(),
+        ),
     };
+    if detect_kind(&old_path, &new_path) != SourceKind::Contract {
+        return match execute_evidence(cli, &format, no_recheck, &old_path, &new_path) {
+            Ok((code, out)) => {
+                print!("{out}");
+                code
+            }
+            Err(e) => {
+                eprintln!("doyle check: {e}");
+                ExitCode::from(2)
+            }
+        };
+    }
     // --live swaps the replay client for the Meta re-check client over ureq;
     // without it the client (and the key requirement) is exactly what it was.
     let client: Box<dyn ModelClient> = match model_for_run(cli.common.live) {
@@ -44,16 +196,24 @@ pub fn run(cli: &cli::Cli) -> ExitCode {
 /// printing. `format` is `"markdown"` or `"json"`. Uses the default (replay)
 /// model client and reads `--no-recheck` from `cli`.
 pub fn execute(cli: &cli::Cli, format: &str) -> Result<(ExitCode, String), String> {
-    let no_recheck = match &cli.command {
-        cli::Command::Check { no_recheck, .. } => *no_recheck,
-        _ => false,
+    let (no_recheck, old_path, new_path) = match &cli.command {
+        cli::Command::Check {
+            no_recheck,
+            old,
+            new,
+            ..
+        } => (no_recheck, old, new),
+        _ => return Err(String::from("doyle check: expected a Check command")),
     };
+    if detect_kind(old_path, new_path) != SourceKind::Contract {
+        return execute_evidence(cli, format, *no_recheck, old_path, new_path);
+    }
     let client: Box<dyn ModelClient> = if cli.common.live {
         live_recheck_client()?
     } else {
         default_recheck_client()
     };
-    execute_with_model(cli, format, no_recheck, client.as_ref())
+    execute_with_model(cli, format, *no_recheck, client.as_ref())
 }
 
 /// Run the check with an explicit model client (for tests and injection).
@@ -195,6 +355,104 @@ pub fn execute_with_model(
         render_json(&old_path, &new_path, &written, &proposals)
     } else {
         render_markdown(&old_path, &new_path, &written, &proposals)
+    };
+
+    let code = if written.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(1)
+    };
+    Ok((code, report))
+}
+
+/// Run the check over a non-contract source: load both versions through the
+/// source's own index, diff into change facts, flag through the same
+/// [`flag_citations`] and the same store. The re-check runs for contract
+/// flags only: each new-kind flag gets a one-line stderr note naming the
+/// later task instead of a proposal, so a default run stays keyless and
+/// `--no-recheck` stays silent.
+fn execute_evidence(
+    cli: &cli::Cli,
+    format: &str,
+    no_recheck: bool,
+    old_path: &str,
+    new_path: &str,
+) -> Result<(ExitCode, String), String> {
+    enum OldNew {
+        Legacy(
+            crate::evidence::legacy::LegacyIndex,
+            crate::evidence::legacy::LegacyIndex,
+        ),
+        Screens(ScreenIndex, ScreenIndex),
+    }
+    let kind = detect_kind(old_path, new_path);
+    let pair = match kind {
+        SourceKind::Legacy => {
+            let old = crate::evidence::legacy::LegacyIndex::load(old_path)
+                .map_err(|e| format!("doyle check: {e}"))?;
+            let new = crate::evidence::legacy::LegacyIndex::load(new_path)
+                .map_err(|e| format!("doyle check: {e}"))?;
+            OldNew::Legacy(old, new)
+        }
+        SourceKind::Screens => {
+            let (old, _) = load_screen_version(old_path)?;
+            let (new, _) = load_screen_version(new_path)?;
+            OldNew::Screens(old, new)
+        }
+        SourceKind::Contract => {
+            return Err(String::from(
+                "doyle check: expected a legacy or screens pair",
+            ));
+        }
+    };
+
+    let dir = cli
+        .common
+        .state_dir
+        .clone()
+        .unwrap_or_else(|| String::from(".doyle"));
+    let mut store = Store::open(&dir).map_err(|e| e.to_string())?;
+
+    let citations: Vec<Citation> = store.citations().to_vec();
+    let open_flags: Vec<Flag> = store.open_flags();
+
+    let flags: Vec<Flag> = match &pair {
+        OldNew::Legacy(old, new) => {
+            let changes: Vec<EvidenceChange> = old.diff_evidence(new).map_err(|e| e.to_string())?;
+            flag_citations(&citations, &changes, old, &open_flags, old_path, new_path)
+        }
+        OldNew::Screens(old, new) => {
+            let changes: Vec<EvidenceChange> = old.diff_evidence(new).map_err(|e| e.to_string())?;
+            flag_citations(&citations, &changes, old, &open_flags, old_path, new_path)
+        }
+    };
+
+    let before = store.flags().len();
+    for f in &flags {
+        store.record_flag(f.clone()).map_err(|e| e.to_string())?;
+    }
+    let written: Vec<Flag> = store.flags()[before..].to_vec();
+
+    // No re-check producer for these kinds yet: note each flag once on a
+    // default run, stay silent (and model-free) under --no-recheck.
+    if !no_recheck {
+        let origin = match kind {
+            SourceKind::Legacy => "legacy",
+            SourceKind::Screens => "screens",
+            SourceKind::Contract => "contract",
+        };
+        for f in &written {
+            eprintln!(
+                "doyle check: flag {} ({}/{}) got no proposal: re-check for {} flags is not built yet (a later task); rerun with --no-recheck to silence",
+                f.id, f.memory.adapter, f.memory.id, origin,
+            );
+        }
+    }
+
+    let report = if format == "json" {
+        render_json(old_path, new_path, &written, &[])
+    } else {
+        render_markdown(old_path, new_path, &written, &[])
     };
 
     let code = if written.is_empty() {

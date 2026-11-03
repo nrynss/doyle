@@ -23,7 +23,10 @@ use std::time::Instant;
 
 use crate::cli;
 use crate::contract::ContractIndex;
-use crate::core::{Severity, Store};
+use crate::core::{ElementId, Severity, Store};
+use crate::evidence::NativeLocation;
+use crate::evidence::legacy::LegacyIndex;
+use crate::evidence::screens::ScreenIndex;
 
 /// Tool inputs the guard inspects. Any other tool name passes through
 /// unseen: allow unknown, deny known-bad.
@@ -225,7 +228,7 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         })
         .or_else(|| {
             native.type_name.as_deref().and_then(|name| {
-                if contains_identifier(&joined, name) {
+                if contains_identifier_folded(&joined, name) {
                     Some(format!("type {name}"))
                 } else {
                     None
@@ -539,16 +542,64 @@ fn resolve_against_cwd(raw: &str, cwd: Option<&str>) -> String {
     }
 }
 
+/// One loaded flag version, in whichever source it was written in. A
+/// legacy flag names `.cbl` programs, a screen flag the review page's
+/// version JSON files, a contract flag its contract files, and a
+/// differential-run flag the batch program (old) plus the run manifest
+/// (new, which loads as nothing and is skipped: the program side still
+/// resolves every blamed paragraph).
+enum VersionIndex {
+    Contract(Box<ContractIndex>),
+    Legacy(Box<LegacyIndex>),
+    Screens(Box<ScreenIndex>),
+}
+
+impl VersionIndex {
+    fn native_location(&self, id: &ElementId) -> Option<NativeLocation> {
+        match self {
+            VersionIndex::Contract(index) => index.native_location(id),
+            VersionIndex::Legacy(index) => {
+                use crate::evidence::EvidenceSource;
+                index.native_location(id)
+            }
+            VersionIndex::Screens(index) => {
+                use crate::evidence::EvidenceSource;
+                index.native_location(id)
+            }
+        }
+    }
+}
+
+/// Load one flag version through the source its path names: `.cbl` is the
+/// legacy COBOL source, a `.json` file with a screens list the screen
+/// source (anything else JSON, like a diffrun manifest, falls through to
+/// the contract loader and then to nothing), anything else a contract.
+fn load_version_index(path: &str) -> Option<VersionIndex> {
+    if path.ends_with(".cbl") {
+        return LegacyIndex::load(path)
+            .ok()
+            .map(|i| VersionIndex::Legacy(Box::new(i)));
+    }
+    if path.ends_with(".json")
+        && let Ok((index, _)) = crate::check::load_screen_version(path)
+    {
+        return Some(VersionIndex::Screens(Box::new(index)));
+    }
+    ContractIndex::load(path)
+        .ok()
+        .map(|i| VersionIndex::Contract(Box::new(i)))
+}
+
 /// Every matchable native location of every open flag: the method and path,
 /// operation ID and type name of each cited element, resolved through BOTH
-/// contracts the flag names. The new version is what made the memory stale;
-/// the old version is what the memory was written against. A rename resolves
-/// through both (the old native location through the old contract, the new
-/// one through the new contract); a removed element resolves only through
-/// the old contract. Each side loads against the agent's cwd exactly as a
-/// single contract did before, and a side that fails to load is skipped:
-/// when no side yields a location the action is allowed with the existing
-/// warning, never fail-closed.
+/// versions the flag names, each loaded in its own source. The new version
+/// is what made the memory stale; the old version is what the memory was
+/// written against. A rename resolves through both (the old native location
+/// through the old version, the new one through the new version); a removed
+/// element resolves only through the old version. Each side loads against
+/// the agent's cwd exactly as a single version did before, and a side that
+/// fails to load is skipped: when no side yields a location the action is
+/// allowed with the existing warning, never fail-closed.
 struct Native {
     method: Option<String>,
     path: Option<String>,
@@ -565,16 +616,16 @@ struct MatchIndex {
 fn build_match_index(store: &Store, open: &[crate::core::Flag], cwd: Option<&str>) -> MatchIndex {
     let mut natives = Vec::new();
     let mut failures: Vec<String> = Vec::new();
-    let mut loaded: Vec<(String, Option<ContractIndex>)> = Vec::new();
+    let mut loaded: Vec<(String, Option<VersionIndex>)> = Vec::new();
     for (position, flag) in open.iter().enumerate() {
         for version in [&flag.old_version, &flag.new_version] {
             if loaded.iter().any(|(key, _)| key == version) {
                 continue;
             }
             let path = resolve_against_cwd(version, cwd);
-            let index = match ContractIndex::load(&path) {
-                Ok(index) => Some(index),
-                Err(_) => {
+            let index = match load_version_index(&path) {
+                Some(index) => Some(index),
+                None => {
                     failures.push(version.clone());
                     None
                 }
@@ -864,6 +915,22 @@ fn contains_identifier(haystack: &str, name: &str) -> bool {
 
 fn is_identifier_char(byte: Option<u8>) -> bool {
     byte.is_some_and(|b| b.is_ascii_alphanumeric() || b == b'_')
+}
+
+/// Whether `name` appears as a standalone identifier, ignoring ASCII case:
+/// a screen named `decommission` matches a console command containing
+/// `DECOMMISSION`. Operation IDs stay case-sensitive (they are code
+/// identifiers, pinned by the tests below); type names vary in case
+/// between screens, records and the commands that name them. The fold is
+/// ASCII-only, so byte length is preserved and the boundary rule is exact.
+fn contains_identifier_folded(haystack: &str, name: &str) -> bool {
+    contains_identifier(&ascii_lower(haystack), &ascii_lower(name))
+}
+
+fn ascii_lower(text: &str) -> String {
+    text.bytes()
+        .map(|b| b.to_ascii_lowercase() as char)
+        .collect()
 }
 
 fn deny_reason(open: &[crate::core::Flag], store: &Store, hits: &[(usize, String)]) -> String {

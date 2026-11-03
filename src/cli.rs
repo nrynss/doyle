@@ -19,12 +19,24 @@ pub enum Command {
     Curate,
     /// Record a citation by hand.
     Cite,
-    /// Diff two contract versions, flag cited memories, write proposals.
+    /// Diff two versions, flag cited memories, write proposals.
     Check {
-        /// Old contract version.
+        /// Old version.
         old: String,
-        /// New contract version.
+        /// New version.
         new: String,
+        /// Output format: markdown or json.
+        format: String,
+        /// Skip the re-check (no model calls).
+        no_recheck: bool,
+    },
+    /// Compare a COBOL batch report with a rewrite report, flag cited
+    /// memories, write flags.
+    Diffrun {
+        /// COBOL batch program (.cbl; copybooks resolve beside it).
+        program: String,
+        /// Run manifest JSON (inputs, reports, paths; see help).
+        run: String,
         /// Output format: markdown or json.
         format: String,
         /// Skip the re-check (no model calls).
@@ -83,7 +95,7 @@ pub fn parse_from(args: &[String]) -> ParseResult {
     match args[0].as_str() {
         "-h" | "--help" => return ParseResult::Help(None),
         "-V" | "--version" => return ParseResult::Version,
-        "curate" | "cite" | "check" | "serve" | "guard" => {}
+        "curate" | "cite" | "check" | "diffrun" | "serve" | "guard" => {}
         other => return ParseResult::Error(format!("doyle: unknown command: {other}")),
     }
 
@@ -102,8 +114,8 @@ pub fn parse_from(args: &[String]) -> ParseResult {
         Err(e) => return ParseResult::Error(format!("doyle: {e}")),
     };
 
-    // check-specific: -f/--format <markdown|json>, --no-recheck
-    let (format, no_recheck, parse_rest) = if command_name == "check" {
+    // check/diffrun-specific: -f/--format <markdown|json>, --no-recheck
+    let (format, no_recheck, parse_rest) = if command_name == "check" || command_name == "diffrun" {
         match extract_check_format(&command_rest) {
             Ok(v) => v,
             Err(e) => return ParseResult::Error(format!("doyle: {e}")),
@@ -139,12 +151,25 @@ pub fn parse_from(args: &[String]) -> ParseResult {
         "check" => {
             if positionals.len() != 2 {
                 return ParseResult::Error(String::from(
-                    "doyle check: requires OLD and NEW contract paths",
+                    "doyle check: requires OLD and NEW version paths",
                 ));
             }
             Command::Check {
                 old: positionals[0].clone(),
                 new: positionals[1].clone(),
+                format,
+                no_recheck,
+            }
+        }
+        "diffrun" => {
+            if positionals.len() != 2 {
+                return ParseResult::Error(String::from(
+                    "doyle diffrun: requires PROGRAM and RUN manifest paths",
+                ));
+            }
+            Command::Diffrun {
+                program: positionals[0].clone(),
+                run: positionals[1].clone(),
                 format,
                 no_recheck,
             }
@@ -305,7 +330,8 @@ Usage:
 Commands:
   curate   Read memories through the adapters, cite each against the current contract, write citations
   cite     Record a citation by hand
-  check    Diff two contract versions, flag cited memories, run the re-check, write proposals
+  check    Diff two versions, flag cited memories, run the re-check, write proposals
+  diffrun  Compare a COBOL batch report with a rewrite report over the same inputs, flag cited memories, write flags
   serve    The review page and the judges' page
   guard    The Muse Code hook
 
@@ -355,15 +381,65 @@ Shared options:
 
 /// Help for `doyle check`.
 pub const CHECK_HELP: &str = "\
-doyle check: diff two contract versions, flag cited memories, run the re-check, write proposals
+doyle check: diff two versions, flag cited memories, run the re-check, write proposals
 
 Usage:
   doyle check <OLD> <NEW> [OPTIONS]
+
+The source is picked from the file extensions: two `.cbl` programs diff
+as legacy COBOL (copybooks resolve beside each program, as LegacyIndex
+loads them); two `.json` files with a screens list diff as console
+screens (the review page's version shape: console, screens, steps and
+the recording); anything else diffs as API contracts. Flags go to the
+same store through flag_citations either way, and the exit code says
+whether anything was flagged, for CI.
+
+The re-check runs for contract flags only: legacy and screen flags get
+no proposal yet (their re-check is a later task), noted one line per
+flag on stderr. --no-recheck stays silent and makes no model calls.
 
 Options:
   -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
       --no-recheck         Skip the re-check (no model calls)
       --live                Run the re-check with live clients (needs keys) instead of replay
+  -s, --state-dir <DIR>   State directory (.doyle/ by default)
+  -a, --adapters <LIST>   Adapters to use, comma-separated
+      --project <DIR>     Muse Code project root (default: the working directory)
+  -v, --verbose           Verbose output
+  -h, --help              Print help
+";
+
+/// Help for `doyle diffrun`.
+pub const DIFRUN_HELP: &str = "\
+doyle diffrun: compare a COBOL batch report with a rewrite report, flag cited memories, write flags
+
+Usage:
+  doyle diffrun <PROGRAM> <RUN> [OPTIONS]
+
+Evidence by execution: PROGRAM is the COBOL batch (a `.cbl` path; its
+paragraphs name the blamed elements through the legacy index), RUN is a
+run manifest JSON naming the recorded inputs and both reports plus the
+per-record paragraph paths (or a raw trace):
+
+  {\"inputs\": \"patients.dat\", \"cobol_report\": \"report.txt\",
+   \"rewrite_report\": \"rewrite.txt\", \"record_paths\": \"paths.txt\"}
+
+or with \"trace\", \"record_start\" and \"record_end\" instead of
+\"record_paths\". Relative paths resolve beside the manifest. Every
+compared record must appear in the inputs, both reports and the paths;
+any drift is an error, never a silent pass. The exit code says whether
+anything was flagged, for CI. The flag's old version is PROGRAM and its
+new version is RUN, the way the review page reads them.
+
+Each mismatching record blames the paragraphs that ran only on
+mismatched paths; a memory citing one is flagged with the inputs and
+both outputs as its evidence. The re-check runs for contract flags
+only (the diffrun re-check is a later task), so diffrun flags get no
+proposal yet, noted one line per flag on stderr unless --no-recheck.
+
+Options:
+  -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
+      --no-recheck         Skip the re-check note (no model calls either way)
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
       --project <DIR>     Muse Code project root (default: the working directory)
@@ -408,6 +484,7 @@ pub fn help_text(command: Option<&str>) -> &'static str {
         Some("curate") => CURATE_HELP,
         Some("cite") => CITE_HELP,
         Some("check") => CHECK_HELP,
+        Some("diffrun") => DIFRUN_HELP,
         Some("serve") => SERVE_HELP,
         Some("guard") => GUARD_HELP,
         _ => TOP_HELP,

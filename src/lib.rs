@@ -11,6 +11,7 @@ pub mod cli;
 pub mod contract;
 pub mod core;
 pub mod curate;
+pub mod diffrun_cmd;
 pub mod evidence;
 pub mod guard;
 pub mod mcp;
