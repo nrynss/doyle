@@ -181,18 +181,21 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         return (ExitCode::SUCCESS, String::new(), String::new());
     }
     let index = build_match_index(&store, &open, call.cwd.as_deref());
-    let mut hits: Vec<(usize, String)> =
-        find_diffrun_artifact_hits(&open, call.cwd.as_deref(), &call.strings);
+    let (mut hits, unheld) = find_diffrun_artifact_hits(&open, call.cwd.as_deref(), &call.strings);
+    let unheld_warning: String = unheld
+        .iter()
+        .map(|w| format!("doyle guard: warning: {w}\n"))
+        .collect();
     let mut seen_flag: Vec<usize> = hits.iter().map(|(flag, _)| *flag).collect();
     if hits.is_empty() && index.natives.is_empty() {
-        return (
-            ExitCode::SUCCESS,
-            String::new(),
-            format!(
+        let mut warning = unheld_warning;
+        if !index.problem.is_empty() {
+            warning.push_str(&format!(
                 "doyle guard: warning: cannot match open flags ({}); allowing the action",
                 index.problem
-            ),
-        );
+            ));
+        }
+        return (ExitCode::SUCCESS, String::new(), warning);
     }
     let candidates = extract_candidates(&call.strings);
     let joined = call.strings.join("\n");
@@ -242,7 +245,7 @@ fn decide_pre_tool_use(call: &HookCall, cli: &cli::Cli) -> (ExitCode, String, St
         }
     }
     if hits.is_empty() {
-        return (ExitCode::SUCCESS, String::new(), String::new());
+        return (ExitCode::SUCCESS, String::new(), unheld_warning);
     }
     hits.sort_by_key(|(flag, _)| *flag);
     deny(&deny_reason(&open, &store, &hits))
@@ -748,14 +751,18 @@ fn load_diffrun_outcome_for_guard(
 /// Every open diffrun flag whose rewrite file is named by the tool input:
 /// one hit per flag, naming the first matched artifact with the run's
 /// blamed paragraphs and mismatch count. The outcome loads only when an
-/// artifact matched, so reads and greps of the batch stay fast.
+/// artifact matched, so reads and greps of the batch stay fast. The second
+/// list names each open diffrun flag the guard cannot hold (its manifest
+/// is unreadable or names no `rewrite_artifacts`): fail open, never
+/// silently.
 fn find_diffrun_artifact_hits(
     open: &[crate::core::Flag],
     cwd: Option<&str>,
     strings: &[String],
-) -> Vec<(usize, String)> {
+) -> (Vec<(usize, String)>, Vec<String>) {
     use crate::evidence::diffrun::exclusive_paragraphs;
     let mut hits = Vec::new();
+    let mut unheld = Vec::new();
     for (position, flag) in open.iter().enumerate() {
         if classify_flag(&flag.old_version, &flag.new_version) != FlagKind::Diffrun {
             continue;
@@ -763,6 +770,10 @@ fn find_diffrun_artifact_hits(
         let manifest = resolve_against_cwd(&flag.new_version, cwd);
         let artifacts = load_rewrite_artifacts(&manifest);
         if artifacts.is_empty() {
+            unheld.push(format!(
+                "differential-run flag {} cannot hold its rewrite: run manifest {} is unreadable or names no rewrite_artifacts",
+                flag.id, manifest
+            ));
             continue;
         }
         let matched = artifacts
@@ -788,13 +799,17 @@ fn find_diffrun_artifact_hits(
         };
         hits.push((position, detail));
     }
-    hits
+    (hits, unheld)
 }
 
 fn build_match_index(store: &Store, open: &[crate::core::Flag], cwd: Option<&str>) -> MatchIndex {
     let mut natives = Vec::new();
     let mut failures: Vec<String> = Vec::new();
     let mut loaded: Vec<(String, Option<VersionIndex>)> = Vec::new();
+    // Whether any open flag is one the guard matches by native location.
+    // Legacy and diffrun flags are not (by design), so a store holding only
+    // those has no "problem" to warn about.
+    let mut considered = false;
     for (position, flag) in open.iter().enumerate() {
         // Legacy and diffrun flags never match paragraph or field names in
         // free command text: reading or grepping the batch is allowed. The
@@ -802,7 +817,7 @@ fn build_match_index(store: &Store, open: &[crate::core::Flag], cwd: Option<&str
         // nothing at the guard.
         match classify_flag(&flag.old_version, &flag.new_version) {
             FlagKind::Legacy | FlagKind::Diffrun => continue,
-            FlagKind::Contract | FlagKind::Screens => {}
+            FlagKind::Contract | FlagKind::Screens => considered = true,
         }
         for version in [&flag.old_version, &flag.new_version] {
             if loaded.iter().any(|(key, _)| key == version) {
@@ -852,7 +867,9 @@ fn build_match_index(store: &Store, open: &[crate::core::Flag], cwd: Option<&str
             }
         }
     }
-    let problem = if failures.is_empty() {
+    let problem = if !considered {
+        String::new()
+    } else if failures.is_empty() {
         String::from("flagged elements have no matchable native locations")
     } else {
         format!("cannot load contract: {}", failures.join(", "))

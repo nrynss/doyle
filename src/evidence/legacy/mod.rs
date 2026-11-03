@@ -52,17 +52,13 @@
 //! slot with its `SELECT` name. The guard matches operation IDs and type
 //! names, never field names, whatever source served them.
 //!
-//! Decide-level multi-source loading is intentionally unchanged: the guard
-//! still loads its versions as contracts, so a legacy flag's versions fail
-//! to load and the action is allowed with the one warning the guard writes
-//! for anything it cannot load. The loader change (picking a source per
-//! flag version, and the legacy version shape no producer writes yet) waits
-//! until the screens and differential-run sources exist, so one design
-//! covers all three instead of one legacy-only file convention. The two
-//! guard-boundary tests below pin the behavior: unknown versions allow
-//! with a warning, and unknown `le2_` elements under loadable versions
-//! allow with a warning. Fail-open is the guard's documented rule, and this
-//! source does not weaken it.
+//! Legacy flags hold no step at the guard (T9.15, user decision): a COBOL
+//! paragraph or field name in free command text is a read of the code as
+//! often as an action resting on the memory, so the guard no longer
+//! matches it. Reading, grepping and compiling the batch are allowed. The
+//! differential run is what guards the rewrite, by the rewrite's own files
+//! (`rewrite_artifacts` in its run manifest). The guard-boundary tests
+//! below pin it: legacy versions, loadable or not, allow silently.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -1242,10 +1238,11 @@ mod tests {
     }
 
     #[test]
-    fn legacy_versions_match_and_fail_open_only_when_unloadable() {
-        // Real .cbl versions load through the legacy source, so a tool
-        // call naming the cited paragraph denies with Doyle's reason.
-        let dir = temp_state_dir("versions");
+    fn legacy_flags_hold_no_free_text_step() {
+        // T9.15: real .cbl versions no longer match a cited paragraph named
+        // in free text. Reading or shipping notes that name it is allowed,
+        // silently: the differential run guards the rewrite instead.
+        let calc = ids::element_id(&ids::paragraph_key("BILLBATCH", "CALC-LATE-FEE")).0;
         let old = std::path::absolute(fixture("legacy/story/v1/BILLBATCH.cbl"))
             .unwrap()
             .to_string_lossy()
@@ -1254,65 +1251,26 @@ mod tests {
             .unwrap()
             .to_string_lossy()
             .to_string();
-        let calc = ids::element_id(&ids::paragraph_key("BILLBATCH", "CALC-LATE-FEE")).0;
-        seed_legacy_flag(&dir, &old, &new, &[&calc]);
-        // The tool input names the cited paragraph outright.
-        let out = run_guard(
-            &dir,
-            "{\"content\":\"ship CALC-LATE-FEE now\",\"path\":\"notes.txt\"}",
-        );
-        assert!(out.status.success(), "deny exits 0");
-        let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-        let value: serde_json::Value = serde_json::from_str(&stdout).expect("deny is JSON");
-        assert_eq!(
-            value["hookSpecificOutput"]["permissionDecision"], "deny",
-            "names the cited paragraph: {stdout}"
-        );
-        let reason = value["hookSpecificOutput"]["permissionDecisionReason"]
-            .as_str()
-            .expect("reason is a string");
-        assert!(reason.contains("L2"), "names the memory: {reason}");
-        assert!(
-            reason.contains("CALC-LATE-FEE"),
-            "names what matched: {reason}"
-        );
-        assert!(
-            reason.ends_with(
-                "A person reviews this flag on Doyle's review page; this session cannot settle it."
-            ),
-            "person-reviews sentence: {reason}"
-        );
-        assert!(
-            String::from_utf8_lossy(&out.stderr).is_empty(),
-            "deny warns nothing: {}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        let _ = std::fs::remove_dir_all(&dir);
-
-        // A genuinely unloadable version matches nothing: fail open with
-        // the one warning naming the file.
-        let dir = temp_state_dir("unloadable");
-        let missing = "/nonexistent/BILLBATCH.cbl";
-        seed_legacy_flag(&dir, missing, missing, &[&calc]);
-        let out = run_guard(
-            &dir,
-            "{\"content\":\"ship CALC-LATE-FEE now\",\"path\":\"notes.txt\"}",
-        );
-        assert!(out.status.success(), "allow exits 0");
-        assert!(
-            String::from_utf8_lossy(&out.stdout).is_empty(),
-            "allow is silent on stdout"
-        );
-        let err = String::from_utf8_lossy(&out.stderr).to_string();
-        assert!(
-            err.contains("warning") && err.contains("allowing"),
-            "one warning, fail-open: {err}"
-        );
-        assert!(
-            err.contains("BILLBATCH.cbl"),
-            "the warning names the unloadable version: {err}"
-        );
-        let _ = std::fs::remove_dir_all(&dir);
+        let missing = "/nonexistent/BILLBATCH.cbl".to_string();
+        for (tag, old, new) in [("versions", &old, &new), ("unloadable", &missing, &missing)] {
+            let dir = temp_state_dir(tag);
+            seed_legacy_flag(&dir, old, new, &[&calc]);
+            let out = run_guard(
+                &dir,
+                "{\"content\":\"ship CALC-LATE-FEE now\",\"path\":\"notes.txt\"}",
+            );
+            assert!(out.status.success(), "allow exits 0 ({tag})");
+            assert!(
+                String::from_utf8_lossy(&out.stdout).is_empty(),
+                "allow is silent on stdout ({tag})"
+            );
+            assert!(
+                String::from_utf8_lossy(&out.stderr).is_empty(),
+                "no warning for a legacy flag ({tag}): {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            let _ = std::fs::remove_dir_all(&dir);
+        }
     }
 
     #[test]
