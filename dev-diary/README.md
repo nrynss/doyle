@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.11 (binary flags), T9.11b (proposals and citations) and T9.12 (operator console) done; T9.13 (capture rig) in review, its live take waiting on the user's OBS steps; T9.14 (fixture scrub) done; then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 done; T9.10 (the extended runs, agent-run on the live capture rig, the person approving only) is ready. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
