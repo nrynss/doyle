@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.11 (binary flags), T9.11b (proposals and citations) and T9.12 (operator console) done; T9.13 (capture rig) in review, its live take waiting on the user's OBS steps; T9.14 (fixture scrub) ready to dispatch; then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.11 (binary flags), T9.11b (proposals and citations) and T9.12 (operator console) done; T9.13 (capture rig) in review, its live take waiting on the user's OBS steps; T9.14 (fixture scrub) done; then T9.10; the user dispatches. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 12 / 15 | T9.1–T9.9 + T9.7b + T9.11 + T9.11b + T9.12 done. T9.13 in review (live take waits on the user's OBS steps), T9.14 ready to dispatch, then T9.10. |
+| P9 | 13 / 15 | T9.1–T9.9 + T9.7b + T9.11 + T9.11b + T9.12 + T9.14 done. T9.13 in review (live take waits on the user's OBS steps), then T9.10. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.14 closed: the scaffolding is gone from what Wonder reads.** Trap labels, task numbers, story/fixture/planted words, memory/flag mentions, the vaccination-visit exemption and the rewrite's bug are out of the comments of the v1/v2 programs and copybooks plus `wonder-bill.rs` (comment text only, zero non-comment diff lines, line counts held 217/243/11/11/69). The rule survives only in code (`IF VISIT-CODE = "V"`); `VISIT-CODE is "V" for a vaccination visit` stays as a field description per the user decision. Review ruled the three surviving `DISCOUNT-FLAG` comment mentions permitted (field's own identifier, "what a field holds," renaming would be a forbidden code change). Proofs: grep leaves only code-identifier/literal matches; elements regenerate byte-identical with all IDs stable; reports entailed identical with the agent's hand-rebuild `cmp`-clean; story e2e 6/6 and gate green keyless; no replay key moved, $0 of $0.25 spent. Loop as ordered: implementation → separate review (LAND, no findings) → no remediation. Only T9.13's live take stands between P9 and T9.10.
 
 - **T9.11b closed: proposals and citations for legacy and screen memories.** Curator + re-check producers for all three new kinds with replayed proofs: curate L2/L3/S1 exact, L4/S2 benign extras, L1 at {CALC-LATE-FEE, BALANCE, LOG-EXEMPT} — flag-algebra-perfect, one field short of the story set, accepted by the user and pinned honestly in-test; re-check corrects L1 (exemption-zero-fee), L2 (35-chars-plus-discount-flag), S1 (dropped confirmation, guideline-7 clean after a no-quotation rule + screens-only 8000 cap). Binary wired: `diffrun --live`, default propose-from-recordings, e2e L1/L2/S1 corrections with reruns exit 0. Live spend $0.823 of the $0.875 ceiling ($0.50 + $0.30 + $0.075 across three user-granted rounds); 9 live calls, no cost_usd returned, transcripts keyless in reports. Loop as ordered: implementation → remediation (superseded-pin precedent, none needed here) → review (LAND) → one aligned nit fix (L1 live gate matches the accepted set). T9.14 is now unblocked.
 

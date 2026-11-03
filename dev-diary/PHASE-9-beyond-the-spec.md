@@ -490,7 +490,7 @@ requires:   [T9.11, T9.11b]
 fixture-ok: no
 size:       S · mid
 owns:       testdata/legacy/story/v1/, testdata/legacy/story/v2/, testdata/legacy/story/rewrite/wonder-bill.rs (comments only), testdata/legacy/story/generate-*.py (only where they write these files), testdata/replies/ (re-recordings only, if a replay key changes), tests/ (only assertions on the changed text)
-status:     in-review
+status:     done
 ```
 
 Found validating T9.13's review take: the story's COBOL sources label their own traps and name the build's tasks. `v1/patient.cpy` says the vaccination-visit exemption is "Trap A2" and "replaces the T9.1 sample's EXEMPT-FLAG mechanism"; `v1/BILLBATCH.cbl` calls its fee schedule "the rule Trap A turns on"; the v2 files mark "the ONLY legacy change in v2 (Trap B1)"; both name "T9.4 fixtures"; the rewrites' headers say "story fixture, Trap D". In T9.10 Wonder reads these files to rewrite the batch, so the labels tell it where the traps are, and they render on the review page's before/after evidence in the takes.
