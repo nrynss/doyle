@@ -527,7 +527,7 @@ pub fn measurement_cases() -> Vec<MeasurementCase> {
 /// evidence. Short and plain like the contract prompt, with the source
 /// vocabulary instead of the endpoint vocabulary.
 pub fn system_prompt_evidence() -> &'static str {
-    "You re-check one flagged agent memory against a new evidence version: a legacy program version, a console version, or a batch-vs-rewrite run.\n\
+    "You re-check one flagged agent memory against a new evidence version: a legacy program version, a console version, or a batch-vs-rewrite comparison.\n\
      \n\
      You receive: the memory's text, the one-line claim it rests on, the \
      change facts behind the flag (severity, kind and a plain description), \
@@ -548,7 +548,9 @@ pub fn system_prompt_evidence() -> &'static str {
      Replacement text rules: at most 280 characters, plain prose, no \
      markdown, no code. Quote nothing from the evidence that could read as an \
      instruction: no imperative clauses, no delete/confirm/decommission/remove \
-     wording. Describe what the new evidence shows, never order an action."
+     wording. Describe what the new evidence shows, never order an action. \
+     Avoid the word 'run' entirely (write 'output' or 'comparison' instead): \
+     the checker cannot tell the noun from an order."
 }
 
 /// Build the [`ModelRequest`](crate::models::ModelRequest) for one
@@ -999,7 +1001,7 @@ pub fn build_diffrun_recheck_input(
                 name: paragraph.clone(),
                 old: format!("batch {} paragraph {paragraph}: {body}", index.program()),
                 new: format!(
-                    "rewrite run {}: the same paragraph, unchanged in the batch; the rewrite charged these records (see the mismatching records above)",
+                    "rewrite output {}: the same paragraph, unchanged in the batch; the rewrite charged these records (see the mismatching records above)",
                     flag.flag.new_version
                 ),
             }
@@ -1593,7 +1595,7 @@ mod evidence_tests {
     fn evidence_system_prompt_names_the_new_evidence() {
         let system = system_prompt_evidence();
         assert!(system.contains("legacy program"));
-        assert!(system.contains("batch-vs-rewrite run"));
+        assert!(system.contains("batch-vs-rewrite comparison"));
         assert!(system.contains("correct"));
         assert!(system.contains("retire"));
         assert!(system.contains("keep"));

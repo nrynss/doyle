@@ -689,7 +689,7 @@ fn live_legacy_curate_and_recheck() {
         &outcome,
         &[],
         "v1/BILLBATCH.cbl",
-        "run-wrong.json",
+        "wrong-rewrite.json",
     );
     assert_eq!(l1_flags.len(), 1, "L1 flags");
 
