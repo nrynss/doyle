@@ -1242,7 +1242,9 @@ mod tests {
     }
 
     #[test]
-    fn legacy_versions_allow_with_a_warning() {
+    fn legacy_versions_match_and_fail_open_only_when_unloadable() {
+        // Real .cbl versions load through the legacy source, so a tool
+        // call naming the cited paragraph denies with Doyle's reason.
         let dir = temp_state_dir("versions");
         let old = std::path::absolute(fixture("legacy/story/v1/BILLBATCH.cbl"))
             .unwrap()
@@ -1252,10 +1254,46 @@ mod tests {
             .unwrap()
             .to_string_lossy()
             .to_string();
-        let record = ids::record_key("BILLBATCH", "PATIENT-RECORD");
-        let record_id = ids::element_id(&record).0;
-        seed_legacy_flag(&dir, &old, &new, &[&record_id]);
-        // The tool input names the flagged paragraph outright.
+        let calc = ids::element_id(&ids::paragraph_key("BILLBATCH", "CALC-LATE-FEE")).0;
+        seed_legacy_flag(&dir, &old, &new, &[&calc]);
+        // The tool input names the cited paragraph outright.
+        let out = run_guard(
+            &dir,
+            "{\"content\":\"ship CALC-LATE-FEE now\",\"path\":\"notes.txt\"}",
+        );
+        assert!(out.status.success(), "deny exits 0");
+        let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+        let value: serde_json::Value = serde_json::from_str(&stdout).expect("deny is JSON");
+        assert_eq!(
+            value["hookSpecificOutput"]["permissionDecision"], "deny",
+            "names the cited paragraph: {stdout}"
+        );
+        let reason = value["hookSpecificOutput"]["permissionDecisionReason"]
+            .as_str()
+            .expect("reason is a string");
+        assert!(reason.contains("L2"), "names the memory: {reason}");
+        assert!(
+            reason.contains("CALC-LATE-FEE"),
+            "names what matched: {reason}"
+        );
+        assert!(
+            reason.ends_with(
+                "A person reviews this flag on Doyle's review page; this session cannot settle it."
+            ),
+            "person-reviews sentence: {reason}"
+        );
+        assert!(
+            String::from_utf8_lossy(&out.stderr).is_empty(),
+            "deny warns nothing: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // A genuinely unloadable version matches nothing: fail open with
+        // the one warning naming the file.
+        let dir = temp_state_dir("unloadable");
+        let missing = "/nonexistent/BILLBATCH.cbl";
+        seed_legacy_flag(&dir, missing, missing, &[&calc]);
         let out = run_guard(
             &dir,
             "{\"content\":\"ship CALC-LATE-FEE now\",\"path\":\"notes.txt\"}",
