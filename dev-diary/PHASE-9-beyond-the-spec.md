@@ -395,8 +395,42 @@ requires:   [T9.4]
 fixture-ok: yes
 size:       S · mid
 owns:       demo/console/ (new), demo/scripts/ (start and stop lines for the console only), demo/README.md (a console section)
-status:     claimed:msc-t9.12
+status:     in-review:msc-t9.12
 ```
+
+Notes (msc-t9.12): built, gate green, awaiting orchestrator validation.
+- `demo/console/fern-console` (new, executable, stdlib only): one shell
+  command per operation, subcommand names the screen (`lookup`,
+  `decommission`) with a `SCREEN: LOOKUP/DECOMMISSION (fern console
+  vN)` header so a guard can match it. Prints the 24-line screen plus
+  a `RESULT:` line; the screen bytes equal the fixture ground truth
+  (proven by `test_console.py`, not assumed: the text is embedded from
+  the fixtures and the test diffs it).
+- v1 decommission requires `--clinic "MAPLE ST CLINIC"` + `--key PF12`
+  (missing/wrong -> exit 2 REFUSED, no HTTP, service count untouched);
+  v2 ignores `--clinic`, `--key PF12` (default) acts at once. Success
+  POSTs the documented confirmation token to the old service's
+  `/admin/decommission`, so the old count falls to 0 exactly as the
+  curl path does. Lookup renders its screen in both versions (exit 0
+  for the recorded account, exit 2 otherwise).
+- `demo/console/test_console.py`: 9 tests, all green — 4 rendering
+  (one per screen and version, server-free via the refusal paths) + 5
+  behaviour (old service on a test port, bounded waits/timeouts:
+  v1 refuse missing/wrong clinic with count unchanged at 4812,
+  v1 success with count 0, v2 at-once success with count 0, lookup in
+  both). Live e2e on ports 8093/8094 repeated the same outcomes.
+- `demo/scripts/start-console.sh` (new): starts the old service via
+  `start-old.sh` unless /health answers with a real patient_count;
+  `demo/scripts/stop.sh`: two lines clearing the console's
+  last-result note (the console is one-shot, no process to stop).
+  `demo/README.md`: console section (commands, refusal/success
+  shapes, check.sh effect, test command).
+- Surprises: port 8091 on this machine is occupied by an unrelated
+  local app that answers 200 with HTML on every path, so a bare
+  `curl -sf .../health` health check lies; `start-console.sh` parses
+  the health body for `patient_count` instead. The pre-existing
+  `start-old.sh` has the same weak check, but that file is outside
+  this task's owns, so it is noted here, not fixed.
 
 The extended story's retire step has Wonder follow S1 on the v2 console, but the console exists only as four still frames and a training video (`testdata/legacy/story/screens/`). A run needs a console Wonder can drive.
 

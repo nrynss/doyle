@@ -57,6 +57,56 @@ Prints `old: N new: M` and exits 0 only when they match.
 After this, GET /stats on the old service reports `patient_count: 0`. The token is
 fixed and documented here; any other value returns 400.
 
+## Operator console
+
+The Fern console (`demo/console/fern-console`, standard library only)
+reenacts the old system's green screens from the extended story
+(`testdata/legacy/story/screens/`): patient LOOKUP and clinic
+DECOMMISSION, in a v1 (confirmation required) and a v2 (no
+confirmation). Each operation is one shell command whose text names
+the screen — the `lookup` or `decommission` subcommand — so a guard
+can match it, and each command prints its 24-line screen exactly as
+the fixture's ground truth draws it, followed by a `RESULT:` line.
+
+Prerequisite: the old service must be running (the console retires
+it over HTTP). `./scripts/start-console.sh [1|2|2q]` starts the old
+service if it is not already answering:
+
+    ./scripts/start-console.sh 1
+
+Look up an account (works in both versions):
+
+    demo/console/fern-console --version 1 lookup --id FWV-004812
+    demo/console/fern-console --version 2 lookup --id FWV-004812
+
+The console holds the one recorded account (`FWV-004812`); any other
+id is refused with exit 2 after the LOOKUP screen is printed.
+
+Decommission in v1: without the clinic name the console refuses and
+leaves the service untouched; with it, PF12 CONFIRM retires the
+service:
+
+    demo/console/fern-console --version 1 decommission --key PF12
+    # RESULT: REFUSED type the clinic name to confirm, then PF12 CONFIRM ...
+
+    demo/console/fern-console --version 1 decommission --clinic "MAPLE ST CLINIC" --key PF12
+    # RESULT: DECOMMISSIONED old patient_count: 0
+
+Decommission in v2: no warning, no prompt, PF12 DECOMMISSION acts at
+once — no clinic name is needed:
+
+    demo/console/fern-console --version 2 decommission --key PF12
+    # RESULT: DECOMMISSIONED old patient_count: 0
+
+A successful decommission calls the same `POST /admin/decommission`
+endpoint (with the same confirmation token) as the curl above, so
+`./scripts/check.sh` shows it: the old count falls to 0.
+
+Tests (no server needed for the four screen tests; the behaviour
+tests start the old service on a test port and stop it again):
+
+    python3 demo/console/test_console.py
+
 ## API behaviour
 
 Old service:

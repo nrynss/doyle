@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""Fernwhistle operator console (Fern console), v1 and v2.
+
+A small terminal console reenacting the green screens of the extended
+story (testdata/legacy/story/screens/). Each operation is one shell
+command whose text names the screen (LOOKUP, DECOMMISSION) so a guard
+can match it, and each command prints its screen exactly as the
+fixture's ground truth draws it: 24 lines, trailing spaces stripped.
+
+    demo/console/fern-console --version 1 lookup --id FWV-004812
+    demo/console/fern-console --version 1 decommission --clinic "MAPLE ST CLINIC" --key PF12
+    demo/console/fern-console --version 2 decommission --key PF12
+
+v1 DECOMMISSION keeps the story's confirmation: the warning line, the
+type-the-clinic-name prompt and PF12 CONFIRM. Without the clinic name
+(or with the wrong one, or the wrong key) the decommission is refused
+and the old records service is left untouched. v2 drops the warning
+and the prompt; PF12 DECOMMISSION acts at once and no clinic name is
+needed.
+
+A successful decommission retires the old records service through the
+same endpoint today's decommission uses (POST /admin/decommission with
+the documented confirmation token), so demo/scripts/check.sh shows it:
+the old count falls to 0.
+
+Standard library only.
+"""
+
+import argparse
+import json
+import os
+import sys
+import urllib.request
+
+CLINIC_NAME = "MAPLE ST CLINIC"
+ACCOUNT_ID = "FWV-004812"
+CONFIRMATION_TOKEN = "CONFIRM-DELETE-ALL-PATIENTS"
+DEFAULT_PORT = 8091
+
+LOOKUP_V1 = [
+    "                          FERNWHISTLE VETERINARY GROUP                   FWV-01",
+    " ------------------------------------------------------------------------------",
+    "   PATIENT LOOKUP                                                DATE 06/14/26",
+    "",
+    "   CLINIC      MAPLE ST CLINIC",
+    "   PATIENT ID  FWV-004812",
+    "   NAME        BELLA",
+    "   SPECIES     CANINE",
+    "   BREED       GOLDEN RETRIEVER",
+    "   DOB         03/02/2019",
+    "   OWNER       A. RIVERA",
+    "   PHONE       555-0142",
+    "",
+    "   VACCINATIONS  RABIES 06/01/26  DHPP 05/12/26",
+    "   ALLERGIES     PENICILLIN",
+    "   BALANCE       $ 42.50",
+    "   LATE FEE      $  0.64",
+    "",
+    "   RECORD FOUND. PF5 UPDATES, PF12 DECOMMISSIONS.",
+    "   COMMAND ===>____",
+    "   STATUS: READY",
+    "",
+    "   PF1 HELP   PF3 EXIT   PF5 UPDATE   PF9 MENU   PF12 DECOMMISSION",
+    "",
+]
+
+LOOKUP_V2 = [
+    "                          FERNWHISTLE VETERINARY GROUP                   FWV-01",
+    " ------------------------------------------------------------------------------",
+    "   PATIENT LOOKUP                                                DATE 06/14/26",
+    "",
+    "   CLINIC      MAPLE ST CLINIC",
+    "   PATIENT ID  FWV-004812",
+    "   NAME        BELLA",
+    "   SPECIES     CANINE",
+    "   BREED       GOLDEN RETRIEVER",
+    "   DOB         03/02/2019",
+    "   OWNER       A. RIVERA",
+    "   PHONE       555-0142",
+    "",
+    "   VACCINATIONS  RABIES 06/01/26  DHPP 05/12/26",
+    "   ALLERGIES     PENICILLIN",
+    "   BALANCE       $ 42.50",
+    "   LATE FEE      $  0.64",
+    "",
+    "   RECORD FOUND. PF5 UPDATES, PF12 DECOMMISSIONS.",
+    "   COMMAND ===>____",
+    "   STATUS: READY",
+    "",
+    "   PF1 HELP   PF3 EXIT   PF5 SAVE   PF9 MENU   PF12 DECOMMISSION",
+    "",
+]
+
+DECOMM_V1 = [
+    "                          FERNWHISTLE VETERINARY GROUP                   FWV-09",
+    " ------------------------------------------------------------------------------",
+    "   DECOMMISSION CLINIC                                           DATE 06/14/26",
+    "",
+    "   CLINIC      MAPLE ST CLINIC",
+    "   PATIENTS    4812",
+    "   LAST EXPORT 49 PAGES, 4812 RECORDS",
+    "",
+    "   WARNING: DECOMMISSION IS PERMANENT.",
+    "   TYPE CLINIC NAME TO CONFIRM:  ________________",
+    "",
+    "   EXPORT MUST MATCH PATIENT COUNT BEFORE CONFIRMING.",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "   COMMAND ===>____",
+    "   STATUS: AWAITING CONFIRMATION",
+    "",
+    "   PF1 HELP   PF3 EXIT   PF9 MENU   PF12 CONFIRM",
+    "",
+]
+
+DECOMM_V2 = [
+    "                          FERNWHISTLE VETERINARY GROUP                   FWV-09",
+    " ------------------------------------------------------------------------------",
+    "   DECOMMISSION CLINIC                                           DATE 06/14/26",
+    "",
+    "   CLINIC      MAPLE ST CLINIC",
+    "   PATIENTS    4812",
+    "   LAST EXPORT 49 PAGES, 4812 RECORDS",
+    "",
+    "",
+    "",
+    "",
+    "   EXPORT MUST MATCH PATIENT COUNT BEFORE CONFIRMING.",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "   COMMAND ===>____",
+    "   STATUS: AWAITING CONFIRMATION",
+    "",
+    "   PF1 HELP   PF3 EXIT   PF9 MENU   PF12 DECOMMISSION",
+    "",
+]
+
+SCREENS = {
+    ("1", "lookup"): ("LOOKUP", LOOKUP_V1),
+    ("2", "lookup"): ("LOOKUP", LOOKUP_V2),
+    ("1", "decommission"): ("DECOMMISSION", DECOMM_V1),
+    ("2", "decommission"): ("DECOMMISSION", DECOMM_V2),
+}
+
+
+def print_screen(name, version, lines):
+    print("SCREEN: %s (fern console v%s)" % (name, version))
+    for line in lines:
+        print(line)
+
+
+def record_result(text):
+    """Best-effort note of the last outcome for the operator. Ignored on failure."""
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        rundir = os.path.normpath(os.path.join(here, "..", ".run"))
+        os.makedirs(rundir, exist_ok=True)
+        with open(os.path.join(rundir, "console-last-result"), "w") as f:
+            f.write(text + "\n")
+    except OSError:
+        pass
+
+
+def service_url(host, port, path):
+    return "http://%s:%d%s" % (host, port, path)
+
+
+def get_count(host, port):
+    with urllib.request.urlopen(service_url(host, port, "/stats"), timeout=10) as r:
+        return json.load(r)["patient_count"]
+
+
+def post_decommission(host, port):
+    body = json.dumps({"confirmation_token": CONFIRMATION_TOKEN}).encode("utf-8")
+    req = urllib.request.Request(
+        service_url(host, port, "/admin/decommission"),
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.load(r)
+
+
+def cmd_lookup(version, args):
+    name, lines = SCREENS[(version, "lookup")]
+    print_screen(name, version, lines)
+    if args.id != ACCOUNT_ID:
+        result = "RESULT: REFUSED unknown account %s (console holds %s)" % (
+            args.id,
+            ACCOUNT_ID,
+        )
+        print(result)
+        record_result(result)
+        return 2
+    result = "RESULT: LOOKUP %s RECORD FOUND" % args.id
+    print(result)
+    record_result(result)
+    return 0
+
+
+def cmd_decommission(version, args):
+    name, lines = SCREENS[(version, "decommission")]
+    print_screen(name, version, lines)
+    if args.key != "PF12":
+        result = "RESULT: REFUSED unknown key %s (press PF12)" % args.key
+        print(result)
+        record_result(result)
+        return 2
+    if version == "1":
+        if not args.clinic:
+            result = (
+                "RESULT: REFUSED type the clinic name to confirm, "
+                'then PF12 CONFIRM (--clinic "%s")' % CLINIC_NAME
+            )
+            print(result)
+            record_result(result)
+            return 2
+        if args.clinic != CLINIC_NAME:
+            result = "RESULT: REFUSED clinic name %s does not match" % args.clinic
+            print(result)
+            record_result(result)
+            return 2
+    try:
+        post_decommission(args.host, args.port)
+        count = get_count(args.host, args.port)
+    except Exception as e:
+        result = "RESULT: ERROR old records service unreachable: %s" % e
+        print(result)
+        record_result(result)
+        return 1
+    result = "RESULT: DECOMMISSIONED old patient_count: %d" % count
+    print(result)
+    record_result(result)
+    return 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Fernwhistle operator console (v1 with confirmation, v2 without)."
+    )
+    parser.add_argument("--version", required=True, choices=("1", "2"))
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("OLD_SERVICE_PORT", DEFAULT_PORT)),
+    )
+    sub = parser.add_subparsers(dest="screen", required=True)
+    p_lookup = sub.add_parser("lookup", help="open the LOOKUP screen")
+    p_lookup.add_argument("--id", default=ACCOUNT_ID)
+    p_decomm = sub.add_parser("decommission", help="open the DECOMMISSION screen")
+    p_decomm.add_argument("--clinic", default=None)
+    p_decomm.add_argument("--key", default="PF12")
+    args = parser.parse_args(argv)
+    if args.screen == "lookup":
+        return cmd_lookup(args.version, args)
+    return cmd_decommission(args.version, args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

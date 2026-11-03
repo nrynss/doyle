@@ -13,4 +13,7 @@ for f in "$DIR/.run/old.pid" "$DIR/.run/new.pid"; do
 done
 pkill -f "old_service.py" 2>/dev/null || true
 pkill -f "new_platform.py" 2>/dev/null || true
+# The Fern console is one-shot and leaves no process behind; clear its
+# last-result note so a later run starts clean.
+rm -f "$DIR/.run/console-last-result"
 sleep 0.2
