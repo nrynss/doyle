@@ -385,7 +385,7 @@ requires:   [T9.11, T5.4]
 fixture-ok: no
 size:       M · mid
 owns:       src/prompts/recheck.rs and src/prompts/curator.rs (the legacy and screen cases), src/check.rs and src/curate.rs (their re-check and curate paths for the new kinds), testdata/replies/ (new recordings only), tests/live_legacy.rs (new)
-status:     not-started
+status:     claimed:msc-t9.11b
 ```
 
 T9.9 found no re-check producer for non-contract flags: its tests seeded proposals by hand. Curate cites memories against an API contract only, so in a live run the L and S memories would never be cited.
@@ -456,7 +456,7 @@ requires:   [T9.12]
 fixture-ok: no
 size:       S · mid
 owns:       ~/work/demo-shoot/doyle/capture-rig.md and ~/work/demo-shoot/doyle/tools/ (outside the repository); nothing in the repository
-status:     not-started
+status:     claimed:msc-t9.13
 ```
 
 Every take so far is a still frame: `muse exec` prints nothing until it finishes. The extended runs need the session recorded as it happens.
