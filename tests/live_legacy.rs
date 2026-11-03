@@ -384,9 +384,14 @@ fn live_legacy_curate_and_recheck() {
     // `DOYLE_LIVE_SKIP_CURATE=1` skips every curate call (and the L1 gate
     // with it) for a rechecks-only run: the rechecks use story citations
     // built in-test, never curate outputs.
+    // `DOYLE_LIVE_SKIP_L1=1` skips the L1 curate call and its gate (for
+    // re-runs after L1's citation already recorded); L1's case file is
+    // assembled offline from that run's recording.
     let mut total_usd = 0.0;
     let mut responses: Vec<(String, ModelRequest, ModelResponse)> = Vec::new();
-    if std::env::var("DOYLE_LIVE_SKIP_CURATE").is_err() {
+    let skip_curate = std::env::var("DOYLE_LIVE_SKIP_CURATE").is_ok();
+    let skip_l1 = std::env::var("DOYLE_LIVE_SKIP_L1").is_ok();
+    if !skip_curate && !skip_l1 {
         let l1_request = curator::build_legacy_curator_request(
             &texts["L1"],
             &v1,
@@ -449,10 +454,12 @@ fn live_legacy_curate_and_recheck() {
                 other => panic!("L1: must cite, got {other:?}"),
             }
         }
-
+        // The L1 response joins the case files below.
+        responses.push(("L1".to_string(), l1_request, l1_response));
+    }
+    if !skip_curate {
         // The remaining curate calls through the real curate path (one memory
         // per adapter so each group cites against its own index).
-        responses.push(("L1".to_string(), l1_request, l1_response));
         let run_group =
             |ids: &[&str],
              index: &LegacyIndex,
