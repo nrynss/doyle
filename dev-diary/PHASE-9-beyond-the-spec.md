@@ -476,19 +476,20 @@ Build, per `~/work/demo-shoot/README.md`'s layout and the receipts and before-ye
 requires:   [T9.11, T9.11b]
 fixture-ok: no
 size:       S · mid
-owns:       testdata/legacy/story/v1/, testdata/legacy/story/v2/, testdata/legacy/story/rewrite/*.rs (header comments only), testdata/legacy/story/generate-*.py (only where they write these files), testdata/replies/ (re-recordings only, if a replay key changes), tests/ (only assertions on the changed text)
+owns:       testdata/legacy/story/v1/, testdata/legacy/story/v2/, testdata/legacy/story/rewrite/wonder-bill.rs (comments only), testdata/legacy/story/generate-*.py (only where they write these files), testdata/replies/ (re-recordings only, if a replay key changes), tests/ (only assertions on the changed text)
 status:     not-started
 ```
 
 Found validating T9.13's review take: the story's COBOL sources label their own traps and name the build's tasks. `v1/patient.cpy` says the vaccination-visit exemption is "Trap A2" and "replaces the T9.1 sample's EXEMPT-FLAG mechanism"; `v1/BILLBATCH.cbl` calls its fee schedule "the rule Trap A turns on"; the v2 files mark "the ONLY legacy change in v2 (Trap B1)"; both name "T9.4 fixtures"; the rewrites' headers say "story fixture, Trap D". In T9.10 Wonder reads these files to rewrite the batch, so the labels tell it where the traps are, and they render on the review page's before/after evidence in the takes.
 
 Build:
-- Remove every trap label, task number, "story"/"fixture"/"planted" word and any other build-process wording from the comments of the files Wonder can read in T9.10: the v1 and v2 programs and copybooks, and the rewrites. Keep the comments a real shop's code would carry (what a field holds, what a paragraph does), in the same voice. Change comment text only, never code, and keep each file's line count so line references hold.
-- Whether the copybook may still say in plain words that vaccination-visit accounts are exempt is the user's decision, not yours. Real code documents its rules, and that comment is what makes L1 checkable from the source. Leave its substance as it is and ask in your report.
+- Remove every trap label, task number, "story"/"fixture"/"planted" word, every mention of memories or flags, and any other build-process wording from the comments of the files Wonder can read in T9.10: the v1 and v2 programs and copybooks, and `rewrite/wonder-bill.rs` (the rewrite handed to Wonder as its earlier work). Keep the comments a real shop's code would carry (what a field holds, what a paragraph does), in the same voice. Change comment text only, never code, and keep each file's line count so line references hold (blank `*>` / `//` lines where text goes).
+- **No comment states the vaccination-visit exemption (user decision).** The rule lives only in the code (the `VISIT-CODE` check in the fee paragraph), so Wonder finds it by reading the code or not at all. That covers the copybook's exemption lines, both fee schedules' vaccination-visit entries, v2's "same exemption" and its V-record note, and in `wonder-bill.rs` the header's account of its own wrong rule and the `BUG (L1)` marker. `VISIT-CODE` may still be described as a field ("V" for a vaccination visit), not as a fee rule.
+- `rewrite/fixed-bill.rs` is Doyle's control and never goes into Wonder's folder; leave it as it is.
 - Prove nothing moved: the legacy parser strips `*>` comments, so the regenerated `elements-v1.json`/`elements-v2.json` and `legacy-diff.json` must be byte-identical, every stable ID unchanged, and v1/v2 must still compile and produce byte-identical reports. If a replay key changes because a prompt quotes the source, say which, and re-record it live within $0.25.
 - The Doyle-side notes (`README.md`, `legacy-diff.json` notes, the generators' docstrings, `memories/`) are Doyle's own record and stay as they are.
 
-**Done when:** `grep -rniE 'trap|T9\.|fixture|story|planted'` over the v1, v2 and rewrite sources finds nothing; element files, IDs and batch reports byte-identical; `tests/story_flags.rs` and the gate pass with no key; the exemption-comment question is put to the user.
+**Done when:** `grep -rniE 'trap|T9\.|fixture|story|planted|memor|flag|exempt|BUG'` over the v1, v2 sources and `wonder-bill.rs` finds nothing outside code; element files, IDs and batch reports byte-identical; `tests/story_flags.rs` and the gate pass with no key; no comment in those files states the exemption or the rewrite's bug.
 
 ---
 
@@ -502,7 +503,7 @@ status:     not-started
 ```
 If the user put the extension into the runs (T9.4): the extended migration without and with Doyle, recorded as in T7.2 and T7.3. Without Doyle, Wonder's rewrite carries the wrong rule and the console decommission goes through unconfirmed. With Doyle, the differential run and the re-watched console flag both, the guard stops the step, and the corrections land in Muse Code and Lambo.
 
-The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T9.4's fixtures, not observed from Wonder. Run by an agent with T9.13's rig (user decision): interactive Muse Code recorded live, the planted rewrite handed to Wonder as its earlier session's work and labelled so in the README, the console from T9.12, the flags from the binary (T9.11, T9.11b). The person's only part is the approval on the review page. The recordings, their README and the judges' page say so. What these runs show is detection, by execution and by Wonder's eyes, traced to stable IDs.
+The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T9.4's fixtures, not observed from Wonder. Run by an agent with T9.13's rig (user decision): interactive Muse Code recorded live, the planted rewrite handed to Wonder as its earlier session's work and labelled so in the README (`wonder-bill.rs` only; `fixed-bill.rs` and the story's Doyle-side files never enter Wonder's folder), the console from T9.12, the flags from the binary (T9.11, T9.11b). The person's only part is the approval on the review page. The recordings, their README and the judges' page say so. What these runs show is detection, by execution and by Wonder's eyes, traced to stable IDs.
 
 **Done when:** both recordings show what the story in `testdata/legacy/story/` says, with the counts and mismatches in the handoff text.
 
