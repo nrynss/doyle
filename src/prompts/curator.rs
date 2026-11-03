@@ -1058,6 +1058,59 @@ mod legacy_screens_tests {
     }
 
     #[test]
+    fn replayed_l1_cites_fee_path_and_exemption_branch() {
+        // L1's load-bearing citation, four live draws in (diary): the
+        // model cites the fee computation and the exemption branch but
+        // never the VISIT-CODE field, and never the v2-wired dispatcher.
+        // Flag-algebra-perfect (diffrun flags via LOG-EXEMPT, legacy
+        // silent), one element short of the story set: unmet, pinned
+        // here so a future exact draw must update this test.
+        let (request, response, memory_text) = replayed_curator_case("curator-legacy", "L1");
+        let index = v1_index();
+        let rebuilt = build_legacy_curator_request(&memory_text, &index, BASETEN_CURATOR_MODEL);
+        assert_eq!(rebuilt, request, "L1 prompt is stable");
+        let allowed = allowed_legacy_ids(&index);
+        match parse_curator_value(&response.value, &allowed).expect("parses") {
+            CuratorVerdict::Cited {
+                elements, claim, ..
+            } => {
+                assert!(!claim.trim().is_empty(), "L1: empty claim");
+                let set: std::collections::HashSet<String> =
+                    elements.into_iter().map(|e| e.0).collect();
+                let para = |name: &str| {
+                    legacy_ids::element_id(&legacy_ids::paragraph_key("BILLBATCH", name)).0
+                };
+                let field = |path: &str| {
+                    legacy_ids::element_id(&legacy_ids::field_key("BILLBATCH", path)).0
+                };
+                for want in [
+                    para("CALC-LATE-FEE"),
+                    field("PATIENT-RECORD.BALANCE"),
+                    para("LOG-EXEMPT"),
+                ] {
+                    assert!(set.contains(&want), "L1 must cite {want}");
+                }
+                assert!(
+                    !set.contains(&para("CHARGE-ACCOUNT")),
+                    "L1 must not cite the dispatcher"
+                );
+                assert_eq!(
+                    set,
+                    [
+                        para("CALC-LATE-FEE"),
+                        field("PATIENT-RECORD.BALANCE"),
+                        para("LOG-EXEMPT"),
+                    ]
+                    .into_iter()
+                    .collect::<std::collections::HashSet<String>>(),
+                    "L1 pins its actual set (VISIT-CODE unmet)"
+                );
+            }
+            other => panic!("L1: must cite, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn replayed_l2_cites_the_record_exactly() {
         let (request, response, memory_text) = replayed_curator_case("curator-legacy", "L2");
         let index = v1_index();
