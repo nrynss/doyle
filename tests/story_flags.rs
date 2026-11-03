@@ -40,9 +40,22 @@ fn temp_dir(tag: &str) -> PathBuf {
 }
 
 fn run(args: &[&str], stdin: Option<&str>) -> Output {
+    run_in(".", args, stdin)
+}
+
+fn run_in(dir: &str, args: &[&str], stdin: Option<&str>) -> Output {
+    run_in_env(dir, args, stdin, &[])
+}
+
+fn run_in_env(dir: &str, args: &[&str], stdin: Option<&str>, extra_env: &[(&str, &str)]) -> Output {
     use std::io::Write;
-    let mut child = Command::new(bin())
+    let mut command = Command::new(bin());
+    for (key, value) in extra_env {
+        command.env(key, value);
+    }
+    let mut child = command
         .args(args)
+        .current_dir(dir)
         .stdin(if stdin.is_some() {
             std::process::Stdio::piped()
         } else {
@@ -73,7 +86,9 @@ fn stderr(out: &Output) -> String {
 
 /// The story's L-memories through the T9.6 citations: L1 cites the fee path
 /// including the exemption, L2 the record layout, L3 the fee paragraph
-/// alone, L4 the v2-only discount elements.
+/// alone, L4 the v2-only discount elements. Claims are the fixture memory
+/// texts (provenance.json), so default runs replay the committed re-check
+/// recordings.
 fn legacy_citations() -> Vec<Citation> {
     let el = legacy_ids::element_id;
     let para = |name: &str| el(&legacy_ids::paragraph_key("BILLBATCH", name));
@@ -92,7 +107,7 @@ fn legacy_citations() -> Vec<Citation> {
     vec![
         cite(
             "L1",
-            "1.5% late fee on the whole balance, no exceptions",
+            "BILLBATCH charges a 1.5% late fee on the whole balance, no exceptions; every account pays",
             vec![
                 para("CALC-LATE-FEE"),
                 field("PATIENT-RECORD.BALANCE"),
@@ -102,7 +117,7 @@ fn legacy_citations() -> Vec<Citation> {
         ),
         cite(
             "L2",
-            "each record is 34 chars",
+            "Each patient account record is 34 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, and a 1-character visit code",
             vec![
                 el(&legacy_ids::record_key("BILLBATCH", "PATIENT-RECORD")),
                 field("PATIENT-RECORD.ACCT-NO"),
@@ -113,12 +128,12 @@ fn legacy_citations() -> Vec<Citation> {
         ),
         cite(
             "L3",
-            "CALC-LATE-FEE computes 1.5% of BALANCE",
+            "CALC-LATE-FEE computes the 1.5% fee from BALANCE, rounded to the cent",
             vec![para("CALC-LATE-FEE"), field("PATIENT-RECORD.BALANCE")],
         ),
         cite(
             "L4",
-            "prompt-payment accounts keep 10% of the fee",
+            "V2 prompt-payment accounts (DISCOUNT-FLAG Y) keep 10% of the fee, rounded; APPLY-PROMPT-DISCOUNT applies it after CALC-LATE-FEE",
             vec![
                 para("APPLY-PROMPT-DISCOUNT"),
                 field("PATIENT-RECORD.DISCOUNT-FLAG"),
@@ -245,12 +260,12 @@ fn screen_citations() -> Vec<Citation> {
     vec![
         cite(
             "S1",
-            "retire: open DECOMMISSION, type the clinic name, press PF12 CONFIRM",
+            "To retire the console: open DECOMMISSION, type the clinic name in the confirmation prompt, press PF12 CONFIRM. The warning means it is permanent",
             [vec![decomm], decomm_steps].concat(),
         ),
         cite(
             "S2",
-            "look up: enter the ID on the lookup screen; PF5 edits",
+            "Look up a patient: enter the ID on the lookup screen; the results list the matches; PF5 edits the record",
             [vec![lookup], lookup_steps].concat(),
         ),
     ]
@@ -692,56 +707,172 @@ fn no_recheck_output_per_kind() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-/// A default run (no `--no-recheck`) flags the same memories and notes the
-/// missing re-check once per flag instead of calling a model: keyless, and
-/// the re-check itself is a later task.
+/// A default run (no `--no-recheck`) flags the same memories and proposes
+/// from the committed replay recordings: keyless and model-free, with one
+/// stderr line per flag that has no recording. The binary runs with the
+/// story directory as its cwd and relative version labels, so the re-check
+/// inputs byte-match the live recordings (`tests/live_legacy.rs`).
 #[test]
-fn default_run_notes_the_missing_recheck() {
+fn default_run_proposes_from_recordings() {
+    use std::os::unix::fs::symlink;
     let root = temp_dir("default");
     let state_arg = root.join("state").to_string_lossy().to_string();
-    seed(&root.join("state"), legacy_citations());
-    let v1_cbl = std::path::absolute(story("v1/BILLBATCH.cbl"))
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-    let v2_cbl = std::path::absolute(story("v2/BILLBATCH.cbl"))
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
-    let out = run(
-        &["check", &v1_cbl, &v2_cbl, "--state-dir", &state_arg],
-        None,
-    );
-    assert_eq!(out.status.code(), Some(1), "still flags: {}", stderr(&out));
-    assert!(
-        stdout(&out).contains("L2"),
-        "flag renders: {}",
-        stdout(&out)
-    );
-    let err = stderr(&out);
-    assert!(
-        err.contains("L2") && err.contains("not built yet"),
-        "one skip note naming the flag: {err}"
-    );
+    let mut all = legacy_citations();
+    all.extend(screen_citations());
+    seed(&root.join("state"), all);
+    // The story pair beside the runner: symlinks keep the version labels
+    // relative while the copybooks resolve.
+    let story_dir = std::path::absolute(story("")).unwrap();
+    let _ = std::fs::remove_dir_all(root.join("v1"));
+    let _ = std::fs::remove_dir_all(root.join("v2"));
+    symlink(story_dir.join("v1"), root.join("v1")).expect("link v1");
+    symlink(story_dir.join("v2"), root.join("v2")).expect("link v2");
+    let cwd = root.to_string_lossy().to_string();
+    let (screens_v1, screens_v2) = write_screen_versions(&root);
+    assert!(std::path::Path::new(&screens_v1).exists());
+    assert!(std::path::Path::new(&screens_v2).exists());
 
-    let wrong_report = format!(
-        "{}/testdata/legacy/diffrun/full-wrong-report.txt",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    let manifest = write_manifest(&root, "run-wrong.json", &wrong_report);
-    let out = run(
-        &["diffrun", &v1_cbl, &manifest, "--state-dir", &state_arg],
+    // The committed replay recordings, by absolute path: the binary's
+    // default replay dir is cwd-relative, and these runs execute with the
+    // story directory as cwd for the relative version labels.
+    let replay_dir = format!("{}/testdata/replies/recheck", env!("CARGO_MANIFEST_DIR"));
+    let replay_env = [("DOYLE_RECHECK_REPLAY_DIR", replay_dir.as_str())];
+
+    // Legacy diff: L2 alone, with a correct proposal from the recording.
+    let out = run_in_env(
+        &cwd,
+        &[
+            "check",
+            "v1/BILLBATCH.cbl",
+            "v2/BILLBATCH.cbl",
+            "--state-dir",
+            &state_arg,
+            "--format",
+            "json",
+        ],
         None,
+        &replay_env,
     );
     assert_eq!(
         out.status.code(),
         Some(1),
-        "diffrun still flags: {}",
+        "legacy diff flags: {}",
         stderr(&out)
     );
+    let report: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    assert_eq!(flag_memory_ids(&stdout(&out)), ["L2"], "L2 alone");
+    let proposal = &report["flags"][0]["proposal"];
+    assert_eq!(proposal["action"], "correct", "L2 proposes correct");
+    let new_text = proposal["new_text"].as_str().unwrap();
     assert!(
-        stderr(&out).contains("L1") && stderr(&out).contains("not built yet"),
-        "one skip note: {}",
+        new_text.contains("35"),
+        "correction states the 35-char record: {new_text}"
+    );
+
+    // Screen diff: S1 alone, with a correct proposal from the recording.
+    let out = run_in_env(
+        &cwd,
+        &[
+            "check",
+            "screens-v1.json",
+            "screens-v2.json",
+            "--state-dir",
+            &state_arg,
+            "--format",
+            "json",
+        ],
+        None,
+        &replay_env,
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "screen diff flags: {}",
+        stderr(&out)
+    );
+    let report: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    assert_eq!(flag_memory_ids(&stdout(&out)), ["S1"], "S1 alone");
+    let proposal = &report["flags"][0]["proposal"];
+    assert_eq!(proposal["action"], "correct", "S1 proposes correct");
+    let new_text = proposal["new_text"].as_str().unwrap();
+    doyle_tms::prompts::recheck::check_replacement_text(new_text).expect("guideline 7 clean");
+
+    // Differential run: L1 alone, with a correct proposal from the recording.
+    let wrong_report = format!(
+        "{}/testdata/legacy/diffrun/full-wrong-report.txt",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    write_manifest(&root, "wrong-rewrite.json", &wrong_report);
+    let out = run_in_env(
+        &cwd,
+        &[
+            "diffrun",
+            "v1/BILLBATCH.cbl",
+            "wrong-rewrite.json",
+            "--state-dir",
+            &state_arg,
+            "--format",
+            "json",
+        ],
+        None,
+        &replay_env,
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "diffrun flags: {}",
+        stderr(&out)
+    );
+    let report: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    assert_eq!(flag_memory_ids(&stdout(&out)), ["L1"], "L1 alone");
+    let proposal = &report["flags"][0]["proposal"];
+    assert_eq!(proposal["action"], "correct", "L1 proposes correct");
+    let new_text = proposal["new_text"].as_str().unwrap();
+    assert!(
+        new_text.to_lowercase().contains("exempt"),
+        "correction states the exemption truth: {new_text}"
+    );
+
+    // Reruns settle: no new flags, proposals already recorded, exit 0.
+    for args in [
+        vec!["check", "v1/BILLBATCH.cbl", "v2/BILLBATCH.cbl"],
+        vec!["check", "screens-v1.json", "screens-v2.json"],
+    ] {
+        let out = run_in(
+            &cwd,
+            &[
+                args[0],
+                args[1],
+                args[2],
+                "--state-dir",
+                &state_arg,
+                "--no-recheck",
+            ],
+            None,
+        );
+        assert_eq!(
+            out.status.code(),
+            Some(0),
+            "rerun exits 0: {}",
+            stderr(&out)
+        );
+    }
+    let out = run_in(
+        &cwd,
+        &[
+            "diffrun",
+            "v1/BILLBATCH.cbl",
+            "wrong-rewrite.json",
+            "--state-dir",
+            &state_arg,
+            "--no-recheck",
+        ],
+        None,
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "diffrun rerun exits 0: {}",
         stderr(&out)
     );
     let _ = std::fs::remove_dir_all(&root);

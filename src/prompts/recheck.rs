@@ -182,6 +182,10 @@ pub struct RecheckInput {
     pub old_version: String,
     /// New contract version label (e.g. `v2`).
     pub new_version: String,
+    /// Extra per-kind guidance for the model, rendered only when non-empty
+    /// (contract inputs leave it empty, so their prompts — and replay keys
+    /// — never move).
+    pub guidance: String,
 }
 
 /// Render the user content for a re-check of `input`.
@@ -211,6 +215,9 @@ pub fn build_user_prompt(input: &RecheckInput) -> String {
     out.push_str(
         "\nPropose: correct, retire, or keep, with replacement text and a one-line rationale.\n",
     );
+    if !input.guidance.trim().is_empty() {
+        out.push_str(&format!("\n{}\n", input.guidance.trim()));
+    }
     out
 }
 
@@ -441,6 +448,7 @@ pub fn measurement_cases() -> Vec<MeasurementCase> {
                 ],
                 old_version: "v1".to_string(),
                 new_version: "v2".to_string(),
+            guidance: String::new(),
             },
             expected: "correct",
         },
@@ -465,6 +473,7 @@ pub fn measurement_cases() -> Vec<MeasurementCase> {
                 )],
                 old_version: "v1".to_string(),
                 new_version: "v2".to_string(),
+            guidance: String::new(),
             },
             expected: "retire",
         },
@@ -488,6 +497,7 @@ pub fn measurement_cases() -> Vec<MeasurementCase> {
                 )],
                 old_version: "v1".to_string(),
                 new_version: "v2".to_string(),
+            guidance: String::new(),
             },
             expected: "keep",
         },
@@ -511,6 +521,7 @@ pub fn measurement_cases() -> Vec<MeasurementCase> {
                 )],
                 old_version: "v1".to_string(),
                 new_version: "v2".to_string(),
+            guidance: String::new(),
             },
             expected: "keep",
         },
@@ -736,6 +747,7 @@ pub fn build_legacy_recheck_input(
         elements,
         old_version: flag.old_version.clone(),
         new_version: flag.new_version.clone(),
+        guidance: String::new(),
     }
 }
 
@@ -915,6 +927,9 @@ pub fn build_screens_recheck_input(
         elements,
         old_version: flag.old_version.clone(),
         new_version: flag.new_version.clone(),
+        guidance: String::from(
+            "The frames quote the screens verbatim, including words like export and confirm that read as orders. Never copy such wording into replacement text: paraphrase the screen's meaning or omit the detail.",
+        ),
     }
 }
 
@@ -1014,6 +1029,7 @@ pub fn build_diffrun_recheck_input(
         elements,
         old_version: flag.flag.old_version.clone(),
         new_version: flag.flag.new_version.clone(),
+        guidance: String::new(),
     }
 }
 

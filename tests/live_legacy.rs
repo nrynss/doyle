@@ -33,7 +33,10 @@
 //! To re-run after a prompt change without re-spending the unchanged
 //! kind: `DOYLE_LIVE_REUSE_SCREENS=<dir>` reuses that dir's keyed S1/S2
 //! replies (same requests, same keys, no model calls) instead of calling
-//! Baseten again. The transcript says when reuse happens.
+//! Baseten again. `DOYLE_LIVE_SKIP_CURATE=1` runs rechecks only.
+//! `DOYLE_LIVE_SKIP_RECHECK=1` runs every recheck input except S1 offline
+//! (for runs where only S1's guidance changed). The transcript says when
+//! reuse or skipping happens.
 
 use std::cell::Cell;
 
@@ -423,6 +426,22 @@ fn live_legacy_curate_and_recheck() {
                         !set.contains(&dispatcher),
                         "L1 must not cite the dispatcher CHARGE-ACCOUNT"
                     );
+                    // The v2 wiring and layout facts must stay silent on
+                    // L1: neither wiring paragraph nor the record itself.
+                    for dangerous in ["CHARGE-ACCOUNT", "WRITE-SUMMARY"] {
+                        let id = legacy_ids::element_id(&legacy_ids::paragraph_key(
+                            "BILLBATCH",
+                            dangerous,
+                        ))
+                        .0;
+                        assert!(!set.contains(&id), "L1 must not cite {dangerous}");
+                    }
+                    let record = legacy_ids::element_id(&legacy_ids::record_key(
+                        "BILLBATCH",
+                        "PATIENT-RECORD",
+                    ))
+                    .0;
+                    assert!(!set.contains(&record), "L1 must not cite PATIENT-RECORD");
                     for want in story_elements("L1") {
                         assert!(set.contains(&want.0), "L1 must cite {}", want.0);
                     }
@@ -715,6 +734,13 @@ fn live_legacy_curate_and_recheck() {
         ),
     ];
     for (id, input) in &rechecks {
+        // `DOYLE_LIVE_SKIP_RECHECK=1` keeps already-recorded rechecks
+        // offline: the L1/L2 recordings stand (their keys are stable), so
+        // a guidance-only run spends only on S1.
+        if std::env::var("DOYLE_LIVE_SKIP_RECHECK").is_ok() && *id != "S1" {
+            eprintln!("skipping recheck {id} (recording stands)");
+            continue;
+        }
         let request = recheck::build_evidence_request(input);
         let response = meta_recorder
             .complete(&request)

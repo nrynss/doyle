@@ -468,47 +468,36 @@ fn execute_evidence(
     }
     let written: Vec<Flag> = store.flags()[before..].to_vec();
 
-    // The re-check producer for the new kinds (T9.11b): under --live each
-    // open proposal-less flag gets a real proposal from Muse Spark through
-    // the evidence input builders, the way contract flags propose by
-    // default. A default run stays keyless and model-free: each new-kind
-    // flag gets the one-line stderr note naming the later task, and
-    // --no-recheck stays silent.
+    // The re-check producer for the new kinds (T9.11b): each open
+    // proposal-less flag gets a real proposal from Muse Spark through the
+    // evidence input builders, the way contract flags propose. The client
+    // is the replay dir by default (keyless, model-free) and the live Meta
+    // client with --live; --no-recheck stays silent.
     let mut proposals: Vec<Proposal> = Vec::new();
     if !no_recheck {
-        if cli.common.live {
-            let client: Box<dyn ModelClient> = live_recheck_client()?;
-            proposals = match &pair {
-                OldNew::Legacy(old, new) => {
-                    propose_legacy_flags(&mut store, &citations, client.as_ref(), old, new)
-                }
-                OldNew::Screens(old, new) => {
-                    let old_frames = load_screen_frames(old_path)?;
-                    let new_frames = load_screen_frames(new_path)?;
-                    propose_screen_flags(
-                        &mut store,
-                        &citations,
-                        client.as_ref(),
-                        old,
-                        new,
-                        &old_frames,
-                        &new_frames,
-                    )
-                }
-            };
+        let client: Box<dyn ModelClient> = if cli.common.live {
+            live_recheck_client()?
         } else {
-            let origin = match kind {
-                SourceKind::Legacy => "legacy",
-                SourceKind::Screens => "screens",
-                SourceKind::Contract => "contract",
-            };
-            for f in &written {
-                eprintln!(
-                    "doyle check: flag {} ({}/{}) got no proposal: re-check for {} flags is not built yet (a later task); rerun with --no-recheck to silence",
-                    f.id, f.memory.adapter, f.memory.id, origin,
-                );
+            default_recheck_client()
+        };
+        proposals = match &pair {
+            OldNew::Legacy(old, new) => {
+                propose_legacy_flags(&mut store, &citations, client.as_ref(), old, new)
             }
-        }
+            OldNew::Screens(old, new) => {
+                let old_frames = load_screen_frames(old_path)?;
+                let new_frames = load_screen_frames(new_path)?;
+                propose_screen_flags(
+                    &mut store,
+                    &citations,
+                    client.as_ref(),
+                    old,
+                    new,
+                    &old_frames,
+                    &new_frames,
+                )
+            }
+        };
     }
 
     let report = if format == "json" {
@@ -529,7 +518,7 @@ fn execute_evidence(
 /// the reply, record the proposal. Diagnostics mirror the contract path
 /// (same `doyle check: flag ... got no proposal` shape) so operators see
 /// one failure vocabulary for every source.
-fn run_evidence_recheck(
+pub(crate) fn run_evidence_recheck(
     store: &mut Store,
     flag: &Flag,
     request: &crate::models::ModelRequest,
@@ -686,7 +675,7 @@ fn model_for_run(live: bool) -> Result<Box<dyn ModelClient>, String> {
 /// reads its key from the environment at call time, so a keyring-resolved
 /// key is planted in the process environment here — the only bridge that
 /// leaves `meta.rs`/`baseten.rs` untouched.
-fn live_recheck_client() -> Result<Box<dyn ModelClient>, String> {
+pub(crate) fn live_recheck_client() -> Result<Box<dyn ModelClient>, String> {
     use crate::models::meta::MetaModelClient;
     if std::env::var(MetaModelClient::DEFAULT_ENV_VAR).is_err() {
         let key = crate::models::keys::meta_key().map_err(|e| e.to_string())?;
@@ -701,7 +690,7 @@ fn live_recheck_client() -> Result<Box<dyn ModelClient>, String> {
     ))))
 }
 
-fn default_recheck_client() -> Box<dyn ModelClient> {
+pub(crate) fn default_recheck_client() -> Box<dyn ModelClient> {
     let dir = std::env::var("DOYLE_RECHECK_REPLAY_DIR")
         .unwrap_or_else(|_| String::from("testdata/replies/recheck"));
     Box::new(ReplayClient::new(dir))
@@ -816,6 +805,7 @@ fn build_recheck_input(
         elements,
         old_version: flag.old_version.clone(),
         new_version: flag.new_version.clone(),
+        guidance: String::new(),
     }
 }
 

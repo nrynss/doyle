@@ -6,20 +6,23 @@
 //! blame, through the same [`flag_citations`](crate::core::flag_citations)
 //! and the same store every source uses. The flag's old version is the
 //! batch program and its new version the run manifest, the way the review
-//! page reads them. The re-check runs for contract flags only: diffrun
-//! flags get no proposal yet (a later task), noted one line per flag on
-//! stderr unless `--no-recheck`.
+//! page reads them. The re-check proposes a correction, retirement or keep
+//! for every open flag without a proposal yet: from recorded replies by
+//! default (keyless, model-free), live from Muse Spark with `--live`.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use crate::check::run_evidence_recheck;
 use crate::cli;
-use crate::core::Store;
+use crate::core::{Proposal, ProposalAction, Store};
 use crate::evidence::diffrun::{
-    DiffrunOutcome, Mismatch, flag_diffrun, mismatch_evidence, parse_record_paths, run_diffrun,
-    run_diffrun_with_paths, total_overcharge_cents,
+    DiffrunFlag, DiffrunOutcome, Mismatch, flag_diffrun, mismatch_evidence, parse_record_paths,
+    run_diffrun, run_diffrun_with_paths, total_overcharge_cents,
 };
 use crate::evidence::legacy::LegacyIndex;
+use crate::models::ModelClient;
+use crate::prompts::recheck;
 
 /// Run the `diffrun` command.
 pub fn run(cli: &cli::Cli) -> ExitCode {
@@ -88,19 +91,38 @@ pub fn execute(
         flag.flag.id.clone_from(&stored.id);
     }
 
+    let mut proposals: Vec<Proposal> = Vec::new();
     if !no_recheck {
-        for f in &written {
-            eprintln!(
-                "doyle diffrun: flag {} ({}/{}) got no proposal: re-check for diffrun flags is not built yet (a later task); rerun with --no-recheck to silence",
-                f.id, f.memory.adapter, f.memory.id,
-            );
-        }
+        let client: Box<dyn ModelClient> = if cli.common.live {
+            crate::check::live_recheck_client()?
+        } else {
+            crate::check::default_recheck_client()
+        };
+        proposals = propose_diffrun_flags(
+            &mut store,
+            &citations,
+            client.as_ref(),
+            &index,
+            &diffrun_flags,
+        );
     }
 
     let report = if format == "json" {
-        render_json(&program_path, &run_path, &outcome, &diffrun_flags)
+        render_json(
+            &program_path,
+            &run_path,
+            &outcome,
+            &diffrun_flags,
+            &proposals,
+        )
     } else {
-        render_markdown(&program_path, &run_path, &outcome, &diffrun_flags)
+        render_markdown(
+            &program_path,
+            &run_path,
+            &outcome,
+            &diffrun_flags,
+            &proposals,
+        )
     };
 
     let code = if written.is_empty() {
@@ -170,6 +192,46 @@ fn money(cents: i64) -> String {
     format!("{sign}${}.{:02}", abs / 100, abs % 100)
 }
 
+/// Propose for diffrun flags: every open proposal-less flag is re-checked
+/// against the batch through the run's own mismatching records. Once a
+/// proposal is recorded it is skipped on reruns; a flag that gets no
+/// proposal (replay miss or parse failure) stays proposal-less, with the
+/// same per-flag diagnostic the check path prints, so the next run
+/// retries it.
+fn propose_diffrun_flags(
+    store: &mut Store,
+    citations: &[crate::core::Citation],
+    client: &dyn ModelClient,
+    index: &LegacyIndex,
+    diffrun_flags: &[DiffrunFlag],
+) -> Vec<Proposal> {
+    let mut proposals = Vec::new();
+    for d in diffrun_flags {
+        let Some(f) = store
+            .open_flags()
+            .into_iter()
+            .find(|f| f.memory == d.flag.memory && store.proposals_for_flag(&f.id).is_empty())
+        else {
+            continue;
+        };
+        let citation = citations.iter().find(|c| c.memory == f.memory).cloned();
+        let input = recheck::build_diffrun_recheck_input(d, citation.as_ref(), index);
+        let request = recheck::build_evidence_request(&input);
+        if let Some(p) = run_evidence_recheck(store, &f, &request, client) {
+            proposals.push(p);
+        }
+    }
+    proposals
+}
+
+fn action_word(a: &ProposalAction) -> &'static str {
+    match a {
+        ProposalAction::Correct { .. } => "correct",
+        ProposalAction::Retire => "retire",
+        ProposalAction::Keep => "keep",
+    }
+}
+
 /// Render the Markdown report: the run's counts and money plus each flag
 /// with its blamed paragraphs and first mismatching records.
 pub fn render_markdown(
@@ -177,6 +239,7 @@ pub fn render_markdown(
     run_path: &str,
     outcome: &DiffrunOutcome,
     flags: &[crate::evidence::diffrun::DiffrunFlag],
+    proposals: &[Proposal],
 ) -> String {
     use crate::core::Severity;
     let mut out = String::new();
@@ -237,7 +300,33 @@ pub fn render_markdown(
                 f.mismatches.len()
             ));
         }
+        if let Some(p) = proposals.iter().find(|p| p.flag_id == f.flag.id) {
+            out.push_str(&format!(
+                "- Proposal: {} — {}\n",
+                p.id,
+                action_word(&p.action)
+            ));
+            out.push_str(&format!("  - Rationale: {}\n", p.rationale));
+            if let ProposalAction::Correct { new_text } = &p.action {
+                out.push_str(&format!("  - New text: {}\n", new_text));
+            }
+        }
         out.push('\n');
+    }
+    if !proposals.is_empty() {
+        out.push_str(&format!("\n## Proposals ({})\n\n", proposals.len()));
+        for p in proposals {
+            out.push_str(&format!(
+                "- {} — {} — {}\n",
+                p.id,
+                p.flag_id,
+                action_word(&p.action)
+            ));
+            out.push_str(&format!("  - Rationale: {}\n", p.rationale));
+            if let ProposalAction::Correct { new_text } = &p.action {
+                out.push_str(&format!("  - New text: {}\n", new_text));
+            }
+        }
     }
     out
 }
@@ -249,6 +338,7 @@ pub fn render_json(
     run_path: &str,
     outcome: &DiffrunOutcome,
     flags: &[crate::evidence::diffrun::DiffrunFlag],
+    proposals: &[Proposal],
 ) -> String {
     let mismatch_value = |m: &Mismatch| {
         serde_json::json!({
@@ -265,6 +355,23 @@ pub fn render_json(
     let flag_values: Vec<serde_json::Value> = flags
         .iter()
         .map(|f| {
+            let proposal = proposals.iter().find(|p| p.flag_id == f.flag.id);
+            let proposal_value = match proposal {
+                Some(p) => {
+                    let mut v = serde_json::json!({
+                        "id": p.id,
+                        "flag_id": p.flag_id,
+                        "action": action_word(&p.action),
+                        "rationale": p.rationale,
+                        "proposed_by": p.proposed_by,
+                    });
+                    if let ProposalAction::Correct { new_text } = &p.action {
+                        v["new_text"] = serde_json::json!(new_text);
+                    }
+                    v
+                }
+                None => serde_json::Value::Null,
+            };
             serde_json::json!({
                 "id": f.flag.id,
                 "memory": {
@@ -279,6 +386,7 @@ pub fn render_json(
                 "paragraphs": f.paragraphs,
                 "mismatch_count": f.mismatches.len(),
                 "mismatches": f.mismatches.iter().map(mismatch_value).collect::<Vec<_>>(),
+                "proposal": proposal_value,
             })
         })
         .collect();
@@ -290,6 +398,25 @@ pub fn render_json(
         "overcharge_cents": total_overcharge_cents(outcome),
         "flags": flag_values,
     });
+    if !proposals.is_empty() {
+        let proposal_values: Vec<serde_json::Value> = proposals
+            .iter()
+            .map(|p| {
+                let mut v = serde_json::json!({
+                    "id": p.id,
+                    "flag_id": p.flag_id,
+                    "action": action_word(&p.action),
+                    "rationale": p.rationale,
+                    "proposed_by": p.proposed_by,
+                });
+                if let ProposalAction::Correct { new_text } = &p.action {
+                    v["new_text"] = serde_json::json!(new_text);
+                }
+                v
+            })
+            .collect();
+        value["proposals"] = serde_json::json!(proposal_values);
+    }
     if let (Some(cobol), Some(rewrite)) = (&outcome.totals_cobol, &outcome.totals_rewrite) {
         value["totals_cobol"] = serde_json::json!({
             "records": cobol.records,

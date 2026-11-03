@@ -59,7 +59,7 @@ pub struct CommonOpts {
     pub verbose: bool,
     /// Dry run: print what would be cited, write nothing (curate).
     pub dry_run: bool,
-    /// Use live model clients instead of replay (curate, check).
+    /// Use live model clients instead of replay (curate, check, diffrun).
     pub live: bool,
     /// Muse Code project root (curate, check, serve; default: the cwd).
     pub project: Option<String>,
@@ -106,7 +106,7 @@ pub fn parse_from(args: &[String]) -> ParseResult {
         return ParseResult::Help(Some(command_name));
     }
 
-    // curate/check-specific: --live (curate, check), --contract <FILE>
+    // curate/check/diffrun-specific: --live (curate, check, diffrun), --contract <FILE>
     // (curate). Other commands leave these in place and the shared parser
     // rejects them as unknown options.
     let (live, contract, command_rest) = match extract_command_flags(&command_name, rest) {
@@ -200,7 +200,8 @@ fn extract_command_flags(
     command_name: &str,
     args: &[String],
 ) -> Result<(bool, Option<String>, Vec<String>), String> {
-    let allow_live = command_name == "curate" || command_name == "check";
+    let allow_live =
+        command_name == "curate" || command_name == "check" || command_name == "diffrun";
     let allow_contract = command_name == "curate";
     let mut live = false;
     let mut contract: Option<String> = None;
@@ -394,9 +395,11 @@ the recording); anything else diffs as API contracts. Flags go to the
 same store through flag_citations either way, and the exit code says
 whether anything was flagged, for CI.
 
-The re-check runs for contract flags only: legacy and screen flags get
-no proposal yet (their re-check is a later task), noted one line per
-flag on stderr. --no-recheck stays silent and makes no model calls.
+The re-check proposes a correction, retirement or keep for every open
+flag without a proposal yet: from recorded replies by default (no key,
+no network; a flag with no recording gets one stderr line naming the
+miss), live from Muse Spark with --live. --no-recheck stays silent and
+makes no model calls.
 
 Options:
   -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
@@ -433,13 +436,16 @@ new version is RUN, the way the review page reads them.
 
 Each mismatching record blames the paragraphs that ran only on
 mismatched paths; a memory citing one is flagged with the inputs and
-both outputs as its evidence. The re-check runs for contract flags
-only (the diffrun re-check is a later task), so diffrun flags get no
-proposal yet, noted one line per flag on stderr unless --no-recheck.
+both outputs as its evidence. The re-check proposes a correction,
+retirement or keep for every open flag without a proposal yet: from
+recorded replies by default (no key, no network; a flag with no
+recording gets one stderr line naming the miss), live from Muse Spark
+with --live.
 
 Options:
   -f, --format <FORMAT>   Output format: markdown or json (default: markdown)
-      --no-recheck         Skip the re-check note (no model calls either way)
+      --no-recheck         Skip the re-check (no model calls)
+      --live               Run the re-check with live clients (needs keys) instead of replay
   -s, --state-dir <DIR>   State directory (.doyle/ by default)
   -a, --adapters <LIST>   Adapters to use, comma-separated
       --project <DIR>     Muse Code project root (default: the working directory)
