@@ -354,7 +354,7 @@ requires:   [T9.6, T9.7, T9.8, T9.9]
 fixture-ok: yes
 size:       M · mid
 owns:       src/check.rs (the evidence-kind dispatch), src/diffrun_cmd.rs (new), src/cli.rs (the options below only, orchestrator-approved), src/main.rs (one dispatch arm for diffrun, orchestrator-approved), src/lib.rs (one module line), src/guard.rs (only if a legacy or screen flag cannot be matched to its step), tests/
-status:     not-started
+status:     claimed:msc-t9.11
 ```
 
 Found while briefing T9.10: the legacy, screen and differential-run sources exist (`src/evidence/`) and their flags render on the review page (T9.9), but no command produces them. `doyle check` diffs API contracts only (`ContractIndex`), and nothing outside tests calls `LegacyIndex::diff_evidence`, `screens::diff_versions` or `flag_diffrun`. A live run with Doyle could flag M1 and nothing else.
@@ -395,7 +395,7 @@ requires:   [T9.4]
 fixture-ok: yes
 size:       S · mid
 owns:       demo/console/ (new), demo/scripts/ (start and stop lines for the console only), demo/README.md (a console section)
-status:     not-started
+status:     claimed:msc-t9.12
 ```
 
 The extended story's retire step has Wonder follow S1 on the v2 console, but the console exists only as four still frames and a training video (`testdata/legacy/story/screens/`). A run needs a console Wonder can drive.
