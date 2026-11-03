@@ -570,7 +570,7 @@ Notes (msc-t9.14): scrubbed, gate green, awaiting orchestrator validation.
 requires:   [T9.11]
 fixture-ok: yes
 size:       S · mid
-owns:       src/guard.rs (the legacy and diffrun matching), src/diffrun_cmd.rs (the manifest's rewrite artifacts, carried onto the flag), src/evidence/diffrun.rs (only if the flag record needs the field), tests/story_flags.rs (the ship-step cases)
+owns:       src/guard.rs (the legacy and diffrun matching), src/diffrun_cmd.rs (the manifest's rewrite artifacts, carried onto the flag), src/evidence/diffrun.rs (only if the flag record needs the field), tests/story_flags.rs (the ship-step cases), docs/guard.md (what a diffrun flag guards)
 status:     not-started
 ```
 
