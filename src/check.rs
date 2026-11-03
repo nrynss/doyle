@@ -654,7 +654,7 @@ fn propose_screen_flags(
             old_frames,
             new_frames,
         );
-        let request = recheck::build_evidence_request(&input);
+        let request = recheck::build_screens_evidence_request(&input);
         if let Some(p) = run_evidence_recheck(store, f, &request, client) {
             proposals.push(p);
         }

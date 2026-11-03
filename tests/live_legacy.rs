@@ -743,12 +743,17 @@ fn live_legacy_curate_and_recheck() {
     for (id, input) in &rechecks {
         // `DOYLE_LIVE_SKIP_RECHECK=1` keeps already-recorded rechecks
         // offline: the L1/L2 recordings stand (their keys are stable), so
-        // a guidance-only run spends only on S1.
+        // a guidance-only run spends only on S1 (through the wider
+        // screens cap).
         if std::env::var("DOYLE_LIVE_SKIP_RECHECK").is_ok() && *id != "S1" {
             eprintln!("skipping recheck {id} (recording stands)");
             continue;
         }
-        let request = recheck::build_evidence_request(input);
+        let request = if *id == "S1" {
+            recheck::build_screens_evidence_request(input)
+        } else {
+            recheck::build_evidence_request(input)
+        };
         let response = meta_recorder
             .complete(&request)
             .expect("re-check must succeed");

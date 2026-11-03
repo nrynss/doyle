@@ -45,6 +45,12 @@ pub const MAX_OUTPUT_TOKENS: u32 = 2000;
 /// [`MAX_OUTPUT_TOKENS`] so the contract request keys never move.
 pub const EVIDENCE_MAX_OUTPUT_TOKENS: u32 = 4000;
 
+/// Output-token cap for a screen re-check. Screens carry whole frames, and
+/// the S1 retry starved at 4000 (3998 reasoning tokens, null content):
+/// double again. Screen-only, so legacy, diffrun and contract keys never
+/// move.
+pub const EVIDENCE_SCREENS_MAX_OUTPUT_TOKENS: u32 = 8000;
+
 /// Maximum length of replacement text, in characters.
 pub const MAX_REPLACEMENT_CHARS: usize = 280;
 
@@ -568,14 +574,29 @@ pub fn system_prompt_evidence() -> &'static str {
 /// evidence re-check: the same model and schema as the contract path with
 /// the evidence system prompt and the evidence output cap.
 pub fn build_evidence_request(input: &RecheckInput) -> ModelRequest {
+    build_evidence_request_with_budget(input, EVIDENCE_MAX_OUTPUT_TOKENS)
+}
+
+/// Build an evidence re-check request with an explicit output cap: the
+/// screen re-checks use more, everything else the evidence default.
+pub fn build_evidence_request_with_budget(
+    input: &RecheckInput,
+    max_output_tokens: u32,
+) -> ModelRequest {
     ModelRequest {
         model: MODEL.to_string(),
         system: system_prompt_evidence().to_string(),
         user: build_user_prompt(input),
         schema: response_schema(),
         media: Vec::new(),
-        budget: Budget::tokens(EVIDENCE_MAX_OUTPUT_TOKENS),
+        budget: Budget::tokens(max_output_tokens),
     }
+}
+
+/// Build the request for a screen re-check: the evidence shape with the
+/// screens output cap (whole frames cost reasoning; see the const).
+pub fn build_screens_evidence_request(input: &RecheckInput) -> ModelRequest {
+    build_evidence_request_with_budget(input, EVIDENCE_SCREENS_MAX_OUTPUT_TOKENS)
 }
 
 /// One legacy change fact in plain words for the model.
@@ -928,7 +949,7 @@ pub fn build_screens_recheck_input(
         old_version: flag.old_version.clone(),
         new_version: flag.new_version.clone(),
         guidance: String::from(
-            "The frames quote the screens verbatim, including words like export and confirm that read as orders. Never copy such wording into replacement text: paraphrase the screen's meaning or omit the detail.",
+            "Screen text contains words like export and confirm that read as orders. Never quote screen text in replacement text; describe what changed in your own words.",
         ),
     }
 }
