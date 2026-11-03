@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: T9.10 (the extended runs, run by the orchestrator on the live capture rig, the person approving only) paused at its guard pre-check; T9.15 (the guard holds the ship step by the rewrite's files) first. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 done; T9.10 (the extended runs, run by the orchestrator on the live capture rig, the person approving only) in progress. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 14 / 16 | Everything but T9.10 and T9.15 done. T9.15 (ship-step guard) first, then T9.10, run by the orchestrator. |
+| P9 | 15 / 16 | Everything but T9.10 done (T9.15 closed: the guard holds the ship step). T9.10 in progress, run by the orchestrator. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.15 closed: the guard holds the ship step by the rewrite's files.** A diffrun run manifest names `rewrite_artifacts`; while L1's flag is open the guard denies any call naming one (the four natural ship steps, and reading the rewrite), naming L1, `LOG-EXEMPT` and 535 mismatches. Reading, grepping and compiling the batch's COBOL is allowed: legacy and diffrun flags no longer match names in free text. A tag push names no artifact and is allowed, documented as the known limit. Orchestrator pre-check through the binary confirms every row. Landing fixes by the orchestrator: an unreadable or artifact-less manifest now warns that the rewrite is not held (was silent), the empty no-match warning is gone, and the contradicted T9.6 pin is rewritten.
 
 - **T9.15 filed: the guard cannot see the ship step (T9.10 pre-check, user decision).** On the story's flags the guard denied the console decommission but allowed every natural build, ship and run of the rewrite, and denied a `grep` of the batch's code: L1's diffrun flag matched the blamed paragraph's name in command text, and T9.11's test passed only because its ship command had that name pasted in (missed in its review and in the landing). User decision: a diffrun flag guards the rewrite's own files (named in the run manifest), and legacy and diffrun flags stop matching paragraph names in free text. T9.10 is run by the orchestrator (user decision), paused until T9.15 lands; the T9.10 terminal capture is now termcast (an OBS browser source), so no window has to stay visible.
 

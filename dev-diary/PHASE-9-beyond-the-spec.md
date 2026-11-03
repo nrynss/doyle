@@ -571,7 +571,7 @@ requires:   [T9.11]
 fixture-ok: yes
 size:       S · mid
 owns:       src/guard.rs (the legacy and diffrun matching), src/diffrun_cmd.rs (the manifest's rewrite artifacts, carried onto the flag), src/evidence/diffrun.rs (only if the flag record needs the field), tests/story_flags.rs (the ship-step cases), docs/guard.md (what a diffrun flag guards)
-status:     claimed:msc-t9.15
+status:     done
 ```
 
 Found by T9.10's guard pre-check, before any Wonder session: on the story's flags the guard denied the console decommission as it should, but allowed every natural ship step (`rustc -O wonder-bill.rs -o bin/billbatch`, `./deploy/ship-billing.sh`, `cp bin/billbatch /srv/billing/billbatch`, `git tag … && git push`, `./wonder-bill > report.txt`) and denied `grep -n LOG-EXEMPT BILLBATCH.cbl`, a read of the batch's code. L1's flag matched on the blamed paragraph's name in the command text. T9.11's end-to-end test passed only because its ship command was written with the name in it (`deploy wonder-bill to production --fee-path LOG-EXEMPT`).
@@ -583,6 +583,13 @@ Build (user decision):
 
 **Done when:** the gate passes with no key; through the built binary, on the story's flags, each natural ship step above that names one of the rewrite's files is denied naming L1 (a tag push names none: allowed, documented in docs/guard.md as a known limit), `grep -n LOG-EXEMPT BILLBATCH.cbl` and `sed -n 1,40p BILLBATCH.cbl` are allowed, the console decommission is still denied naming S1, the traps T9.11 allowed are still allowed, and the contrived ship command is gone from the tests; every T6.x guard test passes unchanged.
 
+
+Notes (msc-t9.15): built, reviewed and remediated in its own worktree.
+- `rewrite_artifacts` in the run manifest, read by the guard through the flag's `new_version` (the manifest path), so no `Flag` change. Convention: the manifest names bare names and natural paths (`wonder-bill.rs`, `wonder-bill`, `bin/billbatch`, `deploy/ship-billing.sh`): bare names catch a copy or run from anywhere, paths catch `cp bin/billbatch …` and `./deploy/ship-billing.sh`. Matching is whole-word or whole path component and case-sensitive (`sbin/billbatch` no, `bin/billbatch.o` yes, `wonder-billing-notes.md` no).
+- Legacy and diffrun flags no longer match paragraph or field names in free text; screen and contract matching unchanged. A diffrun with no artifacts flags and warns ("the guard cannot hold any step for it"); `doyle diffrun --help` says so (a help-text-only `src/cli.rs` edit). The contrived ship case is gone from `tests/story_flags.rs`, replaced by the four-command table, the tag-push limit, reads allowed, the no-artifact case and the decided case.
+
+Closed by the orchestrator, after its own pre-check through the binary on the story's flags with L1 open: the four ship steps and `cat wonder-bill.rs` deny naming L1, `LOG-EXEMPT` and 535 mismatches; the tag push, `grep`/`sed`/`cobc` of the batch and `cat wonder-billing-notes.md` allow; the console decommission denies naming S1. Landing fixes: a diffrun flag whose manifest is unreadable or names no artifacts now warns on every allowed call that its rewrite is not held (it was silent), the empty "cannot match open flags ()" warning no longer fires when only legacy and diffrun flags are open, and the T9.6 pin that pinned free-text legacy matching is rewritten as `legacy_flags_hold_no_free_text_step` (with its module docblock). Note for T9.10: the deny reason prints the versions' full paths, so the run keeps its files under `/tmp`.
+
 ---
 
 ### T9.10: Runs, extended ★
@@ -591,7 +598,7 @@ requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14, T
 fixture-ok: no
 size:       S · user
 owns:       evidence/legacy/
-status:     claimed:orchestrator (paused for T9.15)
+status:     claimed:orchestrator
 ```
 If the user put the extension into the runs (T9.4): the extended migration without and with Doyle, recorded as in T7.2 and T7.3. Without Doyle, Wonder's rewrite carries the wrong rule and the console decommission goes through unconfirmed. With Doyle, the differential run and the re-watched console flag both, the guard stops the step, and the corrections land in Muse Code and Lambo.
 
