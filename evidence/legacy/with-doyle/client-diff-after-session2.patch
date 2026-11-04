@@ -1,0 +1,53 @@
+diff --git a/.agents/memory/MEMORY.md b/.agents/memory/MEMORY.md
+index 24b59bb..cd4945d 100644
+--- a/.agents/memory/MEMORY.md
++++ b/.agents/memory/MEMORY.md
+@@ -1,2 +1,8 @@
+ - [Billing rules](billing-rules.md) — Fernwhistle billing batch rules (legacy COBOL)
+ - [Console procedures](console-procedures.md) — Fernwhistle operator console procedures (green screen)
++- BILLBATCH includes an exemption path where LOG-EXEMPT sets the late fee to zero and increments the exempt count, so the batch output has $0.00 fee for exempt balances while the rewrite comparison has an incorrect fee.
++- BILLBATCH has an exemption path that sets the late fee to zero and increments the exempt count, with 535 comparison records showing zero fee in COBOL output while the rewrite charged a fee.
++- Each patient account record is 35 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, a 1-character visit code, and a trailing 1-character discount flag.
++- Each patient account record in BILLBATCH is now 35 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, a 1-character visit code, and a 1-character discount flag at the end.
++- The retirement screen in v2 no longer shows the permanence warning or the clinic name entry field, and the final function key has a different label than before.
++- The retirement screen in the newer version shows a simplified layout where the permanence notice and the clinic-name entry field are absent, and the function key previously labeled for approval now carries a different title matching the screen name.
+diff --git a/.agents/memory/billing-rules.md b/.agents/memory/billing-rules.md
+index 99a5d3e..c90e6ed 100644
+--- a/.agents/memory/billing-rules.md
++++ b/.agents/memory/billing-rules.md
+@@ -3,7 +3,7 @@ type: reference
+ description: Fernwhistle billing batch rules (legacy COBOL)
+ ---
+ 
+-- BILLBATCH charges a 1.5% late fee on the whole balance, no exceptions; every account pays
+-- Each patient account record is 34 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, and a 1-character visit code
++- BILLBATCH charges a 1.5% late fee on the whole balance, no exceptions; every account pays [Superseded by MEMORY.md#3] [Superseded by MEMORY.md#4]
++- Each patient account record is 34 characters: a 6-digit account number, a 20-character name, a 7-digit balance with an implied decimal point, and a 1-character visit code [Superseded by MEMORY.md#5] [Superseded by MEMORY.md#6]
+ - CALC-LATE-FEE computes the 1.5% fee from BALANCE, rounded to the cent
+ - V2 prompt-payment accounts (DISCOUNT-FLAG Y) keep 10% of the fee, rounded; APPLY-PROMPT-DISCOUNT applies it after CALC-LATE-FEE
+diff --git a/.agents/memory/console-procedures.md b/.agents/memory/console-procedures.md
+index 7df6daa..bf54e39 100644
+--- a/.agents/memory/console-procedures.md
++++ b/.agents/memory/console-procedures.md
+@@ -3,5 +3,5 @@ type: reference
+ description: Fernwhistle operator console procedures (green screen)
+ ---
+ 
+-- To retire the console: open DECOMMISSION, type the clinic name in the confirmation prompt, press PF12 CONFIRM. The warning means it is permanent
++- To retire the console: open DECOMMISSION, type the clinic name in the confirmation prompt, press PF12 CONFIRM. The warning means it is permanent [Superseded by MEMORY.md#7] [Superseded by MEMORY.md#8]
+ - Look up a patient: enter the ID on the lookup screen; the results list the matches; PF5 edits the record
+diff --git a/wonder-bill.rs b/wonder-bill.rs
+index aa97d2e..c3f8065 100644
+--- a/wonder-bill.rs
++++ b/wonder-bill.rs
+@@ -43,8 +43,8 @@ fn main() {
+         let acct = &line[0..6];
+         let name = &line[6..26];
+         let balance: i64 = line[26..33].parse().expect("balance");
+-        //
+-        let fee = fee_cents(balance);
++        let visit = &line[33..34];
++        let fee = if visit == "V" { 0 } else { fee_cents(balance) };
+         total_balance += balance;
+         total_fee += fee;
+         count += 1;

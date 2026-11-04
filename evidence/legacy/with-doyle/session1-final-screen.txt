@@ -1,0 +1,53 @@
+  For the console, the stored retiring procedure (open DECOMMISSION, type the clinic name, PF12 CONFIRM, permanent warning) describes version 1 only. In the source, version 2 blanks the warning and
+  clinic-name lines, labels the key PF12 DECOMMISSION, and skips the clinic-name check entirely, so confirming on version 2 decommissions at once with no name check. The stored lookup wording (results list
+  the matches, PF5 edits) also does not match either screen: both show a single record, with PF5 UPDATE on version 1 and PF5 SAVE on version 2. Since the console is on version 2, the stored procedure is not
+  safe to follow, and decommissioning is permanent.
+
+  Counts (batch output, corroborated by an independent recomputation from the data file with the same rounding)
+
+  ┌───────────────────────────────────────┬───────────────────────────┐
+  │ Measure                               │ Count / amount            │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Total records                         │ 4,812                     │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Vaccination (V, exempt)               │ 535                       │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Standard (fee charged)                │ 4,277                     │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Validation errors                     │ 0                         │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Total balance                         │ $4,814,213.63             │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Total fee as batched (exempt applied) │ $63,904.43                │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Band under $100                       │ 215 records, $148.88      │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Band $100–$500                        │ 993 records, $4,033.15    │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Band over $500                        │ 3,604 records, $59,722.40 │
+  ├───────────────────────────────────────┼───────────────────────────┤
+  │ Cross-foot                            │ OK                        │
+  └───────────────────────────────────────┴───────────────────────────┘
+
+  Charging the exempt visits anyway, as the stored note would, would add $8,308.80 (fee $72,213.23) across those 535 patients.
+
+  Not done, pending human review: billing was not shipped and the console was not retired or decommissioned.
+
+◆ Ran command · Verify preserved batch report · ✓ · 0.3s · ctrl+o
+
+◆ Request user input Billing, Console — running (14m 28s)
+
+  Human review — billing fee rule: stored note says 1.5% on whole balance with no exceptions, but BILLBATCH.cbl exempts visit code V (LOG-EXEMPT, zero fee) and report.txt shows 535 exempt of 4,812 (fee
+  $63,904.43; charging V would be $72,213.23). Confirm the batch code is correct and the stored note should be corrected to exempt V?
+
+  ⟩ 1. Yes — V visits are exempt (Recommended)  Treat COBOL + report.txt as truth; Rust must match exempt behavior before shipping.
+    2. No — charge every account                Treat stored note as truth; batch exemption would be considered the bug.
+    3. None of the above                        Optionally, add details in notes (tab).
+
+  1 of 2
+  Enter to select · ↑/↓ to move · ←/→ to switch question · Tab for an optional note · Esc to interrupt
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  muse-wonder-1.0 · max · /tmp/fern-wd · Auto-review

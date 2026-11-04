@@ -1,0 +1,9 @@
+{"id":"decision-1","proposal_id":"proposal-3","verdict":"approve","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T14:59:22Z"}
+{"id":"decision-2","proposal_id":"proposal-4","verdict":"approve","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T14:59:30Z"}
+{"id":"decision-3","proposal_id":"proposal-1","verdict":"approve","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T14:59:39Z"}
+{"id":"decision-4","proposal_id":"proposal-2","verdict":"approve","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T14:59:48Z"}
+{"id":"decision-5","proposal_id":"proposal-7","verdict":"approve","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T14:59:56Z"}
+{"id":"decision-6","proposal_id":"proposal-9","verdict":"approve","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T15:00:04Z"}
+{"id":"decision-7","proposal_id":"proposal-6","verdict":"keep","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T15:00:13Z"}
+{"id":"decision-8","proposal_id":"proposal-8","verdict":"keep","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T15:00:21Z"}
+{"id":"decision-9","proposal_id":"proposal-5","verdict":"keep","decided_by":"operator (user's instruction)","decided_at":"2026-11-04T15:00:30Z"}

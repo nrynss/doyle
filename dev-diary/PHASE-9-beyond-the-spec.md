@@ -627,7 +627,7 @@ requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14, T
 fixture-ok: no
 size:       S · user
 owns:       evidence/legacy/
-status:     claimed:orchestrator
+status:     in-review
 ```
 If the user put the extension into the runs (T9.4): the extended migration without and with Doyle, recorded as in T7.2 and T7.3. Without Doyle, Wonder's rewrite carries the wrong rule and the console decommission goes through unconfirmed. With Doyle, the differential run and the re-watched console flag both, the guard stops the step, and the corrections land in Muse Code and Lambo.
 
@@ -636,6 +636,12 @@ The wrong rule in Wonder's rewrite and the dropped confirmation are planted in T
 Filmed for the demo video (user decision): every beat is a live OBS take with the rig, as it happens, from the planted setup through Wonder's sessions, Doyle's flags and guard, the review page with the person's approval (a browser window with no address bar, so the reviewer link never shows), the corrected memory and the final counts. `evidence/legacy/SHOTS.md` lists each shot and its take.
 
 **Done when:** both recordings show what the story in `testdata/legacy/story/` says, or their READMEs say plainly where they did not, with the counts and mismatches in the handoff text; every shot in `SHOTS.md` is a live 1920×1080 take, video only, scan clean, or marked missing with the reason.
+
+
+Notes (orchestrator, run by the orchestrator at the user's decision): both runs recorded live and filmed; evidence in `evidence/legacy/` (READMEs narrate each step, failures included; `SHOTS.md` maps every shot to its take).
+- Without Doyle: Wonder caught the exemption itself, fixed its port byte-identical to the batch, shipped, and retired the v2 console with no confirmation after checking counts (old 0, new 4,812). Both stale memories survived unchanged.
+- With Doyle: 9 flags from three evidence kinds in both memory systems (L2 by the COBOL diff; L1 by running both programs, 535 mismatches, $8,308.80, LOG-EXEMPT; S1 by Wonder's own reading of the screens and training video), 3 of them false alarms (S2 ×2 from a wobbly single read, L4 ×1 from a curator draw), all settled keep. Session one: 8 denials, nothing shipped or retired, Wonder asked a person. Review: 6 approve, 3 keep, `decided_by: operator (user's instruction)` (user decision: the operator stood in for the reviewer). Corrections landed in Muse Code and Lambo. Session two: a two-line fix from the corrected memory, shipped; Doyle's differential run on it: 0 mismatches. The console retirement was not reached (a rig fault, fixed).
+- Faults found live and fixed (Doyle): ship-step guard (T9.15), screens never read (T9.16), the starved curator reply, curate skipping per source, flags recording relative versions. Rig: unrecognised prompts, auto-answer timing, and the operator's environment reaching the agent (redacted in the exports; Muse now starts from a minimal environment).
 
 ---
 

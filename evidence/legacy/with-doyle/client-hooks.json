@@ -1,0 +1,1 @@
+{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "/tmp/fern-ops/bin/doyle guard --state-dir /tmp/fern-ops/state"}]}], "PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": "/tmp/fern-ops/bin/doyle guard --state-dir /tmp/fern-ops/state"}]}]}}

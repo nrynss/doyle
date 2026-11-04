@@ -1,0 +1,401 @@
+{
+  "console": "fernwhistle",
+  "screens": [
+    {
+      "name": "lookup",
+      "elements": [
+        {
+          "text": "FERNWHISTLE VETERINARY GROUP",
+          "row": 1,
+          "col": 27,
+          "kind": "title",
+          "protected": true
+        },
+        {
+          "text": "FW-01",
+          "row": 1,
+          "col": 76,
+          "kind": "screen-id",
+          "protected": true
+        },
+        {
+          "text": "PATIENT LOOKUP",
+          "row": 3,
+          "col": 4,
+          "kind": "heading",
+          "protected": true
+        },
+        {
+          "text": "DATE 06/14/26",
+          "row": 3,
+          "col": 66,
+          "kind": "datetime",
+          "protected": true
+        },
+        {
+          "text": "CLINIC",
+          "row": 5,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "MAPLE ST CLINIC",
+          "row": 5,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "PATIENT ID",
+          "row": 6,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "FW-004812",
+          "row": 6,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "NAME",
+          "row": 7,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "BELLA",
+          "row": 7,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "SPECIES",
+          "row": 8,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "CANINE",
+          "row": 8,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "BREED",
+          "row": 9,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "GOLDEN RETRIEVER",
+          "row": 9,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "DOB",
+          "row": 10,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "03/02/2019",
+          "row": 10,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "OWNER",
+          "row": 11,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "A. RIVERA",
+          "row": 11,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "PHONE",
+          "row": 12,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "555-0142",
+          "row": 12,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "VACCINATIONS",
+          "row": 14,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "RABIES 06/01/26  DHPP 05/12/26",
+          "row": 14,
+          "col": 18,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "ALLERGIES",
+          "row": 15,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "PENICILLIN",
+          "row": 15,
+          "col": 18,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "BALANCE",
+          "row": 16,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "$ 42.50",
+          "row": 16,
+          "col": 18,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "LATE FEE",
+          "row": 17,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "$  0.64",
+          "row": 17,
+          "col": 18,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "RECORD FOUND. PF5 UPDATES, PF12 DECOMMISSIONS.",
+          "row": 19,
+          "col": 4,
+          "kind": "message",
+          "protected": true
+        },
+        {
+          "text": "COMMAND ===>",
+          "row": 20,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "____",
+          "row": 20,
+          "col": 16,
+          "kind": "input",
+          "protected": false
+        },
+        {
+          "text": "STATUS: READY",
+          "row": 21,
+          "col": 4,
+          "kind": "status",
+          "protected": true
+        },
+        {
+          "text": "PF1 HELP",
+          "row": 23,
+          "col": 4,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF3 EXIT",
+          "row": 23,
+          "col": 15,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF5 SAVE",
+          "row": 23,
+          "col": 26,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF9 MENU",
+          "row": 23,
+          "col": 37,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF12 DECOMMISSION",
+          "row": 23,
+          "col": 47,
+          "kind": "pfkey",
+          "protected": true
+        }
+      ]
+    },
+    {
+      "name": "decommission",
+      "elements": [
+        {
+          "text": "FERNWHISTLE VETERINARY GROUP",
+          "row": 1,
+          "col": 27,
+          "kind": "title",
+          "protected": true
+        },
+        {
+          "text": "FW-09",
+          "row": 1,
+          "col": 76,
+          "kind": "screen-id",
+          "protected": true
+        },
+        {
+          "text": "DECOMMISSION CLINIC",
+          "row": 3,
+          "col": 4,
+          "kind": "heading",
+          "protected": true
+        },
+        {
+          "text": "DATE 06/14/26",
+          "row": 3,
+          "col": 66,
+          "kind": "datetime",
+          "protected": true
+        },
+        {
+          "text": "CLINIC",
+          "row": 5,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "MAPLE ST CLINIC",
+          "row": 5,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "PATIENTS",
+          "row": 6,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "4812",
+          "row": 6,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "LAST EXPORT",
+          "row": 7,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "49 PAGES, 4812 RECORDS",
+          "row": 7,
+          "col": 16,
+          "kind": "value",
+          "protected": true
+        },
+        {
+          "text": "EXPORT MUST MATCH PATIENT COUNT BEFORE CONFIRMING.",
+          "row": 11,
+          "col": 4,
+          "kind": "message",
+          "protected": true
+        },
+        {
+          "text": "COMMAND ===>",
+          "row": 20,
+          "col": 4,
+          "kind": "label",
+          "protected": true
+        },
+        {
+          "text": "____",
+          "row": 20,
+          "col": 16,
+          "kind": "input",
+          "protected": false
+        },
+        {
+          "text": "STATUS: AWAITING CONFIRMATION",
+          "row": 21,
+          "col": 4,
+          "kind": "status",
+          "protected": true
+        },
+        {
+          "text": "PF1 HELP",
+          "row": 23,
+          "col": 4,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF3 EXIT",
+          "row": 23,
+          "col": 15,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF9 MENU",
+          "row": 23,
+          "col": 26,
+          "kind": "pfkey",
+          "protected": true
+        },
+        {
+          "text": "PF12 DECOMMISSION",
+          "row": 23,
+          "col": 37,
+          "kind": "pfkey",
+          "protected": true
+        }
+      ]
+    }
+  ],
+  "steps": []
+}

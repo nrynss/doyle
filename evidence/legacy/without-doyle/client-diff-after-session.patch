@@ -1,0 +1,111 @@
+diff --git a/wonder-bill.rs b/wonder-bill.rs
+index aa97d2e..cd6283e 100644
+--- a/wonder-bill.rs
++++ b/wonder-bill.rs
+@@ -33,21 +33,57 @@ fn fee_cents(balance_cents: i64) -> i64 {
+ fn main() {
+     let data = fs::read_to_string("patients.dat").expect("patients.dat");
+     let mut out = fs::File::create("rewrite-report.txt").expect("output");
++    writeln!(out, "FERNWHISTLE VETERINARY GROUP - BILLING RUN (V1)").expect("write");
++    writeln!(
++        out,
++        "RATE 1.5% OF BALANCE, ROUNDED. VACCINATION VISITS EXEMPT."
++    )
++    .expect("write");
+     let mut total_balance: i64 = 0;
+     let mut total_fee: i64 = 0;
+     let mut count = 0;
++    let mut exempt_count = 0;
++    let mut error_count = 0;
++    let mut band1_count = 0;
++    let mut band1_fee: i64 = 0;
++    let mut band2_count = 0;
++    let mut band2_fee: i64 = 0;
++    let mut band3_count = 0;
++    let mut band3_fee: i64 = 0;
+     for line in data.lines() {
+         if line.is_empty() {
+             continue;
+         }
+         let acct = &line[0..6];
+         let name = &line[6..26];
+-        let balance: i64 = line[26..33].parse().expect("balance");
+-        //
+-        let fee = fee_cents(balance);
+-        total_balance += balance;
+-        total_fee += fee;
++        let balance_str = &line[26..33];
++        let visit = &line[33..34];
+         count += 1;
++        let is_numeric = acct.bytes().all(|b| b.is_ascii_digit())
++            && balance_str.bytes().all(|b| b.is_ascii_digit());
++        let balance: i64 = balance_str.parse().unwrap_or(0);
++        let mut fee: i64 = 0;
++        if !is_numeric {
++            error_count += 1;
++        } else {
++            total_balance += balance;
++            if visit == "V" {
++                exempt_count += 1;
++            } else {
++                fee = fee_cents(balance);
++                total_fee += fee;
++            }
++            if balance < 10000 {
++                band1_count += 1;
++                band1_fee += fee;
++            } else if balance < 50000 {
++                band2_count += 1;
++                band2_fee += fee;
++            } else {
++                band3_count += 1;
++                band3_fee += fee;
++            }
++        }
+         writeln!(
+             out,
+             "ACCT {} NAME  {} BALANCE {} FEE {}",
+@@ -66,4 +102,43 @@ fn main() {
+         money(total_fee, 10)
+     )
+     .expect("write");
++    writeln!(
++        out,
++        "{:<25}{:>4}{:<9}{:>4} BAND COUNTS UNDER/100+",
++        "SUMMARY EXEMPT VISITS ", exempt_count, " ERRORS ", error_count
++    )
++    .expect("write");
++    writeln!(
++        out,
++        "{:<13}{:>4}{:<6}{}{:<12}{:>4}{:<6}{}",
++        "UNDER $100 ",
++        band1_count,
++        " FEE ",
++        money(band1_fee, 10),
++        " $100-$500 ",
++        band2_count,
++        " FEE ",
++        money(band2_fee, 10)
++    )
++    .expect("write");
++    writeln!(
++        out,
++        "{:<12}{:>4}{:<6}{}",
++        "OVER $500 ",
++        band3_count,
++        " FEE ",
++        money(band3_fee, 10)
++    )
++    .expect("write");
++    let check_fee = band1_fee + band2_fee + band3_fee;
++    writeln!(
++        out,
++        "END OF RUN CROSS-FOOT  {}",
++        if check_fee == total_fee {
++            "CROSS-FOOT OK"
++        } else {
++            "CROSS-FOOT MISMATCH"
++        }
++    )
++    .expect("write");
+ }
