@@ -48,11 +48,14 @@ requires:   [T8.1]
 fixture-ok: yes
 size:       S · user
 owns:       none
-status:     not-started
+status:     done
 ```
 Before the user makes the repository public: scan the whole history for key values and personal data (`grep -rlF` with each value loaded, never printed), check `.gitignore` covers `.env`, `doyle.toml` and `.doyle/`, and read the dev-diary for anything private. The user flips it public.
 
 **Done when:** the scan is clean and recorded in the handoff log, and the repository is public.
+
+
+Notes (orchestrator): scan run before the repository went public. Key values (the Baseten and Meta Model API keys from the keyring, the FAL key, the OBS WebSocket password) loaded into a mode-600 patterns file, never printed: no match in the working tree, in any commit of the history, or in the demo-shoot folder. Personal data: every commit uses the GitHub no-reply address; the account email (one keyring line in `AGENTS.md`) and a home path (three files) were removed from the tree; both remain in older commits, left as they are by the user's decision (rewriting would change every commit hash the dev-diary cites). The only other hit is the operating system's default hostname in two session exports, not identifying. `.gitignore` covers `.env`, `doyle.toml` and `.doyle/`. Video-making files moved out of the repository (user decision).
 
 ---
 
