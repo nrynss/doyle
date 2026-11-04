@@ -216,8 +216,10 @@ impl ReviewServer {
         body.push_str(
             "<h1>For judges: start here</h1><p>Doyle keeps what the migration agent remembers \
             true. Below: the recorded runs with and without Doyle, the measured numbers, the \
-            session logs, and the review page itself. Every link is served from this checkout, \
-            with the evidence committed.</p>",
+            session logs, and the review page itself. Every evidence link is served from this checkout, \
+            with the evidence committed.</p><p>The demo video is on YouTube: \
+            <code>youtube.com/watch?v=cBD3CQrDqUc</code> (given as text, so every link on \
+            this page stays on this server).</p>",
         );
         body.push_str(new_or_existing());
         body.push_str(&self.runs_table(root));

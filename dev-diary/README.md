@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9 done: the extended runs are recorded live, without and with Doyle (T9.10). P8 next: the video (T8.2, cut from the T9.10 takes), then T8.3 and T8.4. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** all phases done, P0–P9. The entry is submitted: the public repository, the demo video, the docs site at nrynss.github.io/doyle, and the X thread. Open for after the event: a tolerance pass for the screens differ, server mode (a remote guard endpoint), serve's single-threaded stall, the second-agent experiment.
 
 ---
 
@@ -150,7 +150,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P5 | 5 / 5 | Done. T5.4 wired the binary for live runs; T5.5 keeps Lambo on Doyle's own session. |
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
-| P8 | 0 / 4 | Waits for P7. |
+| P8 | 4 / 4 | Done: README, video, public repository, submitted. |
 | P9 | 17 / 17 | Done. T9.10 recorded both extended runs live, filmed for the demo. |
 
 ---
@@ -158,6 +158,9 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **P8 closed: submitted.** T8.4: the user submitted the entry (the repository, the YouTube video, the X thread) with form answers the orchestrator drafted from the run records. T8.2: the reel was rebuilt from the T9.10 takes (slides, captions, a generated track; the builder lives outside the repository), published by the user, and linked from the README, the docs site and the judges' page (as text there, which keeps that page's links local). T8.1: the README rewritten around both stories, with the video, docs and thread links and the name's 1979 paper in full.
+- **Docs site landed and live.** Astro Starlight in `site/`, deployed by `.github/workflows/pages.yml` to nrynss.github.io/doyle (Pages enabled from Actions, at the user's go-ahead). Built by a separate agent from a detailed prompt; the orchestrator validated it (build, link and prose checks, the Rust gate, a privacy scan, the walkthrough's offline steps run by hand, the screenshots inspected) and fixed five wrong claims before landing: the re-check model ID, a two-pass video read the code does not do, the replay hash (FNV-1a, not SHA-256), the dependency list, and an invented element ID. The source docs' stale lines it reported were fixed first, on `main`.
 
 - **T8.3 closed: the repository is public.** Secrets scan clean across the tree, every commit and the demo-shoot folder (four key values, loaded never printed). The account email and a home path were removed from the tree; they stay in older commits by the user's decision. Commits use the GitHub no-reply address. The video's cut, slides and builder live outside the repository.
 

@@ -34,6 +34,18 @@ A careful agent may probe past a stale memory in one session, but it leaves the 
   </Card>
 </CardGrid>
 
+## Why the name
+
+Doyle is named after Jon Doyle. His paper *A Truth Maintenance System* appeared in *Artificial Intelligence* 12(3), 231–272, in 1979 ([doi:10.1016/0004-3702(79)90008-0](https://doi.org/10.1016/0004-3702(79)90008-0)).
+
+In a truth maintenance system, every belief keeps its justification. When a justification fails, the beliefs resting on it are withdrawn.
+
+Doyle applies that idea to agent memory. A memory is the belief. Its citation, the evidence elements it rests on, is the justification. When a cited element changes, the memory is flagged and the guard holds the agent off it.
+
+One step differs from the paper. A person, not the system, decides whether a flagged memory is corrected, retired, or kept.
+
+The name is a tribute. This project is not affiliated with or endorsed by Jon Doyle.
+
 ## Key resources
 
 - Read the project specification in [`product.md`](https://github.com/nrynss/doyle/blob/main/product.md).
