@@ -28,6 +28,7 @@ fn dispatch(cli_value: cli::Cli) -> ExitCode {
         cli::Command::Cite => doyle_tms::cite::run(&cli_value),
         cli::Command::Check { .. } => doyle_tms::check::run(&cli_value),
         cli::Command::Diffrun { .. } => doyle_tms::diffrun_cmd::run(&cli_value),
+        cli::Command::Screens(_) => doyle_tms::screens_cmd::run(&cli_value),
         cli::Command::Serve => doyle_tms::serve::run(&cli_value),
         cli::Command::Guard => doyle_tms::guard::run(&cli_value),
     }

@@ -42,10 +42,30 @@ pub enum Command {
         /// Skip the re-check (no model calls).
         no_recheck: bool,
     },
+    /// Read a console version's screens and recording with the vision model
+    /// and write the screens version file `check` reads.
+    Screens(Box<ScreensArgs>),
     /// Run the review page and the judges' page.
     Serve,
     /// Run the Muse Code hook.
     Guard,
+}
+
+/// The arguments of `doyle screens read`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScreensArgs {
+    /// The console the version belongs to.
+    pub console: String,
+    /// The version label.
+    pub version: String,
+    /// `NAME=PNG` pairs, in the order they go out.
+    pub screens: Vec<String>,
+    /// `NAME=MP4`, when the version has a training recording.
+    pub recording: Option<String>,
+    /// The recording's duration in seconds (text, parsed by the command).
+    pub duration_s: Option<String>,
+    /// Where to write the version file.
+    pub output: String,
 }
 
 /// Options shared by every command.
@@ -95,7 +115,7 @@ pub fn parse_from(args: &[String]) -> ParseResult {
     match args[0].as_str() {
         "-h" | "--help" => return ParseResult::Help(None),
         "-V" | "--version" => return ParseResult::Version,
-        "curate" | "cite" | "check" | "diffrun" | "serve" | "guard" => {}
+        "curate" | "cite" | "check" | "diffrun" | "screens" | "serve" | "guard" => {}
         other => return ParseResult::Error(format!("doyle: unknown command: {other}")),
     }
 
@@ -104,6 +124,10 @@ pub fn parse_from(args: &[String]) -> ParseResult {
 
     if rest.iter().any(|a| a == "-h" || a == "--help") {
         return ParseResult::Help(Some(command_name));
+    }
+
+    if command_name == "screens" {
+        return parse_screens(rest);
     }
 
     // curate/check/diffrun-specific: --live (curate, check, diffrun), --contract <FILE>
@@ -194,6 +218,98 @@ pub fn parse_from(args: &[String]) -> ParseResult {
     };
 
     ParseResult::Run(Cli { command, common })
+}
+
+/// Parse `doyle screens read ...`.
+fn parse_screens(rest: &[String]) -> ParseResult {
+    const USAGE: &str = "doyle screens: usage: doyle screens read --console NAME --version V --screen NAME=PNG [...] [--recording NAME=MP4 --duration-s SECONDS] [--live] -o FILE";
+    if rest.first().map(String::as_str) != Some("read") {
+        return ParseResult::Error(USAGE.to_string());
+    }
+    let mut console = None;
+    let mut version = None;
+    let mut screens = Vec::new();
+    let mut recording = None;
+    let mut duration_s = None;
+    let mut output = None;
+    let mut live = false;
+    let mut i = 1;
+    while i < rest.len() {
+        let a = rest[i].as_str();
+        let (flag, inline) = match a.split_once('=') {
+            Some((f, v)) if f.starts_with("--") => (f, Some(v.to_string())),
+            _ => (a, None),
+        };
+        if flag == "--live" && inline.is_none() {
+            live = true;
+            i += 1;
+            continue;
+        }
+        if !matches!(
+            flag,
+            "--console"
+                | "--version"
+                | "--screen"
+                | "--recording"
+                | "--duration-s"
+                | "-o"
+                | "--output"
+        ) {
+            return ParseResult::Error(format!("doyle screens read: unknown option: {a}"));
+        }
+        let value = match inline {
+            Some(v) => v,
+            None => {
+                i += 1;
+                match rest.get(i) {
+                    Some(v) => v.clone(),
+                    None => {
+                        return ParseResult::Error(format!(
+                            "doyle screens read: missing value for {flag}"
+                        ));
+                    }
+                }
+            }
+        };
+        match flag {
+            "--console" => console = Some(value),
+            "--version" => version = Some(value),
+            "--screen" => screens.push(value),
+            "--recording" => recording = Some(value),
+            "--duration-s" => duration_s = Some(value),
+            _ => output = Some(value),
+        }
+        i += 1;
+    }
+    let (Some(console), Some(version), Some(output)) = (console, version, output) else {
+        return ParseResult::Error(format!(
+            "doyle screens read: requires --console, --version and -o\n{USAGE}"
+        ));
+    };
+    if screens.is_empty() {
+        return ParseResult::Error(String::from(
+            "doyle screens read: requires at least one --screen NAME=PNG",
+        ));
+    }
+    if recording.is_some() != duration_s.is_some() {
+        return ParseResult::Error(String::from(
+            "doyle screens read: --recording and --duration-s go together",
+        ));
+    }
+    ParseResult::Run(Cli {
+        command: Command::Screens(Box::new(ScreensArgs {
+            console,
+            version,
+            screens,
+            recording,
+            duration_s,
+            output,
+        })),
+        common: CommonOpts {
+            live,
+            ..CommonOpts::default()
+        },
+    })
 }
 
 fn extract_command_flags(
@@ -333,6 +449,7 @@ Commands:
   cite     Record a citation by hand
   check    Diff two versions, flag cited memories, run the re-check, write proposals
   diffrun  Compare a COBOL batch report with a rewrite report over the same inputs, flag cited memories, write flags
+  screens  Read a console version's screens and recording with the vision model, write the version file check reads
   serve    The review page and the judges' page
   guard    The Muse Code hook
 
@@ -459,6 +576,37 @@ Options:
   -h, --help              Print help
 ";
 
+/// Help for `doyle screens`.
+pub const SCREENS_HELP: &str = "\
+doyle screens: read a console version with the vision model
+
+Usage:
+  doyle screens read --console NAME --version V --screen NAME=PNG [--screen NAME=PNG ...]
+                     [--recording NAME=MP4 --duration-s SECONDS] [--live] -o FILE
+
+One muse-wonder-1.0 call reads the version's stills (and its training
+recording, when given) into screens, elements and steps, and writes FILE in
+the version shape `doyle check` and `doyle curate` read (console, screens,
+steps, recording). The stated cost is printed before the call, the reply's
+usage and every warning (for example dropped step-screen names) after it.
+
+Without --live the reply is replayed from DOYLE_REPLAY_DIR (default
+testdata/replies/vision); a miss is an error naming the request key and
+writes nothing. With --live the call goes to the Meta Model API with the
+key from MODEL_API_KEY or the keyring, and when DOYLE_RECORD_DIR is set the
+reply is recorded there so it can be replayed later.
+
+Options:
+      --console <NAME>      The console (scopes every element ID)
+      --version <V>         The version label (names the request)
+      --screen <NAME=PNG>   A still frame; repeat for each screen
+      --recording <NAME=MP4>  The training recording
+      --duration-s <SECONDS>  The recording's duration (with --recording)
+      --live                Call the live model instead of replaying
+  -o, --output <FILE>       Where to write the version file
+  -h, --help                Print help
+";
+
 /// Help for `doyle serve`.
 pub const SERVE_HELP: &str = "\
 doyle serve: the review page and the judges' page
@@ -497,6 +645,7 @@ pub fn help_text(command: Option<&str>) -> &'static str {
         Some("cite") => CITE_HELP,
         Some("check") => CHECK_HELP,
         Some("diffrun") => DIFRUN_HELP,
+        Some("screens") => SCREENS_HELP,
         Some("serve") => SERVE_HELP,
         Some("guard") => GUARD_HELP,
         _ => TOP_HELP,
