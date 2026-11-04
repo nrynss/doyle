@@ -1,0 +1,226 @@
+/* Self-hosted type: the fonts ship with the site, so a build makes no
+   external font request. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
+:root {
+  --doyle-bg: #111111;
+  --doyle-panel: #1b1b1d;
+  --doyle-panel-strong: #242426;
+  --doyle-text: #ecebe7;
+  --doyle-muted: #9a9890;
+  --doyle-accent: #e8b04a;
+  --doyle-ok: #7fc58a;
+  --doyle-bad: #e3806b;
+  --doyle-hairline: #2e2e31;
+
+  /* Starlight surfaces, so the theme is Doyle's and not the default. */
+  --sl-color-bg: var(--doyle-bg);
+  --sl-color-bg-nav: var(--doyle-panel);
+  --sl-color-bg-sidebar: var(--doyle-panel);
+  --sl-color-bg-inline-code: var(--doyle-panel-strong);
+  --sl-color-bg-accent: var(--doyle-accent);
+  --sl-color-black: var(--doyle-bg);
+  --sl-color-white: var(--doyle-text);
+  --sl-color-gray-1: #ecebe7;
+  --sl-color-gray-2: #d7d5cf;
+  --sl-color-gray-3: #9a9890;
+  --sl-color-gray-4: #6b6a64;
+  --sl-color-gray-5: #3a3a3d;
+  --sl-color-gray-6: #1b1b1d;
+  --sl-color-gray-7: #161618;
+  --sl-color-accent-low: #3a2c12;
+  --sl-color-accent: var(--doyle-accent);
+  --sl-color-accent-high: #f6d79b;
+  --sl-color-text: var(--doyle-text);
+  --sl-color-text-accent: var(--doyle-accent);
+  --sl-color-text-invert: #111111;
+  --sl-color-hairline-light: var(--doyle-hairline);
+  --sl-color-hairline: #232326;
+  --sl-color-hairline-shade: var(--doyle-bg);
+
+  --sl-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --sl-font-system: 'Inter', system-ui, -apple-system, sans-serif;
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+:root[data-theme='light'],
+[data-theme='light'] {
+  --doyle-bg: #fbfaf7;
+  --doyle-panel: #f1efe9;
+  --doyle-panel-strong: #e8e5dc;
+  --doyle-text: #1b1b1a;
+  --doyle-muted: #5f5d57;
+  --doyle-accent: #8a5a0b;
+  --doyle-ok: #2f6b3a;
+  --doyle-bad: #a63d28;
+  --doyle-hairline: #d9d5ca;
+
+  --sl-color-bg: var(--doyle-bg);
+  --sl-color-bg-nav: var(--doyle-panel);
+  --sl-color-bg-sidebar: var(--doyle-panel);
+  --sl-color-bg-inline-code: var(--doyle-panel-strong);
+  --sl-color-bg-accent: var(--doyle-accent);
+  --sl-color-black: var(--doyle-bg);
+  --sl-color-white: var(--doyle-text);
+  --sl-color-gray-1: #1b1b1a;
+  --sl-color-gray-2: #3b3a36;
+  --sl-color-gray-3: #5f5d57;
+  --sl-color-gray-4: #85827a;
+  --sl-color-gray-5: #cfcabe;
+  --sl-color-gray-6: #e8e5dc;
+  --sl-color-gray-7: #f1efe9;
+  --sl-color-accent-low: #f3e2bf;
+  --sl-color-accent: var(--doyle-accent);
+  --sl-color-accent-high: #5c3a05;
+  --sl-color-text: var(--doyle-text);
+  --sl-color-text-accent: var(--doyle-accent);
+  --sl-color-text-invert: #ffffff;
+  --sl-color-hairline-light: var(--doyle-hairline);
+  --sl-color-hairline: #e4e0d6;
+  --sl-color-hairline-shade: var(--doyle-bg);
+}
+
+/* The mark is an <img> in the header, so its size is set here rather than by
+   the inline SVG's attributes. */
+.site-title img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Callouts: a left rule and a tinted panel, no icon dependency. */
+.callout {
+  margin: 1.5rem 0;
+  padding: 1rem 1.15rem;
+  background: var(--doyle-panel);
+  border-left: 4px solid var(--doyle-accent);
+  border-radius: 0.25rem;
+}
+.callout > :first-child {
+  margin-top: 0;
+}
+.callout > :last-child {
+  margin-bottom: 0;
+}
+.callout strong:first-child {
+  display: block;
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.02em;
+}
+.callout-ok {
+  border-left-color: var(--doyle-ok);
+}
+.callout-bad {
+  border-left-color: var(--doyle-bad);
+}
+.callout-muted {
+  border-left-color: var(--doyle-muted);
+}
+
+/* Badges for a flag's state and an evidence verdict. */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge-ok {
+  color: var(--doyle-ok);
+}
+.badge-bad {
+  color: var(--doyle-bad);
+}
+.badge-amber {
+  color: var(--doyle-accent);
+}
+.badge-muted {
+  color: var(--doyle-muted);
+}
+
+/* A number stated once, the way the evidence states it: the figure reads
+   first, the bound after. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+.figures li {
+  padding: 0.9rem 1rem;
+  background: var(--doyle-panel);
+  border: 1px solid var(--doyle-hairline);
+  border-radius: 0.25rem;
+}
+.figures b {
+  display: block;
+  color: var(--doyle-accent);
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.figures span {
+  color: var(--doyle-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* Tables: evidence tables are wide; keep them legible and scrollable. */
+.sl-markdown-content table {
+  font-variant-numeric: tabular-nums;
+}
+.sl-markdown-content th {
+  background: var(--doyle-panel);
+  border-bottom: 1px solid var(--doyle-hairline);
+}
+.sl-markdown-content td,
+.sl-markdown-content th {
+  padding: 0.5rem 0.75rem;
+}
+.sl-markdown-content tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--doyle-panel) 55%, transparent);
+}
+
+/* The claim line: what the judges' page may say, quoted once. */
+.claim {
+  margin: 1.5rem 0;
+  padding: 1.1rem 1.25rem;
+  background: var(--doyle-panel);
+  border: 1px solid var(--doyle-hairline);
+  border-left: 4px solid var(--doyle-accent);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 48rem) {
+  .figures {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
