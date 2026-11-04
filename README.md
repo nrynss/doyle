@@ -8,7 +8,7 @@ The demo story is the Quiet Migration (`product.md`, `evidence/`): a veterinary 
 
 > **Status:** entry for the Meta Global AI Developer Hackathon (Indie track). The binary builds, the gate passes keyless, and the demo below runs fully offline from a fresh clone. Live model calls, live services and the video are separate (below).
 
-**Docs and judge walkthrough:** https://nrynss.github.io/doyle/.
+**Docs and judge walkthrough:** https://nrynss.github.io/doyle/
 
 ## What is new here, and what is not
 

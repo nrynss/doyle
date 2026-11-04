@@ -2,7 +2,7 @@ name: Build and deploy documentation
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'docs/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'docs/**', 'evidence/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read

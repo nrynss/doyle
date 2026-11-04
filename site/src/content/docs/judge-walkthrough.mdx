@@ -23,7 +23,7 @@ gate passed
 
 ### 2. Record a memory citation
 
-Create a temporary state directory and record a citation for memory `M1`. The citation links memory `M1` (`ve2_37b63fc2d46e`) to `GET /patients` in the contract index.
+Create a temporary state directory and record a citation for memory `M1`. The citation links memory `M1` to the `GET /patients` operation's stable element ID in the contract index.
 
 ```sh
 STATE=$(mktemp -d)
@@ -74,7 +74,7 @@ Test the guard hook on a tool call matching the flagged endpoint.
 echo '{"hook_event_name":"PreToolUse","tool_name":"bash","tool_input":{"command":"curl -s http://127.0.0.1:8091/patients | head -c 2000"},"session_id":"demo"}' | ./target/debug/doyle guard --state-dir "$STATE"
 ```
 
-The guard denies the call, cites the breaking contract change, and points to the review page:
+The guard denies the call, cites the breaking contract change, and points to the review page (it prints the contract paths as absolute paths; they are shown relative here):
 
 ```json
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"DOYLE-GUARD: memory muse-code/M1 is stale (\"GET /patients returns every patient in one response\"). Matched GET /patients (listPatients). Changed testdata/contracts/patients-v1.yaml -> testdata/contracts/patients-v2.yaml (breaking). A person reviews this flag on Doyle's review page; this session cannot settle it."}}

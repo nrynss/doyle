@@ -33,11 +33,11 @@ One Rust binary, `doyle`. One core that knows nothing about any particular memor
 
 | Type | What it is |
 |---|---|
-| `ElementId` | Vimanam's stable entity ID (`ve2_…`): an operation, type, field, argument, result or enum value. Stable across versions and document order |
+| `ElementId` | A stable element ID from an evidence source: Vimanam's `ve2_…` (an operation, type, field, argument, result or enum value), legacy `le2_…`, or screens `se2_…`. Stable across versions and document order |
 | `MemoryRef` | An adapter name plus that system's own memory ID. Doyle never copies memory text into its own store except as evidence on a flag |
 | `Memory` | `MemoryRef`, text, last updated, scope. Read through an adapter |
 | `Citation` | A memory rests on one or more elements: `MemoryRef`, `ElementId`s, the claim in one line, who recorded it (curator model or a person), confidence |
-| `Flag` | A cited element changed: the memory, the Vimanam change IDs (`vc2_…`), severity, the old and new contract versions |
+| `Flag` | A cited element changed: the memory, the change IDs (`vc2_…`, `lc2_…` or `sc2_…`), severity, the old and new versions |
 | `Proposal` | For one flag: correct (with new text), retire, or keep; the rationale; the model that proposed it |
 | `Decision` | A person's verdict on a proposal: approve, retire, keep, or edit then approve; who decided, and when |
 

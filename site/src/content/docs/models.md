@@ -23,7 +23,7 @@ When it identifies a match, it writes a `Citation` record containing the cited e
 
 ### 2. Muse Spark on Meta Model API: the re-check
 
-`muse-spark` runs through the official Meta Model API. It powers `doyle check --live` and `doyle diffrun --live`.
+`muse-spark-1.3` runs through the Meta Model API. It powers `doyle check --live` and `doyle diffrun --live`.
 
 Implementation details live in [`src/models/meta.rs`](https://github.com/nrynss/doyle/blob/main/src/models/meta.rs), [`src/prompts/recheck.rs`](https://github.com/nrynss/doyle/blob/main/src/prompts/recheck.rs), and [`src/check.rs`](https://github.com/nrynss/doyle/blob/main/src/check.rs).
 
@@ -45,10 +45,7 @@ Implementation details live in [`src/models/vision.rs`](https://github.com/nryns
 
 For static terminal screens, Wonder inspects 3270 green-screen PNG images in a single multimodal call. It extracts visible fields, labels, status lines, and function key hints.
 
-For operator training MP4 videos, Wonder operates in two phases:
-
-1. A coarse pass scans the entire video to detect operational step boundaries.
-2. A fine pass extracts padded video clips with `ffmpeg` and transcribes per-step key commands and target fields.
+A console version's stills and its training video go to Wonder together, in one call per version (`image_url` and `video_url` parts). Wonder returns the screens, their elements, and the video's steps with their time spans. Doyle diffs two such reads. It reads no pixels itself.
 
 ### 4. Muse Wonder 1.0 in Muse Code: the developer agent
 
@@ -82,6 +79,6 @@ Recorded model interactions live in [`testdata/replies/`](https://github.com/nry
 - `recheck/`: Recorded repair proposals for flagged claims.
 - `vision/`: Recorded multimodal terminal reads and video step transcriptions.
 
-During offline runs, Doyle calculates the SHA-256 hash of the outbound request envelope. It matches the hash against local fixtures.
+During offline runs, Doyle keys each request by a 64-bit FNV-1a hash ([`src/models/mod.rs`](https://github.com/nrynss/doyle/blob/main/src/models/mod.rs)). The hash covers the model ID, the prompts, the canonical response schema and the budget. Doyle serves the recorded reply with that key, and a missing recording fails loudly.
 
 Setting `DOYLE_REPLAY_DIR` or `DOYLE_RECHECK_REPLAY_DIR` redirects model clients to replay directories. This guarantees fast, deterministic verification across all environments.

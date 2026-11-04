@@ -30,8 +30,8 @@ Doyle connects to external services and crates without vendoring their source co
 - Lambo: an external graph memory service reached over HTTP MCP streams, never linked as a library.
 - Rust ecosystem crates: `serde` and `serde_json` for serialization, and `ureq` for blocking HTTP requests.
 - GnuCOBOL (`cobc`): used to compile COBOL batches and capture execution traces.
-- `ffmpeg`: used for slicing video recordings into test segments.
-- Muse Code: the coding agent runtime executing Meta models, including `muse-wonder-1.0`, `muse-spark`, and `meta-models/muse-spark-open-1026`.
+- Muse Code: Meta's coding agent, running `muse-wonder-1.0`. Doyle plugs into it as a hook and through its memory files.
+- The Meta Model API (`muse-spark-1.3`, `muse-wonder-1.0`) and Baseten (`meta-models/muse-spark-open-1026`): the model endpoints Doyle calls with `--live`.
 
 ## How the repository was built
 
