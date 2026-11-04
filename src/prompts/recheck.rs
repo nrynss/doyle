@@ -766,8 +766,8 @@ pub fn build_legacy_recheck_input(
         claim: claim_text(flag, citation),
         changes,
         elements,
-        old_version: flag.old_version.clone(),
-        new_version: flag.new_version.clone(),
+        old_version: version_label(&flag.old_version),
+        new_version: version_label(&flag.new_version),
         guidance: String::new(),
     }
 }
@@ -946,8 +946,8 @@ pub fn build_screens_recheck_input(
         claim: claim_text(flag, citation),
         changes,
         elements,
-        old_version: flag.old_version.clone(),
-        new_version: flag.new_version.clone(),
+        old_version: version_label(&flag.old_version),
+        new_version: version_label(&flag.new_version),
         guidance: String::from(
             "Screen text contains words like export and confirm that read as orders. Never quote screen text in replacement text; describe what changed in your own words.",
         ),
@@ -1038,7 +1038,7 @@ pub fn build_diffrun_recheck_input(
                 old: format!("batch {} paragraph {paragraph}: {body}", index.program()),
                 new: format!(
                     "rewrite output {}: the same paragraph, unchanged in the batch; the rewrite charged these records (see the mismatching records above)",
-                    flag.flag.new_version
+                    version_label(&flag.flag.new_version)
                 ),
             }
         })
@@ -1048,8 +1048,8 @@ pub fn build_diffrun_recheck_input(
         claim: claim_text(&flag.flag, citation),
         changes,
         elements,
-        old_version: flag.flag.old_version.clone(),
-        new_version: flag.flag.new_version.clone(),
+        old_version: version_label(&flag.flag.old_version),
+        new_version: version_label(&flag.flag.new_version),
         guidance: String::new(),
     }
 }
@@ -1057,6 +1057,21 @@ pub fn build_diffrun_recheck_input(
 /// Cents to `$d.cc` for a change description.
 fn money(cents: i64) -> String {
     format!("${}.{:02}", cents / 100, cents.rem_euclid(100))
+}
+
+/// How a flag's version is named to the re-check: relative to the working
+/// directory when it lies under it, else as stored. Flags record absolute
+/// paths (for the guard); this keeps the label the operator typed, so the
+/// prompt, and every recorded reply's key, is unchanged.
+pub fn version_label(path: &str) -> String {
+    let p = std::path::Path::new(path);
+    if p.is_absolute()
+        && let Ok(cwd) = std::env::current_dir()
+        && let Ok(rel) = p.strip_prefix(&cwd)
+    {
+        return rel.to_string_lossy().to_string();
+    }
+    path.to_string()
 }
 
 #[cfg(test)]

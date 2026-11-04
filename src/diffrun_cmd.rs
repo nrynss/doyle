@@ -73,8 +73,8 @@ pub fn execute(
         &index,
         &outcome,
         &open_flags,
-        &program_path,
-        &run_path,
+        &crate::check::flag_version_path(&program_path),
+        &crate::check::flag_version_path(&run_path),
     );
 
     let before = store.flags().len();

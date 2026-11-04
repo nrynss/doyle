@@ -178,6 +178,17 @@ pub fn load_screen_frames(path: &str) -> Result<Vec<(String, String)>, String> {
         .collect())
 }
 
+/// The version path a flag records: absolute, so the guard (which runs in
+/// the agent's working directory, not the operator's) can load it. A
+/// relative path given on the command line would resolve against the wrong
+/// folder and fail open (found in T9.10). The label shown and sent to the
+/// re-check stays as given.
+pub(crate) fn flag_version_path(path: &str) -> String {
+    std::path::absolute(path)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| path.to_string())
+}
+
 /// Run the `check` command.
 pub fn run(cli: &cli::Cli) -> ExitCode {
     let (format, no_recheck, old_path, new_path) = match &cli.command {
@@ -282,8 +293,8 @@ pub fn execute_with_model(
         &changes,
         &old,
         &open_flags,
-        &old_path,
-        &new_path,
+        &flag_version_path(&old_path),
+        &flag_version_path(&new_path),
     );
 
     // Write the new flags to the store.
@@ -454,11 +465,25 @@ fn execute_evidence(
     let flags: Vec<Flag> = match &pair {
         OldNew::Legacy(old, new) => {
             let changes: Vec<EvidenceChange> = old.diff_evidence(new).map_err(|e| e.to_string())?;
-            flag_citations(&citations, &changes, old, &open_flags, old_path, new_path)
+            flag_citations(
+                &citations,
+                &changes,
+                old,
+                &open_flags,
+                &flag_version_path(old_path),
+                &flag_version_path(new_path),
+            )
         }
         OldNew::Screens(old, new) => {
             let changes: Vec<EvidenceChange> = old.diff_evidence(new).map_err(|e| e.to_string())?;
-            flag_citations(&citations, &changes, old, &open_flags, old_path, new_path)
+            flag_citations(
+                &citations,
+                &changes,
+                old,
+                &open_flags,
+                &flag_version_path(old_path),
+                &flag_version_path(new_path),
+            )
         }
     };
 
@@ -803,8 +828,8 @@ fn build_recheck_input(
         claim,
         changes: change_facts,
         elements,
-        old_version: flag.old_version.clone(),
-        new_version: flag.new_version.clone(),
+        old_version: recheck::version_label(&flag.old_version),
+        new_version: recheck::version_label(&flag.new_version),
         guidance: String::new(),
     }
 }
