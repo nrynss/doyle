@@ -27,7 +27,7 @@ Notes (t81): README rewritten on branch t81 (commit 4c6266f): what Doyle is, fre
 requires:   [T7.3]
 fixture-ok: no
 size:       M · user
-owns:       evidence/video/
+owns:       none in the repository (the cut, slides and builder live in the demo-shoot folder, user decision)
 status:     in-review
 ```
 Three minutes, of what was built during the event: the problem, the run without Doyle, the run with Doyle, the review page, the numbers. The agent drafts the script from the recorded runs; the user records and publishes. The cut assembles from the takes T7.2 and T7.3 left in the demo-shoot `takes/`.

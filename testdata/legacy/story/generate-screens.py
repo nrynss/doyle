@@ -9,7 +9,7 @@ key, no model calls. Run from this directory:
     python3 generate-screens.py
 
 Outputs land in screens/ (committed) and takes/ (raw .mkv captures for
-/home/nryn/work/demo-shoot/doyle/takes/, never committed).
+~/work/demo-shoot/doyle/takes/, never committed).
 
 Layout rules (Trap C1): the lookup screen changes between v1 and v2 by
 one cosmetic footer relabel only (PF5 UPDATE -> SAVE), which no S-memory
@@ -25,7 +25,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCREENS = os.path.join(HERE, "screens")
-TAKES = "/home/nryn/work/demo-shoot/doyle/takes"
+TAKES = os.path.expanduser("~/work/demo-shoot/doyle/takes")
 FONT = "/usr/share/fonts/liberation/LiberationMono-Regular.ttf"
 FS = 20
 

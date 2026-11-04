@@ -45,7 +45,7 @@ Rules for any agent working in this repository. The product is in [`product.md`]
 ## Secrets
 
 - Keys come from the environment or the system keyring, never from a committed file. `.env` and `doyle.toml` are gitignored; `.env.example` holds names only.
-- Baseten: `BASETEN_API_KEY` (keyring: `secret-tool lookup service baseten account rocknarayan@gmail.com`).
+- Baseten: `BASETEN_API_KEY` (keyring: `secret-tool lookup service baseten`).
 - Never print, log, commit, or paste a key value, including in test output, fixtures and recordings.
 
 ## Commits and pull requests

@@ -14,7 +14,7 @@ Paths: `~` is the home directory, `<user>` the local username. `CLIENT` = `/tmp/
 
 1. **Services and client** as in the run without Doyle (`../setup/`): old 4,812, new 4,812 on ports 8191 and 8092. CLIENT built by `setup.py`, OPS beside it (v1 and v2 COBOL, the run manifest naming `rewrite_artifacts`, the console stills and training video).
 2. **Lambo.** `setup/lambo-plant.py` sent the fixture's six concepts to `doyle-t910` only (agent_id `muse-wonder-ops`; receipt accepted). Nothing was written to any other Lambo session.
-3. **Flags** (take `…-wd-flags.mkv`, 8 min 33 s; `setup/shots/wd-flags.sh`), all live:
+3. **Flags** (take `…-wd-flags.mkv`, 8 min 33 s), all live:
    - `doyle curate --live --contract v1/BILLBATCH.cbl`: the curator (Muse Spark Open on Baseten) cited the billing memories in both systems.
    - `doyle check v1/BILLBATCH.cbl v2/BILLBATCH.cbl --live`: L2 flagged in both systems (record layout 34 → 35), plus L4 in Muse Code (a false alarm; below).
    - Both programs run on all 4,812 accounts (`cobc`, `rustc`), then `doyle diffrun v1/BILLBATCH.cbl wonder-bill.json --live`: 4,812 compared, 535 mismatches, $8,308.80 overcharge, totals $63,904.43 vs $72,213.23, blamed paragraph LOG-EXEMPT; L1 flagged in both systems.

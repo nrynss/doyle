@@ -143,7 +143,7 @@ plus the regeneration recipe. Recorded totals:
 | `plan.md` | the grown migration plan (beats B1-B5) |
 
 Raw captures live outside the repo in
-`/home/nryn/work/demo-shoot/doyle/takes/` (`2026-10-31-console-v1.mkv`,
+`~/work/demo-shoot/doyle/takes/` (`2026-10-31-console-v1.mkv`,
 `2026-10-31-console-v2.mkv`, `2026-10-31-training-v1.mkv`); the small fixture
 copies above are what the gate and later tasks read. The video sits within
 the measured limits (`docs/wonder-vision.md` §5/8): 45 s of 120 s, 121 KB
