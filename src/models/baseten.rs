@@ -241,6 +241,16 @@ impl ModelClient for BasetenModelClient {
                             ),
                         });
                     }
+                    // A reasoning model can spend the whole allowance on
+                    // reasoning and return no content (`finish_reason:
+                    // length`). Retry once with double the allowance (up to
+                    // 8192). Recorded replies never hit this path, so replay
+                    // keys are unchanged.
+                    if starved_for_length(&resp.body)
+                        && let Some(grown) = grown_request(request)
+                    {
+                        return self.complete(&grown);
+                    }
                     return parse_reply(&model_id, &resp.body);
                 }
                 Err(te) => {
@@ -263,6 +273,28 @@ impl ModelClient for BasetenModelClient {
         }
         Err(last_error.unwrap_or_else(|| ModelError::backend("model call failed")))
     }
+}
+
+/// Whether a reply came back with no content because the token allowance
+/// ran out (typically spent on reasoning).
+fn starved_for_length(body: &str) -> bool {
+    let Ok(parsed) = serde_json::from_str::<serde_json::Value>(body) else {
+        return false;
+    };
+    let choice = &parsed["choices"][0];
+    choice["finish_reason"] == "length" && choice["message"]["content"].is_null()
+}
+
+/// The same request with double the output allowance, or `None` when there
+/// is no cap or it is already at the 8192 ceiling.
+fn grown_request(request: &ModelRequest) -> Option<ModelRequest> {
+    let current = request.budget.max_output_tokens?;
+    if current >= 8192 {
+        return None;
+    }
+    let mut grown = request.clone();
+    grown.budget.max_output_tokens = Some((current * 2).min(8192));
+    Some(grown)
 }
 
 fn parse_reply(model_id: &str, body: &str) -> Result<ModelResponse, ModelError> {
@@ -358,6 +390,7 @@ pub type Baseten = BasetenModelClient;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Budget;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -835,5 +868,35 @@ mod tests {
             !dbg.contains("test-key-not-real"),
             "key leaked in Debug: {dbg}"
         );
+    }
+
+    #[test]
+    fn length_starved_reply_retries_with_double_allowance() {
+        let starved = r#"{"choices":[{"index":0,"finish_reason":"length","message":{"role":"assistant","content":null,"reasoning_content":"thinking"}}]}"#;
+        assert!(starved_for_length(starved));
+        let answered = r#"{"choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"{}"}}]}"#;
+        assert!(!starved_for_length(answered));
+        assert!(!starved_for_length("not json"));
+        let mut request = ModelRequest {
+            model: "m".to_string(),
+            system: String::new(),
+            user: String::new(),
+            schema: serde_json::json!({}),
+            media: Vec::new(),
+            budget: Budget::tokens(2048),
+        };
+        assert_eq!(
+            grown_request(&request).unwrap().budget.max_output_tokens,
+            Some(4096)
+        );
+        request.budget.max_output_tokens = Some(6000);
+        assert_eq!(
+            grown_request(&request).unwrap().budget.max_output_tokens,
+            Some(8192)
+        );
+        request.budget.max_output_tokens = Some(8192);
+        assert!(grown_request(&request).is_none());
+        request.budget.max_output_tokens = None;
+        assert!(grown_request(&request).is_none());
     }
 }
