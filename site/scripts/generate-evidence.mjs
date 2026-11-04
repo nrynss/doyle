@@ -282,7 +282,7 @@ function assertClean(text, label) {
   flag('an ISO date fragment', /\b\d{4}-\d{2}/);
   flag('an email address', /@[\w.-]+\.[a-z]{2,}/i);
   flag('a home path', /(?:^|[\s(`])~\//m);
-  flag('a home path', /\/home\//);
+  flag('a home path', new RegExp('\\/' + 'home\\/'));
   flag('a rig path', /demo-shoot/);
   if (problems.length) {
     throw new Error(`The generated page would carry ${problems.join(', ')} (${label})`);
