@@ -17,4 +17,5 @@ pub mod guard;
 pub mod mcp;
 pub mod models;
 pub mod prompts;
+pub mod screens_cmd;
 pub mod serve;
