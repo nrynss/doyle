@@ -8,7 +8,7 @@ Entry for the Meta Global AI Developer Hackathon (Cerebral Valley), Indie track,
 
 ## The product
 
-Coding agents remember what they learn about the code and the APIs they work with. Those memories rest on things that change. When an API contract changes, every memory about the old behaviour is now wrong, and nothing tells the agent. An agent's built-in memory records what it learned but not why it holds, so it cannot know when what it remembers stops being true. Neither can an external memory such as Lambo.
+Coding agents remember what they learn about the code and the APIs they work with. Those memories rest on things that change. When an API contract changes, every memory about the old behaviour is now wrong, and nothing tells the agent. An agent's built-in memory records what it learned but not why it holds, so it cannot know when what it remembers stops being true. Neither can an external memory such as [Lambo](https://github.com/nrynss/lambo).
 
 Doyle can. It:
 

@@ -20,7 +20,7 @@ The shared service will evaluate flags across distributed environments without f
 
 ## Additional memory adapters (not built)
 
-Doyle currently provides production adapters for Muse Code and Lambo.
+Doyle currently provides production adapters for Muse Code and [Lambo](https://github.com/nrynss/lambo).
 Because the core engine interacts solely through the adapter trait, adding new systems requires no core modifications.
 
 Planned adapters include:

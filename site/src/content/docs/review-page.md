@@ -104,7 +104,7 @@ When a reviewer settles a flag, [`src/core/decide.rs`](https://github.com/nrynss
 The server writes updates or retirement markers to each configured adapter holding copies.
 It records the decision audit trail in `.doyle/decisions.jsonl`.
 
-External services like Lambo servers might become temporarily unreachable during a review session.
+External services like [Lambo](https://github.com/nrynss/lambo) servers might become temporarily unreachable during a review session.
 When an adapter write fails, the server records the error in `.doyle/decisions.jsonl`.
 The flag remains marked with `decision_needs_writeback`.
 The review page displays the pending state and retries write-back during subsequent review actions.

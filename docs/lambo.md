@@ -1,6 +1,6 @@
 # Lambo as a client: the calls Doyle needs
 
-Status: every call Doyle needs is recorded against the running server (Lambo 0.8.0). Doyle has two sessions of its own on it: `doyle` for the product and the demo, and `doyle-probe` for throwaway writes like these. Transcripts `01`–`04` are the first, read-only probe of `lambo-dev`; `05`–`15` are the write half, all in `doyle-probe`. Nothing was ever written to `lambo-dev`.
+Status: every call Doyle needs is recorded against the running server ([Lambo](https://github.com/nrynss/lambo) 0.8.0). Doyle has two sessions of its own on it: `doyle` for the product and the demo, and `doyle-probe` for throwaway writes like these. Transcripts `01`–`04` are the first, read-only probe of `lambo-dev`; `05`–`15` are the write half, all in `doyle-probe`. Nothing was ever written to `lambo-dev`.
 
 Sources: Lambo's `docs/reference/mcp.mdx`, `config.mdx` and `cli.mdx`. The shapes below marked **recorded** come from the server; those marked **docs** come from the reference and have not been checked against the running server.
 

@@ -135,7 +135,7 @@ Four evidence sources extract stable elements and change facts:
 3. **Console screens:** Read by `muse-wonder-1.0` via [`src/evidence/screens/mod.rs`](https://github.com/nrynss/doyle/blob/main/src/evidence/screens/mod.rs). Produces `se2_` element identifiers and `sc2_` change facts.
 4. **Differential runs:** Executed by [`src/evidence/diffrun.rs`](https://github.com/nrynss/doyle/blob/main/src/evidence/diffrun.rs). Attributes output mismatches to executed paragraphs with `lc2_` change facts.
 
-Memory adapters implement the `MemoryAdapter` trait. They read memories, write fresh notes, annotate stale claims, and apply human-approved corrections. Doyle provides built-in adapters for Muse Code memory files and Lambo graph databases.
+Memory adapters implement the `MemoryAdapter` trait. They read memories, write fresh notes, annotate stale claims, and apply human-approved corrections. Doyle provides built-in adapters for Muse Code memory files and [Lambo](https://github.com/nrynss/lambo) graph databases.
 
 Two runtime surfaces close the loop:
 

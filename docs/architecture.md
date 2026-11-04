@@ -55,7 +55,7 @@ Additive, non-breaking changes flag nothing. `Review` severity (Vimanam's inferr
 
 ## The plug-in seams
 
-- **`MemoryAdapter`** (trait). Required: `list(query)` (search, not enumerate), `read`, `write` (fresh memories only). Optional, through capability flags: `annotate` (put a warning on the memory so it shows on recall), `supersede` (create the correction and mark the stale memory replaced by it), `watch` (notice new memories; the first call reports everything visible and the caller baselines). The core calls only the trait. Lambo has no special paths.
+- **`MemoryAdapter`** (trait). Required: `list(query)` (search, not enumerate), `read`, `write` (fresh memories only). Optional, through capability flags: `annotate` (put a warning on the memory so it shows on recall), `supersede` (create the correction and mark the stale memory replaced by it), `watch` (notice new memories; the first call reports everything visible and the caller baselines). The core calls only the trait. [Lambo](https://github.com/nrynss/lambo) has no special paths.
 - **`ModelClient`** (trait). One call: a prompt and a JSON schema in, structured JSON out. Implementations: the Meta Model API (Muse Spark, the re-check), Baseten (Muse Spark Open, the curator), and a replay client that serves recorded responses, for tests and an offline demo.
 - **Contract source.** Vimanam's `contract` module, used as a library with default features off. OpenAPI first; protobuf comes free with Vimanam 2.0.
 

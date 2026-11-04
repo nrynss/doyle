@@ -49,7 +49,7 @@ During live execution of Story 2, a single read by `muse-wonder-1.0` wobbled on 
 The model misread `FWV-004812` as `FW-004812`.
 
 This wobble caused the screen differ to report an unintended change.
-The differ raised flag `S2` across both Muse Code and Lambo, generating one false-alarm denial in session one.
+The differ raised flag `S2` across both Muse Code and [Lambo](https://github.com/nrynss/lambo), generating one false-alarm denial in session one.
 Separately, a curator draw in Muse Code linked memory `L4` to an edited COBOL element, although `L4` remained valid.
 
 Human reviewers settled all three false alarms as `keep`.

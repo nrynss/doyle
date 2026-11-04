@@ -16,7 +16,7 @@ Doyle records what each memory rests on. When the evidence changes, Doyle flags 
 
 Both are live, recorded Muse Code sessions with `muse-wonder-1.0`, run once without Doyle and once with it. The numbers are the measured ones; each links to its record.
 
-**1. The Quiet Migration.** A veterinary clinic chain moves 4,812 patient records to a new platform. The agent remembers that `GET /patients` returns everyone in one call; the vendor API now pages at 100. Without Doyle, Wonder probed past the stale memory and lost nothing, but the stale belief survived. With Doyle, both memories were flagged, the guard held the export, a person approved the correction, and it landed in Muse Code and Lambo. 0 records lost in any run, never claimed as "losses averted". [`evidence/measures.md`](evidence/measures.md)
+**1. The Quiet Migration.** A veterinary clinic chain moves 4,812 patient records to a new platform. The agent remembers that `GET /patients` returns everyone in one call; the vendor API now pages at 100. Without Doyle, Wonder probed past the stale memory and lost nothing, but the stale belief survived. With Doyle, both memories were flagged, the guard held the export, a person approved the correction, and it landed in Muse Code and [Lambo](https://github.com/nrynss/lambo). 0 records lost in any run, never claimed as "losses averted". [`evidence/measures.md`](evidence/measures.md)
 
 **2. The COBOL cutover.** Wonder ports a COBOL billing batch (4,812 accounts) to Rust, ships it, and retires the green-screen console. Its memory says the 1.5% late fee has "no exceptions"; the COBOL exempts vaccination visits. Without Doyle, Wonder found the bug itself and shipped correctly, and both stale memories survived. With Doyle:
 
@@ -120,7 +120,7 @@ The hackathon's new-work rule draws this line, and so does this file. Everything
 | Dependency | What it is | How Doyle uses it |
 |---|---|---|
 | [Vimanam](https://github.com/noemaforge/vimanam) | An existing API-contract library (crates.io `vimanam` 2.x) | Used as a library with default features off: the contract model, stable element IDs (`ve2_…`), and the diff. Doyle links it; no code is copied |
-| Lambo | An existing open-source memory system | Reached as a client of a running Lambo server over MCP. Doyle records corrections `against` stale memories; Lambo itself is untouched |
+| [Lambo](https://github.com/nrynss/lambo) | An existing open-source memory system | Reached as a client of a running Lambo server over MCP. Doyle records corrections `against` stale memories; Lambo itself is untouched |
 | Muse Code built-in memory | The memory the demo agent already writes and recalls | Read and annotated in place through an adapter; owned by Muse, not by Doyle |
 | Muse Wonder (`muse-wonder-1.0`) | The coding agent in the demo | Runs the migration. Doyle never migrates; it keeps what Wonder believes true |
 | Meta Model API (Muse Spark 1.3, the re-check; Muse Wonder, the screen reader) and Baseten (Muse Spark Open, the curator) | Model endpoints | Called live only with `--live` and keys; offline they are replaced by committed recordings |

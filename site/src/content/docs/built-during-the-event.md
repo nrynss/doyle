@@ -15,7 +15,7 @@ New components created in this repository include:
 - The entire `doyle` Rust crate and executable located in [`src/`](https://github.com/nrynss/doyle/tree/main/src).
 - The truth-maintenance core: citation indexing, change detection, flagging, proposal generation, decision logging, and the append-only state store.
 - Four distinct evidence sources: the Vimanam contract bridge, the COBOL parser and differ, the vision reader and screen differ, and the differential run execution parser.
-- The memory adapters for Muse Code file memory and Lambo graph memory.
+- The memory adapters for Muse Code file memory and [Lambo](https://github.com/nrynss/lambo) graph memory.
 - The HTTP model clients for Baseten and the Meta Model API, alongside offline replay engines for testing.
 - The `doyle serve` web server, including the human review interface and the judges evidence overview.
 - The `doyle guard` runtime hook preventing agents from executing commands based on stale facts.

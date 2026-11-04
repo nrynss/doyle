@@ -54,7 +54,7 @@ The annotations prevent the model from repeating discredited facts.
 
 ## Lambo adapter
 
-The Lambo adapter lives in [`src/adapters/lambo.rs`](https://github.com/nrynss/doyle/blob/main/src/adapters/lambo.rs).
+The [Lambo](https://github.com/nrynss/lambo) adapter lives in [`src/adapters/lambo.rs`](https://github.com/nrynss/doyle/blob/main/src/adapters/lambo.rs).
 Lambo provides graph-based agent memory over Model Context Protocol (MCP).
 Detailed wire logs and schema analysis appear in [`docs/lambo.md`](https://github.com/nrynss/doyle/blob/main/docs/lambo.md).
 

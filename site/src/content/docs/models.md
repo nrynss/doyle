@@ -51,7 +51,7 @@ A console version's stills and its training video go to Wonder together, in one 
 
 `muse-wonder-1.0` also drives the autonomous developer agent inside Muse Code.
 
-It executes API migration steps and COBOL billing cutover tasks. The agent reads memories from Muse Code storage and Lambo graph databases.
+It executes API migration steps and COBOL billing cutover tasks. The agent reads memories from Muse Code storage and [Lambo](https://github.com/nrynss/lambo) graph databases.
 
 During each session, [`src/guard.rs`](https://github.com/nrynss/doyle/blob/main/src/guard.rs) monitors tool use. The guard prevents the agent from acting on unverified assumptions until a human signs off.
 

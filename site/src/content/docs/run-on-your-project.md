@@ -82,7 +82,7 @@ Doyle inspects several environment variables:
 
 - `BASETEN_API_KEY`: API key for Baseten model calls.
 - `MODEL_API_KEY`: API key for Meta Model API calls.
-- `LAMBO_URL`: URL for Lambo MCP streamable HTTP (default `http://127.0.0.1:7700/mcp/s/doyle`).
+- `LAMBO_URL`: URL for [Lambo](https://github.com/nrynss/lambo) MCP streamable HTTP (default `http://127.0.0.1:7700/mcp/s/doyle`).
 - `DOYLE_SERVE_PORT`: port for `doyle serve` (default `8080`).
 - `DOYLE_REPLAY_DIR`: directory containing recorded model responses.
 - `DOYLE_RECORD_DIR`: directory where live model responses are saved.
