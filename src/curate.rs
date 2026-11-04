@@ -427,6 +427,19 @@ fn screen_queries(index: &ScreenIndex) -> Vec<String> {
         .collect()
 }
 
+/// Which source an element ID belongs to, by its prefix: legacy elements
+/// and changes (`le2_`, `lc2_`), screen elements and changes (`se2_`,
+/// `sc2_`), and everything else (Vimanam's contract IDs).
+fn element_family(id: &str) -> &'static str {
+    if id.starts_with("le2_") || id.starts_with("lc2_") {
+        "legacy"
+    } else if id.starts_with("se2_") || id.starts_with("sc2_") {
+        "screens"
+    } else {
+        "contract"
+    }
+}
+
 /// The shared curate loop behind every source: one search per query plus
 /// one unfiltered pass, skip memories already cited at their text, run the
 /// curator for the rest, write citations. `build_request` renders the
@@ -482,9 +495,27 @@ fn curate_generic(
         }
 
         for memory in candidates {
-            // Skip memories already cited at their current text.
+            // Skip memories already cited at their current text, per source:
+            // a citation counts for this source when its elements are in this
+            // source's ID family. A "rests on nothing" citation (no elements)
+            // skips only contract curation, as it always has: legacy and
+            // screens curation run into the same store, and a memory the
+            // COBOL curator tied to nothing must still be asked about the
+            // screens (found in T9.10).
             let existing = store.citations_for_memory(&memory.reference);
-            if existing.iter().any(|c| c.source_text == memory.text) {
+            let family = allowed
+                .iter()
+                .next()
+                .map(|id| element_family(id))
+                .unwrap_or("contract");
+            if existing.iter().any(|c| {
+                c.source_text == memory.text
+                    && if c.elements.is_empty() {
+                        family == "contract"
+                    } else {
+                        c.elements.iter().any(|e| element_family(&e.0) == family)
+                    }
+            }) {
                 continue;
             }
 
@@ -1420,5 +1451,15 @@ mod source_tests {
         assert!(queries.contains(&"lookup".to_string()), "{queries:?}");
         assert!(queries.contains(&"training-v1".to_string()), "{queries:?}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn element_family_splits_sources_by_prefix() {
+        assert_eq!(element_family("le2_abc"), "legacy");
+        assert_eq!(element_family("lc2_abc"), "legacy");
+        assert_eq!(element_family("se2_abc"), "screens");
+        assert_eq!(element_family("sc2_abc"), "screens");
+        assert_eq!(element_family("ve2_abc"), "contract");
+        assert_eq!(element_family("anything"), "contract");
     }
 }
