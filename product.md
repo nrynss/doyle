@@ -76,7 +76,7 @@ Where a memory system cannot annotate, the agent learns of staleness through Doy
 
 | Model | Job |
 |---|---|
-| Muse Glimmer, or Muse Spark Open on Baseten | Curator: reads memories and transcripts, records which API elements each rests on |
+| Muse Spark Open on Baseten | Curator: reads memories and transcripts, records which API elements each rests on |
 | Muse Spark | Re-check: flagged memory + new contract → correct, retire, or keep |
 | Muse Wonder (in Muse Code) | The coding agent in the demo: it runs the migration and rewrites the COBOL batch, is held at the stale step, then works from the corrected memory |
 | Muse Wonder (Meta Model API) | Doyle's eyes: reads screens and recordings into evidence with stable IDs |
@@ -110,7 +110,5 @@ A live page with a "For judges: start here" table: the recorded runs with and wi
 
 ## Open questions
 
-- Whether the legacy and screen evidence (PHASE-9) goes into the recorded runs and the video, once its probes report.
 - Whether to add a second, less exploratory agent reading the same shared memory: the case where the belief left behind does the damage. Optional; its result could go either way.
 - The problem statements, on the event details page (sign-in only). The Official Rules are read: original work, no new-code rule, open source allowed if licences are followed, no licence requirement.
-- The review page's stack.

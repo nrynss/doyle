@@ -46,7 +46,7 @@ Runs `rustfmt --check`, `clippy` with warnings denied, `cargo build` and the ful
 cargo build --locked
 ```
 
-The binary is `target/debug/doyle`. `doyle --help` lists the five commands; each takes `--help`.
+The binary is `target/debug/doyle`. `doyle --help` lists the seven commands; each takes `--help`.
 
 ### 3. Record what a memory rests on, then flag it (`cite`, `check`)
 
@@ -108,6 +108,8 @@ Quoted from `evidence/measures.md` ("What the judges' page may claim, at most"),
 | `doyle curate` | Read memories through the adapters, have the curator cite each against the current contract, write citations |
 | `doyle cite` | Record a citation by hand (for tests and for memories the curator misses) |
 | `doyle check OLD NEW` | Diff two contract versions, flag cited memories, run the re-check, write proposals. Exit code 1 when anything was flagged, for CI |
+| `doyle diffrun PROGRAM RUN` | Read a differential run (the COBOL batch against a rewrite, from a manifest), trace each mismatched output to the paragraphs that ran, and flag memories resting on them |
+| `doyle screens read` | Have `muse-wonder-1.0` read console screens into an element list with stable IDs, the input to a screens check |
 | `doyle serve` | The review page and the judges' page. A decision writes the correction back through the adapters |
 | `doyle guard` | The Muse Code hook. `PreToolUse`: deny an action that touches an element with an unsettled flag, with the reason. `SessionStart`: a short notice of open flags |
 
