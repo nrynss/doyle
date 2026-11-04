@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 and T9.16 done; T9.10 (the extended runs, run by the orchestrator on the live capture rig) in progress; T9.16 (`doyle screens read`, Doyle's eyes from the command line) building for it. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 done; T9.10 (the extended runs, run by the orchestrator on the live capture rig) in progress. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 15 / 17 | Everything but T9.10 and T9.16 done. T9.16 (`doyle screens read`) building; T9.10 in progress, run by the orchestrator. |
+| P9 | 16 / 17 | Everything but T9.10 done (T9.16 closed: `doyle screens read`). T9.10 in progress, run by the orchestrator. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.16 closed: `doyle screens read`, Doyle's eyes from the command line (user question during T9.10).** The command sends a console version's stills and training recording to `muse-wonder-1.0` and writes the screens file `check` and `curate` read; offline it replays from committed live recordings (about $0.93 of $1.00 spent). Unmet and accepted (user decision): single live reads of the lookup screen wobble, so the screen diff flags S2 as well as S1; T9.10 settles S2 as a false alarm, and a screens-differ tolerance task stays open. Landed with a Baseten fix found live in T9.10: a reply starved by its token allowance is retried once at double the allowance (replay keys unchanged).
 
 - **T9.15 closed: the guard holds the ship step by the rewrite's files.** A diffrun run manifest names `rewrite_artifacts`; while L1's flag is open the guard denies any call naming one (the four natural ship steps, and reading the rewrite), naming L1, `LOG-EXEMPT` and 535 mismatches. Reading, grepping and compiling the batch's COBOL is allowed: legacy and diffrun flags no longer match names in free text. A tag push names no artifact and is allowed, documented as the known limit. Orchestrator pre-check through the binary confirms every row. Landing fixes by the orchestrator: an unreadable or artifact-less manifest now warns that the rewrite is not held (was silent), the empty no-match warning is gone, and the contradicted T9.6 pin is rewritten.
 

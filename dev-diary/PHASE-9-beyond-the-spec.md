@@ -598,7 +598,7 @@ requires:   [T9.7, T9.11]
 fixture-ok: yes
 size:       S · mid
 owns:       src/screens_cmd.rs (new), src/cli.rs (the subcommand only, orchestrator-approved), src/main.rs (one dispatch arm, orchestrator-approved), src/lib.rs (one module line), testdata/replies/vision/ (new recordings), tests/screens_read.rs (new), tests/live_screens_read.rs (new)
-status:     in-review
+status:     done
 ```
 
 Found while running T9.10 (user question): T9.7 built Doyle's eyes (`read_version` sends a version's screens and training recording to `muse-wonder-1.0` and parses screens, elements and steps), and T9.7b ran it live, but no `doyle` command calls it. `doyle check` on screens reads version files built from the fixtures' ground truth, so a run never looks at an image. User decision: add the command, and use it in T9.10.
@@ -615,6 +615,9 @@ Notes (msc-t9.16): built, gate green, awaiting orchestrator validation. One Done
 - Unmet: lookup writes nothing. A single live read of the lookup screen wobbles, and five v2 reads and two v1 reads paired in every combination gave a lookup fact. The wobble kinds seen: `FWV-004812` read as `FW-004812` on one side only (it cancels only when both sides drop the V), the dashes rule at row 2 present on one side, `DATE` and its value split or merged, `COMMAND ===>` and its input merged, the vaccination line split in two, and column shifts of 1-2. This is the T9.7b product implication (the differ needs a separator concept, kind-tolerant matching or voting) seen through the command, not a defect in the command. `tests/screens_read.rs` therefore asserts S1 flags breaking and nothing but the two seeded memories can flag, and says so in its docblock; it does not claim lookup silence. Fixing it belongs to the differ (`src/evidence/screens/`, outside this task's owns).
 - Live spend, from stated usage on the $15/MTok basis: about $0.93 of the $1.00 across eight reads (one scratch v2 $0.07, the live test's pair $0.31, four more v2 reads at $0.08 each and one more v1 at $0.23, all hunting a quiet lookup pair). The committed recordings are the last reply per request key: v1 11752 in / 3541 out, v2 1871 in / 3091 out.
 - Surprise: re-reading is not a fix. Each single read is individually good (element counts match ground truth within 1-4), and the noise is between reads, so a pair gets a lookup fact more often than not.
+
+
+Closed by the orchestrator: the command works live and replayed; the gate passes keyless; the committed recordings carry no key. One clause unmet and accepted (user decision): a single live read of the lookup screen wobbles (an ID, a separator, a split label, columns off by one or two), so the screen diff flags S2 as well as S1. T9.10 runs as it is and settles S2 on the review page as a false alarm from a single read; a tolerance task on the screens differ stays open. Landed with a Baseten client fix found in T9.10: a reply starved by its token allowance (`finish_reason: length`, no content) is retried once at double the allowance, so the legacy curator no longer fails live; replay keys are unchanged.
 
 ---
 
