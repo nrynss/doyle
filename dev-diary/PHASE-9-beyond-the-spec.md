@@ -592,9 +592,26 @@ Closed by the orchestrator, after its own pre-check through the binary on the st
 
 ---
 
+### T9.16: `doyle screens read`: Doyle's eyes from the command line ★
+```yaml
+requires:   [T9.7, T9.11]
+fixture-ok: yes
+size:       S · mid
+owns:       src/screens_cmd.rs (new), src/cli.rs (the subcommand only, orchestrator-approved), src/main.rs (one dispatch arm, orchestrator-approved), src/lib.rs (one module line), testdata/replies/vision/ (new recordings), tests/screens_read.rs (new), tests/live_screens_read.rs (new)
+status:     claimed:msc-t9.16
+```
+
+Found while running T9.10 (user question): T9.7 built Doyle's eyes (`read_version` sends a version's screens and training recording to `muse-wonder-1.0` and parses screens, elements and steps), and T9.7b ran it live, but no `doyle` command calls it. `doyle check` on screens reads version files built from the fixtures' ground truth, so a run never looks at an image. User decision: add the command, and use it in T9.10.
+
+Build: `doyle screens read --console NAME --version V --screen NAME=PNG ... [--recording NAME=MP4] [--live] -o FILE` runs one `read_version` call and writes the screens version file `doyle check` and `doyle curate` already read (`check::load_screen_version`'s shape: console, screens with elements, steps, recording). Offline it replays from `DOYLE_REPLAY_DIR` (default `testdata/replies/vision`); `--live` uses the Meta client with the key from the environment or keyring. It prints the stated cost before the call and the reply's usage after, and every warning `read_version` returns (dropped step-screen names).
+
+**Done when:** the gate passes with no key; replayed, on T9.4's console, `doyle screens read` for v1 (lookup and decommission stills plus `training-v1.mp4`) and v2 (stills) writes two files that `doyle check` diffs to S1's breaking decommission fact and nothing on lookup, through the built binary; one `#[ignore]`d live test reads both versions under a $1.00 budget, its recordings committed so the replay test uses real replies.
+
+---
+
 ### T9.10: Runs, extended ★
 ```yaml
-requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14, T9.15]
+requires:   [T9.4, T9.7, T9.8, T9.9, T7.3, T9.11, T9.11b, T9.12, T9.13, T9.14, T9.15, T9.16]
 fixture-ok: no
 size:       S · user
 owns:       evidence/legacy/

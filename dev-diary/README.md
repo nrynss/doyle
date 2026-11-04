@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 done; T9.10 (the extended runs, run by the orchestrator on the live capture rig, the person approving only) in progress. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 and T9.16 done; T9.10 (the extended runs, run by the orchestrator on the live capture rig) in progress; T9.16 (`doyle screens read`, Doyle's eyes from the command line) building for it. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,7 +151,7 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 15 / 16 | Everything but T9.10 done (T9.15 closed: the guard holds the ship step). T9.10 in progress, run by the orchestrator. |
+| P9 | 15 / 17 | Everything but T9.10 and T9.16 done. T9.16 (`doyle screens read`) building; T9.10 in progress, run by the orchestrator. |
 
 ---
 
