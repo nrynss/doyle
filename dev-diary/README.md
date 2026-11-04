@@ -14,7 +14,7 @@ Each phase document gives an engineer starting cold the complete context for its
 
 **This diary is public.** The repository goes public for submission. Nothing private goes in here: no key, no account detail, no personal path beyond `~`, no private repository's name.
 
-**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9: everything but T9.10 done; T9.10 (the extended runs, run by the orchestrator on the live capture rig) in progress. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
+**Current status:** P0–P7 done. P8: T8.1 (README) and T8.2 (video) in review, each waiting on the user; T8.3, T8.4 not started. P9 done: the extended runs are recorded live, without and with Doyle (T9.10). P8 next: the video (T8.2, cut from the T9.10 takes), then T8.3 and T8.4. Open user decisions: screen-differ tolerance task; live-curator-budget task; serve's single-threaded stall; the second-agent experiment.
 
 ---
 
@@ -151,13 +151,15 @@ The demo is built around one story, the Quiet Migration (product.md). Muse Wonde
 | P6 | 4 / 4 | Done: guard, review page, reviewer-only decisions, retry after a restart. |
 | P7 | 8 / 8 | Done: runs without/with Doyle, measures, judges' page. |
 | P8 | 0 / 4 | Waits for P7. |
-| P9 | 16 / 17 | Everything but T9.10 done (T9.16 closed: `doyle screens read`). T9.10 in progress, run by the orchestrator. |
+| P9 | 17 / 17 | Done. T9.10 recorded both extended runs live, filmed for the demo. |
 
 ---
 
 ## Handoff Log
 
 Newest first. One entry per closed task, finding, or split.
+
+- **T9.10 closed: the extended runs, recorded live (run by the orchestrator, user decision).** Without Doyle, Wonder caught the exemption itself, shipped a correct port and retired the v2 console unconfirmed after checking counts; both stale memories survived. With Doyle: 9 flags from three evidence kinds in both memory systems (the COBOL diff, running both programs on 4,812 accounts, Wonder's own reading of the screens and training video), 3 false alarms counted and kept; session one held at the ship step with 4 denials and Wonder asking a person; the operator decided on the review page at the user's instruction (6 approve, 3 keep); corrections landed in Muse Code and Lambo; session two shipped a two-line fix that Doyle's differential run confirms (0 mismatches). Five Doyle faults found live and fixed (ship-step guard, screens never read, starved curator reply, curate skip per source, relative version paths); rig faults fixed (prompt matching, auto-answer timing, the operator's environment reaching the agent, redacted in the exports). A fresh reviewer agent found a doubled denial count and a decommission overclaim; both corrected before landing.
 
 - **T9.16 closed: `doyle screens read`, Doyle's eyes from the command line (user question during T9.10).** The command sends a console version's stills and training recording to `muse-wonder-1.0` and writes the screens file `check` and `curate` read; offline it replays from committed live recordings (about $0.93 of $1.00 spent). Unmet and accepted (user decision): single live reads of the lookup screen wobble, so the screen diff flags S2 as well as S1; T9.10 settles S2 as a false alarm, and a screens-differ tolerance task stays open. Landed with a Baseten fix found live in T9.10: a reply starved by its token allowance is retried once at double the allowance (replay keys unchanged).
 
