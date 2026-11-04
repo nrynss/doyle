@@ -1,0 +1,41 @@
+---
+title: Overview
+description: Truth maintenance for agent memory.
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Every memory an agent keeps rests on an external source like an API contract, a COBOL paragraph, or an operator console screen. When that source changes, the memory goes stale and the agent keeps acting on it.
+
+Doyle is truth maintenance for agent memory. It records what each memory cites, flags memories when sources change or differential runs fail, and asks a Meta model to propose a correction.
+
+A Muse Code hook holds the agent at the step where a stale belief would do damage. Once a human reviewer signs off, Doyle writes the correction back to Muse Code built-in memory and Lambo.
+
+## The problem
+
+A careful agent may probe past a stale memory in one session, but it leaves the wrong belief untouched in storage for the next session.
+
+## The two stories
+
+- **The Quiet Migration:** A veterinary clinic API adds pagination at 100 records while agent memory still says one call returns all 4,812 patients.
+- **The Billing Cutover:** A COBOL billing batch port and console retirement face a planted fee bug, a record layout change, and a removed confirmation screen.
+
+## Start here
+
+<CardGrid>
+  <Card title="Judge walkthrough">
+    Follow the [judge walkthrough](/doyle/judge-walkthrough/) to verify every claim and run.
+  </Card>
+  <Card title="How it works">
+    Read the [system architecture](/doyle/architecture/) to inspect the core verification pipeline.
+  </Card>
+  <Card title="Run on your own project">
+    Follow the [project guide](/doyle/run-on-your-project/) to run truth maintenance on your codebase.
+  </Card>
+</CardGrid>
+
+## Key resources
+
+- Read the project specification in [`product.md`](https://github.com/nrynss/doyle/blob/main/product.md).
+- Read the project overview in [`README.md`](https://github.com/nrynss/doyle/blob/main/README.md).
+- Review the metrics and counts in [`evidence/measures.md`](https://github.com/nrynss/doyle/blob/main/evidence/measures.md).
