@@ -13,7 +13,18 @@ Doyle deploys four distinct model configurations:
 
 ### 1. Muse Spark Open on Baseten: the curator
 
-`meta-models/muse-spark-open-1026` runs on Baseten. It powers `doyle curate --live`.
+`meta-models/muse-spark-open-1026` runs on [Baseten](https://www.baseten.co/), through its OpenAI-style endpoint at `https://inference.baseten.co/v1`. It powers `doyle curate --live`.
+
+**Why Baseten.** Both candidate curators were measured on the same sixteen memories against a hand-written expected citation set:
+
+| Model | Precision | Recall | Exact-set cases |
+|---|---|---|---|
+| Muse Spark (`muse-spark-1.3`) | 0.964 | 0.964 | 14 of 16 |
+| Muse Spark Open on Baseten | 0.886 | 0.969 | 13 of 16 |
+
+Muse Spark was a little more precise. Muse Spark Open was chosen anyway because its weights are open. Doyle also drops any cited ID that is not a real element, and a person reviews every citation that matters. The full measurement is in [`testdata/replies/curator/MEASUREMENT.md`](https://github.com/nrynss/doyle/blob/main/testdata/replies/curator/MEASUREMENT.md).
+
+**Empty replies.** A reasoning model can spend its whole output allowance on reasoning and return no text. Doyle detects this from `finish_reason: length` with empty content. It retries with double the allowance, up to 8,192 tokens. Recorded replies never take this path, so their replay keys stay the same.
 
 Implementation details live in [`src/models/baseten.rs`](https://github.com/nrynss/doyle/blob/main/src/models/baseten.rs) and [`src/curate.rs`](https://github.com/nrynss/doyle/blob/main/src/curate.rs).
 
